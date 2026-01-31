@@ -14,26 +14,10 @@ interface AlbumCardProps {
 }
 
 export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
-  const [isDragging, setIsDragging] = useState(false);
   const [deezerUrl, setDeezerUrl] = useState<string | null>(null);
   const [isLoadingDeezer, setIsLoadingDeezer] = useState(false);
 
-  const setDraggedAlbum = useFolderStore(state => state.setDraggedAlbum);
-  const setDraggedFolderId = useFolderStore(state => state.setDraggedFolderId);
   const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    setIsDragging(true);
-    setDraggedAlbum(album);
-    setDraggedFolderId(folderId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    setDraggedAlbum(null);
-    setDraggedFolderId(null);
-  };
 
   const handleRemove = () => {
     removeAlbumFromFolder(folderId, album.id);
@@ -53,12 +37,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
       className={cn(
-        'group relative bg-card rounded-lg overflow-hidden border border-border shadow-sm transition-all hover:shadow-md hover:border-muted-foreground/30',
-        isDragging && 'opacity-50 ring-2 ring-primary'
+        'group relative bg-card rounded-lg overflow-hidden border border-border shadow-sm transition-all hover:shadow-md hover:border-muted-foreground/30'
       )}
     >
       <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10">

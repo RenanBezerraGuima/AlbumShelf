@@ -22,6 +22,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { useFolderStore } from '@/lib/store';
 import type { Folder as FolderType } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -35,6 +41,8 @@ interface FolderItemProps {
 const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: FolderItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
+  const [isCreatingSubfolder, setIsCreatingSubfolder] = useState(false);
+  const [newSubfolderName, setNewSubfolderName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropPosition, setDropPosition] = useState<'before' | 'inside' | 'after' | null>(null);
 
@@ -43,6 +51,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
   const toggleFolderExpanded = useFolderStore(state => state.toggleFolderExpanded);
   const renameFolder = useFolderStore(state => state.renameFolder);
   const deleteFolder = useFolderStore(state => state.deleteFolder);
+  const createFolder = useFolderStore(state => state.createFolder);
   const draggedAlbum = useFolderStore(state => state.draggedAlbum);
   const draggedFolderId = useFolderStore(state => state.draggedFolderId);
   const draggedFolder = useFolderStore(state => state.draggedFolder);
@@ -72,6 +81,14 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
 
   const handleDelete = () => {
     deleteFolder(folder.id);
+  };
+
+  const handleCreateSubfolder = () => {
+    if (newSubfolderName.trim()) {
+      createFolder(newSubfolderName.trim(), folder.id);
+      setNewSubfolderName('');
+      setIsCreatingSubfolder(false);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -127,8 +144,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
       if (draggedFolderId !== folder.id) {
         moveAlbum(draggedFolderId, folder.id, draggedAlbum.id);
       }
-      setDraggedAlbum(null);
-      setDraggedFolderId(null);
+      setDraggedAlbum(null, null, null);
       return;
     }
 
@@ -154,9 +170,11 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
 
   return (
     <div>
-      <div
-        className={cn(
-          'group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer transition-colors',
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            className={cn(
+              'group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer transition-colors',
           isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50',
           isDragOver && dropPosition === 'inside' && 'bg-primary/20 ring-2 ring-primary',
           isDragOver && dropPosition === 'before' && 'border-t-2 border-primary',
@@ -254,6 +272,18 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!folder.isExpanded) {
+                      toggleFolderExpanded(folder.id);
+                    }
+                    setIsCreatingSubfolder(true);
+                  }}
+                >
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Create Subfolder
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleDelete();
                   }}
                   className="text-destructive focus:text-destructive"
@@ -265,10 +295,83 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
             </DropdownMenu>
           </>
         )}
-      </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+              setEditName(folder.name);
+            }}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Rename
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!folder.isExpanded) {
+                toggleFolderExpanded(folder.id);
+              }
+              setIsCreatingSubfolder(true);
+            }}
+          >
+            <FolderPlus className="h-4 w-4 mr-2" />
+            Create Subfolder
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
-      {folder.isExpanded && hasSubfolders && (
+      {folder.isExpanded && (hasSubfolders || isCreatingSubfolder) && (
         <div>
+          {isCreatingSubfolder && (
+            <div
+              className="flex items-center gap-1 px-2 py-1.5"
+              style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}
+            >
+              <Folder className="h-4 w-4 text-amber-500 shrink-0" />
+              <Input
+                value={newSubfolderName}
+                onChange={(e) => setNewSubfolderName(e.target.value)}
+                placeholder="Subfolder name"
+                className="h-6 text-sm py-0 flex-1 min-w-0"
+                autoFocus
+                maxLength={100}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateSubfolder();
+                  if (e.key === 'Escape') {
+                    setIsCreatingSubfolder(false);
+                    setNewSubfolderName('');
+                  }
+                }}
+              />
+              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={handleCreateSubfolder}>
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0"
+                onClick={() => {
+                  setIsCreatingSubfolder(false);
+                  setNewSubfolderName('');
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
           {folder.subfolders.map((subfolder) => (
             <FolderItem key={subfolder.id} folder={subfolder} depth={depth + 1} parentId={folder.id} />
           ))}

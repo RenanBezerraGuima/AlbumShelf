@@ -42,8 +42,10 @@ export function AlbumGrid() {
   const folders = useFolderStore(state => state.folders);
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const reorderAlbum = useFolderStore(state => state.reorderAlbum);
+  const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
+  const draggedAlbum = useFolderStore(state => state.draggedAlbum);
+  const setDraggedAlbum = useFolderStore(state => state.setDraggedAlbum);
 
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!selectedFolderId) {
@@ -68,13 +70,14 @@ export function AlbumGrid() {
 
   const breadcrumb = getBreadcrumb(folders, selectedFolderId);
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
+  const handleDragStart = (e: React.DragEvent, album: Album, index: number) => {
+    setDraggedAlbum(album, selectedFolderId, index);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== index) {
+    if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
       setDropIndex(index);
     }
   };
@@ -84,15 +87,15 @@ export function AlbumGrid() {
   };
 
   const handleDrop = (index: number) => {
-    if (draggedIndex !== null && draggedIndex !== index) {
-      reorderAlbum(selectedFolderId, draggedIndex, index);
+    if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
+      reorderAlbum(selectedFolderId, draggedAlbumIndex, index);
     }
-    setDraggedIndex(null);
+    setDraggedAlbum(null, null, null);
     setDropIndex(null);
   };
 
   const handleDragEnd = () => {
-    setDraggedIndex(null);
+    setDraggedAlbum(null, null, null);
     setDropIndex(null);
   };
 
@@ -127,14 +130,14 @@ export function AlbumGrid() {
               <div
                 key={album.id}
                 draggable
-                onDragStart={() => handleDragStart(index)}
+                onDragStart={(e) => handleDragStart(e, album, index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(index)}
                 onDragEnd={handleDragEnd}
                 className={cn(
                   'transition-all',
-                  draggedIndex === index && 'opacity-50',
+                  draggedAlbumIndex === index && 'opacity-50',
                   dropIndex === index && 'ring-2 ring-primary ring-offset-2 rounded-lg'
                 )}
               >

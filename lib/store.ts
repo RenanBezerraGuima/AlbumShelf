@@ -7,6 +7,7 @@ interface FolderStore {
   selectedFolderId: string | null;
   draggedAlbum: Album | null;
   draggedFolderId: string | null;
+  draggedAlbumIndex: number | null;
   draggedFolder: Folder | null;
   draggedFolderParentId: string | null;
   
@@ -25,7 +26,7 @@ interface FolderStore {
   reorderAlbum: (folderId: string, fromIndex: number, toIndex: number) => void;
   
   // Drag and drop
-  setDraggedAlbum: (album: Album | null) => void;
+  setDraggedAlbum: (album: Album | null, folderId: string | null, index: number | null) => void;
   setDraggedFolderId: (folderId: string | null) => void;
   setDraggedFolder: (folder: Folder | null, parentId: string | null) => void;
 }
@@ -185,6 +186,7 @@ export const useFolderStore = create<FolderStore>()(
       selectedFolderId: null,
       draggedAlbum: null,
       draggedFolderId: null,
+      draggedAlbumIndex: null,
       draggedFolder: null,
       draggedFolderParentId: null,
 
@@ -329,8 +331,12 @@ export const useFolderStore = create<FolderStore>()(
         }));
       },
 
-      setDraggedAlbum: (album) => {
-        set({ draggedAlbum: album });
+      setDraggedAlbum: (album, folderId, index) => {
+        set({
+          draggedAlbum: album,
+          draggedFolderId: folderId,
+          draggedAlbumIndex: index
+        });
       },
 
       setDraggedFolderId: (folderId) => {
