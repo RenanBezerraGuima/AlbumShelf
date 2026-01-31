@@ -149,6 +149,7 @@ export function AlbumSearch() {
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             className="pl-9 w-full"
+            maxLength={200}
             aria-label="Search albums"
             aria-expanded={isOpen}
             aria-controls={listboxId}

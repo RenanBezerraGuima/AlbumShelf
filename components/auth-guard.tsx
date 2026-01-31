@@ -70,6 +70,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 onChange={(e) => setPassword(e.target.value)}
                 className={error ? 'border-destructive' : ''}
                 autoFocus
+                maxLength={100}
               />
               {error && (
                 <p className="text-xs text-destructive mt-1">

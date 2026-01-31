@@ -149,7 +149,7 @@ export const useFolderStore = create<FolderStore>()(
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
           id: generateId(),
-          name,
+          name: name.slice(0, 100),
           parentId,
           albums: [],
           subfolders: [],
@@ -164,7 +164,7 @@ export const useFolderStore = create<FolderStore>()(
         set((state) => ({
           folders: updateFolderInTree(state.folders, id, (folder) => ({
             ...folder,
-            name,
+            name: name.slice(0, 100),
           })),
         }));
       },

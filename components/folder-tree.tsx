@@ -203,6 +203,7 @@ function FolderItem({ folder, depth, parentId }: FolderItemProps) {
               onChange={(e) => setEditName(e.target.value)}
               className="h-6 text-sm py-0 flex-1 min-w-0"
               autoFocus
+              maxLength={100}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleRename();
                 if (e.key === 'Escape') setIsEditing(false);
@@ -350,6 +351,7 @@ export function FolderTree() {
                 placeholder="Folder name"
                 className="h-7 text-sm flex-1"
                 autoFocus
+                maxLength={100}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateFolder();
                   if (e.key === 'Escape') {
