@@ -16,13 +16,13 @@ export default function Home() {
 
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={35} className="flex flex-col">
             <FolderTree />
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={80} minSize={50}>
+          <ResizablePanel defaultSize={80} minSize={50} className="flex flex-col">
             <AlbumGrid />
           </ResizablePanel>
         </ResizablePanelGroup>

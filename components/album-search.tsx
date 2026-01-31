@@ -98,7 +98,7 @@ export function AlbumSearch() {
     }
   }, []);
 
-  const debouncedSearch = useDebounce(searchAlbums, 500);
+  const debouncedSearch = useDebounce(searchAlbums, 150);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -129,7 +129,6 @@ export function AlbumSearch() {
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault();
       handleAddAlbum(results[activeIndex]);
-      setIsOpen(false);
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
