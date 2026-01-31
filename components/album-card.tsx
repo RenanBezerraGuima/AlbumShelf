@@ -67,6 +67,7 @@ export function AlbumCard({ album, folderId }: AlbumCardProps) {
           variant="destructive"
           className="h-7 w-7"
           onClick={handleRemove}
+          aria-label="Remove album"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -82,6 +83,7 @@ export function AlbumCard({ album, folderId }: AlbumCardProps) {
         <button
           onClick={handleOpenDeezer}
           disabled={isLoadingDeezer}
+          aria-label="Open on Deezer"
           className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
         >
           {isLoadingDeezer ? (

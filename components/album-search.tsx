@@ -16,7 +16,9 @@ export function AlbumSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listboxId = "album-search-results";
   
   const { selectedFolderId, addAlbumToFolder, folders } = useFolderStore();
   
@@ -38,6 +40,21 @@ export function AlbumSearch() {
     
     return new Set(folder.albums.map(a => `${a.name}-${a.artist}`));
   }, [selectedFolderId, folders]);
+
+  // Reset active index when results change
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIndex >= 0 && isOpen) {
+      const activeElement = document.getElementById(`option-${activeIndex}`);
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex, isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -88,6 +105,29 @@ export function AlbumSearch() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      setIsOpen(true);
+      return;
+    }
+
+    if (!isOpen || results.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      handleAddAlbum(results[activeIndex]);
+      setIsOpen(false);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   const handleAddAlbum = (album: Album) => {
     if (!selectedFolderId) {
       setError('Please select a folder first');
@@ -107,7 +147,14 @@ export function AlbumSearch() {
             value={query}
             onChange={handleSearchChange}
             onFocus={handleFocus}
+            onKeyDown={handleKeyDown}
             className="pl-9 w-full"
+            aria-label="Search albums"
+            aria-expanded={isOpen}
+            aria-controls={listboxId}
+            aria-haspopup="listbox"
+            aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
+            role="combobox"
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -123,24 +170,29 @@ export function AlbumSearch() {
         {isOpen && (results.length > 0 || error) && (
           <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
             <ScrollArea className="h-[384px]">
-              <div className="p-2 space-y-1">
+              <div className="p-2 space-y-1" role="listbox" id={listboxId}>
                 {error && (
                   <p className="text-sm text-destructive text-center py-2">{error}</p>
                 )}
 
-                {results.map((album) => {
+                {results.map((album, index) => {
                   const isAdded = albumsInSelectedFolder.has(`${album.name}-${album.artist}`);
+                  const isActive = index === activeIndex;
                   
                   return (
                     <div
                       key={album.id}
+                      id={`option-${index}`}
                       onClick={() => handleAddAlbum(album)}
+                      role="option"
+                      aria-selected={isActive}
                       className={cn(
                         "flex items-center gap-3 p-2 rounded-lg transition-colors",
                         selectedFolderId 
                           ? "cursor-pointer hover:bg-secondary active:bg-secondary/80" 
                           : "opacity-60 cursor-not-allowed",
-                        isAdded && "bg-green-500/10"
+                        isAdded && "bg-green-500/10",
+                        isActive && "bg-accent text-accent-foreground"
                       )}
                     >
                       <img

@@ -325,6 +325,7 @@ export function FolderTree() {
           variant="ghost"
           onClick={() => setIsCreating(true)}
           title="Create folder"
+          aria-label="Create folder"
         >
           <FolderPlus className="h-4 w-4" />
         </Button>
