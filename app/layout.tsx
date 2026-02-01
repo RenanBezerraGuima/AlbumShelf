@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthGuard } from '@/components/auth-guard'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -37,11 +38,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <AuthGuard>
-          {children}
-        </AuthGuard>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthGuard>
+            {children}
+          </AuthGuard>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

@@ -14,6 +14,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -427,15 +428,18 @@ export function FolderTree() {
     <div className="flex flex-col h-full glass">
       <div className="h-[73px] p-4 border-b border-border/50 flex items-center justify-between shrink-0">
         <h2 className="text-lg font-bold text-gradient">Collections</h2>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsCreating(true)}
-          title="Create folder"
-          aria-label="Create folder"
-        >
-          <FolderPlus className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setIsCreating(true)}
+            title="Create folder"
+            aria-label="Create folder"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
