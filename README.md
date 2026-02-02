@@ -1,18 +1,47 @@
-# Deezer Album Organizer (GitHub Pages)
+# Deezer Album Organizer
 
-A static, local-first album organizer for Deezer fans. Search for albums, place them into folders, and keep everything stored in your browser so the site can be hosted publicly with no authentication gate.
+A fast, local-first album organizer for Deezer fans. Search for your favorite albums, organize them into collections, and keep your data stored locally in your browser.
 
 ## Features
-- Search Deezer albums and add them to folders.
-- Local-first storage (data lives in your browser).
-- Static export-ready for GitHub Pages.
+- **Search**: Discover albums on Deezer using the built-in search.
+- **Collections**: Organize your music into a hierarchical folder structure.
+- **Local-First**: All your data stays in your browser's local storage—no account or backend required.
+- **Glassmorphism UI**: A modern, responsive interface with deep indigo and violet accents.
+- **Privacy Focused**: No tracking, no analytics, no external data harvesting.
 
-## Run locally
+## Getting Started
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [pnpm](https://pnpm.io/)
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/deezer-album-organizer.git
+   cd deezer-album-organizer
+   ```
+
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+3. Run the development server:
+   ```bash
+   pnpm dev
+   ```
+
+4. Open [http://localhost:3000/deezer-album-organizer/](http://localhost:3000/deezer-album-organizer/) in your browser.
+
+## Deployment
+This project is designed to be hosted as a static site on GitHub Pages.
+
+To build the project:
 ```bash
-pnpm install
-pnpm dev
+pnpm build
 ```
+The output will be in the `out/` directory.
 
-## Notes
-- The app is static and does not require a backend.
-- All user data remains local to the browser, so it is safe to host publicly.
+## License
+This project is licensed under the GNU GPL v3.0 - see the [LICENSE](LICENSE) file for details.

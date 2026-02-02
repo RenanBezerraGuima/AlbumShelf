@@ -5,7 +5,7 @@ const nextConfig = {
   output: 'export',
   basePath,
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,

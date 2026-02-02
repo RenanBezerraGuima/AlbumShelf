@@ -5,7 +5,7 @@ import { Music } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore } from '@/lib/store';
 import { AlbumCard } from './album-card';
-import type { Folder } from '@/lib/types';
+import type { Folder, Album } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 function findFolder(folders: Folder[], id: string): Folder | null {
