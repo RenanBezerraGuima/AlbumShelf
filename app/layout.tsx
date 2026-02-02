@@ -2,7 +2,6 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { AuthGuard } from '@/components/auth-guard'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
@@ -10,9 +9,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Album Organizer - Spotify & Deezer',
-  description: 'Organize your favorite albums in folders. Search Spotify and open albums in Deezer.',
-  generator: 'v0.app',
+  title: 'Deezer Album Organizer',
+  description: 'Organize Deezer albums in folders using a fast, local-first catalog.',
   icons: {
     icon: [
       {
@@ -41,9 +39,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
+          {children}
         </ThemeProvider>
         <Analytics />
       </body>
