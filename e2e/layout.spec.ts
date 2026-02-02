@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('headers should be aligned', async ({ page }) => {
-  await page.goto('/');
-
-  // Login
-  await page.fill('input[type="password"]', '8$cbfkFu%N$nx9!zPcg^');
-  await page.click('button:has-text("Enter")');
+  await page.goto('./');
 
   // Create a folder first
   await page.click('button[title="Create folder"]');

@@ -1,14 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('add and then remove album from search results', async ({ page }) => {
-  await page.goto('/');
-
-  // Bypass AuthGuard via localStorage if possible, or just login
-  // The memory said: "To bypass the AuthGuard in Playwright tests, set 'app_authenticated' to 'true' in localStorage before navigating or reloading."
-  await page.addInitScript(() => {
-    window.localStorage.setItem('app_authenticated', 'true');
-  });
-  await page.goto('/');
+  await page.goto('./');
 
   // Create a folder
   await page.click('button[title="Create folder"]');

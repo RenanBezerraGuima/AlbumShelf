@@ -4,7 +4,6 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/deezer-album-organizer'
 const nextConfig = {
   output: 'export',
   basePath,
-  assetPrefix: basePath,
   typescript: {
     ignoreBuildErrors: true,
   },
