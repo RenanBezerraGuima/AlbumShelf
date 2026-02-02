@@ -13,12 +13,6 @@ pnpm install
 pnpm dev
 ```
 
-## Build for GitHub Pages
-```bash
-pnpm build
-pnpm start
-```
-
 ## Notes
 - The app is static and does not require a backend.
 - All user data remains local to the browser, so it is safe to host publicly.
