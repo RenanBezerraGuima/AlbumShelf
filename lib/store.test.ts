@@ -97,4 +97,66 @@ describe('useFolderStore', () => {
     expect(newState.folders.find(f => f.id === folder2.id)!.albums).toHaveLength(1);
     expect(newState.folders.find(f => f.id === folder2.id)!.albums[0].id).toBe('album-1');
   });
+
+  it('should import folders and handle collisions with OLD/NEW naming', () => {
+    const { createFolder, importFolders } = useFolderStore.getState();
+
+    // Setup existing state
+    createFolder('Rock', null);
+    createFolder('Jazz', null);
+
+    const existingFolders = useFolderStore.getState().folders;
+    expect(existingFolders).toHaveLength(2);
+
+    // Prepare imported data
+    const importedData = [
+      {
+        id: 'old-id-1',
+        name: 'Rock',
+        parentId: null,
+        albums: [],
+        subfolders: [
+          {
+            id: 'old-id-2',
+            name: 'Alternative',
+            parentId: 'old-id-1',
+            albums: [],
+            subfolders: [],
+            isExpanded: true
+          }
+        ],
+        isExpanded: true
+      },
+      {
+        id: 'old-id-3',
+        name: 'Classical',
+        parentId: null,
+        albums: [],
+        subfolders: [],
+        isExpanded: true
+      }
+    ];
+
+    importFolders(importedData as any);
+
+    const finalFolders = useFolderStore.getState().folders;
+
+    // Total should be 2 existing + 2 imported = 4 root folders
+    expect(finalFolders).toHaveLength(4);
+
+    const names = finalFolders.map(f => f.name);
+    expect(names).toContain('Rock (OLD)');
+    expect(names).toContain('Rock (NEW)');
+    expect(names).toContain('Jazz');
+    expect(names).toContain('Classical');
+
+    // Verify subfolder of imported Rock (NEW)
+    const rockNew = finalFolders.find(f => f.name === 'Rock (NEW)')!;
+    expect(rockNew.subfolders).toHaveLength(1);
+    expect(rockNew.subfolders[0].name).toBe('Alternative');
+    // Verify ID was regenerated
+    expect(rockNew.id).not.toBe('old-id-1');
+    expect(rockNew.subfolders[0].id).not.toBe('old-id-2');
+    expect(rockNew.subfolders[0].parentId).toBe(rockNew.id);
+  });
 });

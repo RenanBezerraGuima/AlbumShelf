@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SettingsDialog } from '@/components/settings-dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -430,6 +431,7 @@ export function FolderTree() {
         <h2 className="text-lg font-black uppercase tracking-tighter">Collections</h2>
         <div className="flex items-center gap-1">
           <ThemeToggle />
+          <SettingsDialog />
           <Button
             size="icon"
             variant="ghost"

@@ -29,6 +29,7 @@ interface FolderStore {
   setDraggedAlbum: (album: Album | null, folderId: string | null, index: number | null) => void;
   setDraggedFolderId: (folderId: string | null) => void;
   setDraggedFolder: (folder: Folder | null, parentId: string | null) => void;
+  importFolders: (folders: Folder[]) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -345,6 +346,52 @@ export const useFolderStore = create<FolderStore>()(
 
       setDraggedFolder: (folder, parentId) => {
         set({ draggedFolder: folder, draggedFolderParentId: parentId });
+      },
+
+      importFolders: (importedFolders) => {
+        const state = get();
+
+        const regenerateIds = (folders: Folder[], parentId: string | null): Folder[] => {
+          return folders.map((folder) => {
+            const newId = generateId();
+            return {
+              ...folder,
+              id: newId,
+              parentId,
+              subfolders: regenerateIds(folder.subfolders, newId),
+            };
+          });
+        };
+
+        const processedImported = regenerateIds(importedFolders, null);
+        const existingFolders = [...state.folders];
+
+        const existingNames = new Set(existingFolders.map(f => f.name));
+        const importedNames = new Set(processedImported.map(f => f.name));
+
+        const collidingNames = [...importedNames].filter(name => existingNames.has(name));
+
+        if (collidingNames.length > 0) {
+          const collidingSet = new Set(collidingNames);
+
+          const updatedExisting = existingFolders.map(f => {
+            if (collidingSet.has(f.name)) {
+              return { ...f, name: `${f.name} (OLD)` };
+            }
+            return f;
+          });
+
+          const updatedImported = processedImported.map(f => {
+            if (collidingSet.has(f.name)) {
+              return { ...f, name: `${f.name} (NEW)` };
+            }
+            return f;
+          });
+
+          set({ folders: [...updatedExisting, ...updatedImported] });
+        } else {
+          set({ folders: [...existingFolders, ...processedImported] });
+        }
       },
     }),
     {
