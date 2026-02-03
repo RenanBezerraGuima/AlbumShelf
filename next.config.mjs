@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/deezer-album-organizer'
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/album-shelf'
 
 const nextConfig = {
   output: 'export',

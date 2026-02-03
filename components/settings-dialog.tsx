@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Download, Upload, Settings } from 'lucide-react';
+import { Download, Upload, Settings, Music, Radio } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -18,6 +18,8 @@ import { useFolderStore } from '@/lib/store';
 export function SettingsDialog() {
   const folders = useFolderStore((state) => state.folders);
   const importFolders = useFolderStore((state) => state.importFolders);
+  const streamingProvider = useFolderStore((state) => state.streamingProvider);
+  const setStreamingProvider = useFolderStore((state) => state.setStreamingProvider);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -91,6 +93,30 @@ export function SettingsDialog() {
         <div className="grid gap-6 py-4">
           <div className="space-y-4">
             <h4 className="text-sm font-black uppercase tracking-tight border-b-2 border-border pb-1">
+              Streaming Provider
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant={streamingProvider === 'deezer' ? 'default' : 'outline'}
+                className="justify-start gap-2 rounded-none"
+                onClick={() => setStreamingProvider('deezer')}
+              >
+                <Radio className="h-4 w-4" />
+                Deezer
+              </Button>
+              <Button
+                variant={streamingProvider === 'apple' ? 'default' : 'outline'}
+                className="justify-start gap-2 rounded-none"
+                onClick={() => setStreamingProvider('apple')}
+              >
+                <Music className="h-4 w-4" />
+                Apple Music
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-sm font-black uppercase tracking-tight border-b-2 border-border pb-1">
               Data Management
             </h4>
 
@@ -137,7 +163,7 @@ export function SettingsDialog() {
               About
             </h4>
             <p className="text-[10px] font-mono uppercase">
-              Deezer Album Organizer v0.1.0
+              AlbumShelf v0.1.0
               <br />
               Local-first storage
             </p>

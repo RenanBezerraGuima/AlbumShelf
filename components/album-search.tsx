@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore } from '@/lib/store';
 import type { Album, Folder } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
-import { searchAlbumsDeezer } from '@/lib/search-service';
+import { searchAlbumsDeezer, searchAlbumsApple } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
 
 export function AlbumSearch() {
@@ -20,7 +20,7 @@ export function AlbumSearch() {
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = "album-search-results";
   
-  const { selectedFolderId, addAlbumToFolder, removeAlbumFromFolder, folders } = useFolderStore();
+  const { selectedFolderId, addAlbumToFolder, removeAlbumFromFolder, folders, streamingProvider } = useFolderStore();
   
   // Get albums in selected folder
   const albumsInSelectedFolder = useMemo(() => {
@@ -86,7 +86,9 @@ export function AlbumSearch() {
     setError(null);
 
     try {
-      const data = await searchAlbumsDeezer(searchQuery);
+      const data = streamingProvider === 'apple'
+        ? await searchAlbumsApple(searchQuery)
+        : await searchAlbumsDeezer(searchQuery);
       setResults(data);
       setIsOpen(true);
     } catch (err) {
@@ -157,7 +159,7 @@ export function AlbumSearch() {
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
-            placeholder="SEARCH ALBUMS..."
+            placeholder={`SEARCH ALBUMS ON ${streamingProvider.toUpperCase()}...`}
             value={query}
             onChange={handleSearchChange}
             onFocus={handleFocus}

@@ -1,9 +1,9 @@
-# Deezer Album Organizer
+# AlbumShelf
 
-A fast, local-first album organizer for Deezer fans. Search for your favorite albums, organize them into collections, and keep your data stored locally in your browser.
+A fast, local-first album organizer. Search for your favorite albums, organize them into collections, and keep your data stored locally in your browser.
 
 ## Features
-- **Search**: Discover albums on Deezer using the built-in search.
+- **Search**: Discover albums on multiple streaming platforms using the built-in search.
 - **Collections**: Organize your music into a hierarchical folder structure.
 - **Local-First**: All your data stays in your browser's local storage—no account or backend required.
 - **Glassmorphism UI**: A modern, responsive interface with deep indigo and violet accents.
@@ -18,8 +18,8 @@ A fast, local-first album organizer for Deezer fans. Search for your favorite al
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/deezer-album-organizer.git
-   cd deezer-album-organizer
+   git clone https://github.com/your-username/album-shelf.git
+   cd album-shelf
    ```
 
 2. Install dependencies:
@@ -32,7 +32,7 @@ A fast, local-first album organizer for Deezer fans. Search for your favorite al
    pnpm dev
    ```
 
-4. Open [http://localhost:3000/deezer-album-organizer/](http://localhost:3000/deezer-album-organizer/) in your browser.
+4. Open [http://localhost:3000/album-shelf/](http://localhost:3000/album-shelf/) in your browser.
 
 ## Deployment
 This project is designed to be hosted as a static site on GitHub Pages.

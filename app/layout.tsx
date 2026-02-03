@@ -5,8 +5,8 @@ import { Toaster } from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Deezer Album Organizer',
-  description: 'Organize Deezer albums in folders using a fast, local-first catalog.',
+  title: 'AlbumShelf',
+  description: 'Organize your music albums in collections using a fast, local-first catalog.',
   icons: {
     icon: [
       {

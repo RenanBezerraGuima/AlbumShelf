@@ -14,24 +14,22 @@ interface AlbumCardProps {
 }
 
 export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
-  const [deezerUrl, setDeezerUrl] = useState<string | null>(null);
-  const [isLoadingDeezer, setIsLoadingDeezer] = useState(false);
-
   const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
+  const streamingProvider = useFolderStore(state => state.streamingProvider);
 
   const handleRemove = () => {
     removeAlbumFromFolder(folderId, album.id);
   };
 
-  const handleOpenDeezer = () => {
+  const handlePlay = () => {
     if (album.externalUrl) {
       window.open(album.externalUrl, '_blank');
     } else {
       const searchQuery = `${album.name} ${album.artist}`;
-      window.open(
-        `https://www.deezer.com/search/${encodeURIComponent(searchQuery)}`,
-        '_blank'
-      );
+      const url = streamingProvider === 'apple'
+        ? `https://music.apple.com/search?term=${encodeURIComponent(searchQuery)}`
+        : `https://www.deezer.com/search/${encodeURIComponent(searchQuery)}`;
+      window.open(url, '_blank');
     }
   };
 
@@ -67,18 +65,13 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         />
         
         <button
-          onClick={handleOpenDeezer}
-          disabled={isLoadingDeezer}
-          aria-label="Open on Deezer"
+          onClick={handlePlay}
+          aria-label="Play album"
           className="absolute inset-0 flex items-center justify-center bg-primary/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
         >
-          {isLoadingDeezer ? (
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-          ) : (
-            <div className="bg-primary text-primary-foreground border-2 border-border p-4 brutalist-shadow hover:scale-110 transition-transform duration-200">
-              <Play className="h-8 w-8 fill-current" />
-            </div>
-          )}
+          <div className="bg-primary text-primary-foreground border-2 border-border p-4 brutalist-shadow hover:scale-110 transition-transform duration-200">
+            <Play className="h-8 w-8 fill-current" />
+          </div>
         </button>
       </div>
 
@@ -90,6 +83,10 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           {album.artist}
         </p>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+          <span className="bg-foreground text-background px-1 font-bold">
+            {album.id.split('-')[0].toUpperCase()}
+          </span>
+          <span>|</span>
           {album.releaseDate && (
             <>
               <span>{album.releaseDate.split('-')[0]}</span>

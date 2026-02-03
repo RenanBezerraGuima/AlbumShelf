@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Folder, Album } from './types';
 
+export type StreamingProvider = 'deezer' | 'apple';
+
 interface FolderStore {
   folders: Folder[];
   selectedFolderId: string | null;
@@ -10,6 +12,8 @@ interface FolderStore {
   draggedAlbumIndex: number | null;
   draggedFolder: Folder | null;
   draggedFolderParentId: string | null;
+  streamingProvider: StreamingProvider;
+  hasSetPreference: boolean;
   
   // Folder actions
   createFolder: (name: string, parentId: string | null) => void;
@@ -30,6 +34,8 @@ interface FolderStore {
   setDraggedFolderId: (folderId: string | null) => void;
   setDraggedFolder: (folder: Folder | null, parentId: string | null) => void;
   importFolders: (folders: Folder[]) => void;
+  setStreamingProvider: (provider: StreamingProvider) => void;
+  setHasSetPreference: (hasSet: boolean) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -190,6 +196,8 @@ export const useFolderStore = create<FolderStore>()(
       draggedAlbumIndex: null,
       draggedFolder: null,
       draggedFolderParentId: null,
+      streamingProvider: 'deezer',
+      hasSetPreference: false,
 
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
@@ -392,6 +400,14 @@ export const useFolderStore = create<FolderStore>()(
         } else {
           set({ folders: [...existingFolders, ...processedImported] });
         }
+      },
+
+      setStreamingProvider: (provider) => {
+        set({ streamingProvider: provider });
+      },
+
+      setHasSetPreference: (hasSet) => {
+        set({ hasSetPreference: hasSet });
       },
     }),
     {

@@ -49,3 +49,30 @@ export async function searchAlbumsDeezer(query: string): Promise<Album[]> {
     throw error;
   }
 }
+
+export async function searchAlbumsApple(query: string): Promise<Album[]> {
+  if (!query.trim()) return [];
+
+  try {
+    const data = await jsonp<any>(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=20`
+    );
+
+    if (!data.results) {
+      return [];
+    }
+
+    return data.results.map((item: any) => ({
+      id: `apple-${item.collectionId}`,
+      name: item.collectionName,
+      artist: item.artistName,
+      imageUrl: item.artworkUrl100.replace('100x100bb', '600x600bb'), // Get higher res image
+      releaseDate: item.releaseDate,
+      totalTracks: item.trackCount,
+      externalUrl: item.collectionViewUrl,
+    }));
+  } catch (error) {
+    console.error('Apple search error:', error);
+    throw error;
+  }
+}
