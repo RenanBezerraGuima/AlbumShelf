@@ -152,17 +152,17 @@ export function AlbumSearch() {
   };
 
   return (
-    <div className="w-full flex justify-center px-4 py-6 border-b border-border/50 glass z-50">
+    <div className="w-full flex justify-center px-4 py-6 border-b-2 border-border bg-background z-50">
       <div className="w-full max-w-2xl relative" ref={containerRef}>
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
-            placeholder="Search albums..."
+            placeholder="SEARCH ALBUMS..."
             value={query}
             onChange={handleSearchChange}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
-            className="pl-12 h-12 w-full rounded-2xl glass border-border/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-lg"
+            className="pl-12 h-12 w-full rounded-none bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all text-lg font-mono uppercase tracking-tighter"
             maxLength={200}
             aria-label="Search albums"
             aria-expanded={isOpen}
@@ -177,17 +177,17 @@ export function AlbumSearch() {
         </div>
 
         {!selectedFolderId && query && (
-          <p className="text-xs text-amber-500 mt-2 text-center">
-            Select a folder to add albums
+          <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">
+            Select a collection to add albums
           </p>
         )}
 
         {isOpen && (results.length > 0 || error) && (
-          <div className="absolute left-0 right-0 top-full mt-4 z-50 glass border border-border/50 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border rounded-none brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
             <ScrollArea className="h-[400px]">
               <div className="p-2 space-y-1" role="listbox" id={listboxId}>
                 {error && (
-                  <p className="text-sm text-destructive text-center py-2">{error}</p>
+                  <p className="text-sm text-destructive text-center py-2 font-mono uppercase">{error}</p>
                 )}
 
                 {results.map((album, index) => {
@@ -202,30 +202,30 @@ export function AlbumSearch() {
                       role="option"
                       aria-selected={isActive}
                       className={cn(
-                        "flex items-center gap-4 p-3 rounded-xl transition-all duration-200 mx-1",
+                        "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
                         selectedFolderId 
-                          ? "cursor-pointer hover:bg-primary/10 active:scale-[0.98]"
+                          ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
                           : "opacity-60 cursor-not-allowed",
-                        isAdded && "bg-accent/10",
-                        isActive && "bg-primary/20 ring-1 ring-primary/30"
+                        isAdded && "bg-accent/20 border-accent",
+                        isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
                       )}
                     >
                       <img
                         src={album.imageUrl || "/placeholder.svg"}
                         alt={album.name}
-                        className="w-12 h-12 rounded object-cover shrink-0 bg-muted"
+                        className="w-12 h-12 rounded-none border border-border object-cover shrink-0 bg-muted"
                       />
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm font-medium text-foreground truncate">
+                        <p className="text-sm font-bold truncate uppercase tracking-tighter">
                           {album.name}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs opacity-80 truncate font-mono uppercase">
                           {album.artist}
                           {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
                         </p>
                       </div>
                       {isAdded && (
-                        <Check className="h-4 w-4 text-green-500 shrink-0" />
+                        <Check className="h-4 w-4 shrink-0" />
                       )}
                     </div>
                   );

@@ -38,12 +38,12 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
   return (
     <div
       className={cn(
-        'group relative glass rounded-xl overflow-hidden border border-border shadow-sm transition-all duration-300 hover:scale-[1.02] hover:glow-primary hover:border-primary/50'
+        'group relative bg-card rounded-none overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'
       )}
     >
       <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10">
-        <div className="bg-background/80 backdrop-blur-sm rounded p-1">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <div className="bg-background border border-border p-1">
+          <GripVertical className="h-4 w-4 text-foreground" />
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <Button
           size="icon"
           variant="destructive"
-          className="h-7 w-7"
+          className="h-7 w-7 rounded-none border-2 border-border brutalist-shadow-sm"
           onClick={handleRemove}
           aria-label="Remove album"
         >
@@ -59,44 +59,44 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         </Button>
       </div>
 
-      <div className="aspect-square relative">
+      <div className="aspect-square relative border-b-2 border-border overflow-hidden">
         <img
           src={album.imageUrl || "/placeholder.svg"}
           alt={album.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         
         <button
           onClick={handleOpenDeezer}
           disabled={isLoadingDeezer}
           aria-label="Open on Deezer"
-          className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer"
+          className="absolute inset-0 flex items-center justify-center bg-primary/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
         >
           {isLoadingDeezer ? (
-            <Loader2 className="h-12 w-12 text-white animate-spin" />
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
           ) : (
-            <div className="bg-gradient-to-br from-primary to-accent rounded-full p-4 shadow-xl hover:scale-110 transition-transform duration-300">
-              <Play className="h-8 w-8 text-white fill-white" />
+            <div className="bg-primary text-primary-foreground border-2 border-border p-4 brutalist-shadow hover:scale-110 transition-transform duration-200">
+              <Play className="h-8 w-8 fill-current" />
             </div>
           )}
         </button>
       </div>
 
-      <div className="p-3">
-        <h3 className="font-medium text-sm text-foreground truncate" title={album.name}>
+      <div className="p-3 bg-card font-mono uppercase tracking-tighter">
+        <h3 className="font-black text-sm text-foreground truncate" title={album.name}>
           {album.name}
         </h3>
-        <p className="text-xs text-muted-foreground truncate mt-0.5" title={album.artist}>
+        <p className="text-[10px] text-muted-foreground truncate mt-0.5" title={album.artist}>
           {album.artist}
         </p>
-        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
           {album.releaseDate && (
             <>
               <span>{album.releaseDate.split('-')[0]}</span>
-              <span>-</span>
+              <span>|</span>
             </>
           )}
-          <span>{album.totalTracks} tracks</span>
+          <span>{album.totalTracks} TRACKS</span>
         </div>
       </div>
     </div>

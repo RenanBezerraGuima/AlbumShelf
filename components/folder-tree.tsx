@@ -175,10 +175,10 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
         <ContextMenuTrigger asChild>
           <div
             className={cn(
-              'group flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-all duration-200',
+              'group flex items-center gap-2 px-3 py-2 rounded-none cursor-pointer transition-all duration-100 border-l-4 border-transparent',
           isSelected
-            ? 'bg-gradient-to-r from-primary/20 to-accent/20 text-foreground ring-1 ring-primary/30 shadow-sm'
-            : 'hover:bg-accent/30',
+            ? 'bg-primary text-primary-foreground border-border'
+            : 'hover:bg-muted',
           isDragOver && dropPosition === 'inside' && 'bg-primary/20 ring-2 ring-primary',
           isDragOver && dropPosition === 'before' && 'border-t-2 border-primary',
           isDragOver && dropPosition === 'after' && 'border-b-2 border-primary'
@@ -192,12 +192,12 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab shrink-0" />
+        <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-100 cursor-grab shrink-0" />
         
         <button
           onClick={handleToggle}
           className={cn(
-            'p-0.5 rounded hover:bg-muted transition-colors shrink-0',
+            'p-0.5 rounded-none hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0',
             !hasSubfolders && 'invisible'
           )}
         >
@@ -209,9 +209,9 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
         </button>
 
         {folder.isExpanded ? (
-          <FolderOpen className="h-4 w-4 text-accent shrink-0" />
+          <FolderOpen className="h-4 w-4 shrink-0" />
         ) : (
-          <Folder className="h-4 w-4 text-accent shrink-0" />
+          <Folder className="h-4 w-4 shrink-0" />
         )}
 
         {isEditing ? (
@@ -219,7 +219,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="h-6 text-sm py-0 flex-1 min-w-0"
+              className="h-6 text-sm py-0 flex-1 min-w-0 rounded-none border-border"
               autoFocus
               maxLength={100}
               onKeyDown={(e) => {
@@ -241,9 +241,9 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
           </div>
         ) : (
           <>
-            <span className="text-sm truncate flex-1 min-w-0">{folder.name}</span>
-            <span className="text-xs text-muted-foreground shrink-0">
-              ({folder.albums.length})
+            <span className="text-sm truncate flex-1 min-w-0 font-bold uppercase tracking-tighter">{folder.name}</span>
+            <span className="text-[10px] font-mono shrink-0 opacity-70">
+              [{folder.albums.length}]
             </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -425,17 +425,18 @@ export function FolderTree() {
   };
 
   return (
-    <div className="flex flex-col h-full glass">
-      <div className="h-[73px] p-4 border-b border-border/50 flex items-center justify-between shrink-0">
-        <h2 className="text-lg font-bold text-gradient">Collections</h2>
+    <div className="flex flex-col h-full bg-background border-r-2 border-border">
+      <div className="h-[73px] p-4 border-b-2 border-border flex items-center justify-between shrink-0 bg-background">
+        <h2 className="text-lg font-black uppercase tracking-tighter">Collections</h2>
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <Button
             size="icon"
             variant="ghost"
+            className="rounded-none hover:bg-primary hover:text-primary-foreground border-border"
             onClick={() => setIsCreating(true)}
-            title="Create folder"
-            aria-label="Create folder"
+            title="Create collection"
+            aria-label="Create collection"
           >
             <FolderPlus className="h-4 w-4" />
           </Button>
@@ -488,8 +489,8 @@ export function FolderTree() {
           )}
 
           {folders.length === 0 && !isCreating && (
-            <p className="text-sm text-muted-foreground text-center py-8 px-4">
-              No folders yet. Click the + button to create one.
+            <p className="text-sm text-muted-foreground text-center py-8 px-4 font-mono uppercase">
+              No collections found.
             </p>
           )}
 
@@ -501,14 +502,14 @@ export function FolderTree() {
           {draggedFolder && (
             <div
               className={cn(
-                "h-16 mt-2 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-sm text-muted-foreground transition-colors",
+                "h-16 mt-2 rounded-none border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-xs font-mono uppercase transition-colors",
                 isDragOver && "border-primary bg-primary/10 text-primary"
               )}
               onDragOver={handleRootDragOver}
               onDragLeave={handleRootDragLeave}
               onDrop={handleRootDrop}
             >
-              Drop here to move to root
+              MOVE_TO_ROOT
             </div>
           )}
         </div>

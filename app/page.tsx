@@ -12,10 +12,6 @@ import {
 export default function Home() {
   return (
     <main className="h-screen flex flex-col bg-background relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow" />
-
       <AlbumSearch />
 
       <div className="flex-1 min-h-0 z-10">
@@ -24,7 +20,7 @@ export default function Home() {
             <FolderTree />
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          <ResizableHandle withHandle className="w-2 bg-border hover:bg-primary transition-colors" />
 
           <ResizablePanel defaultSize={80} minSize={50} className="flex flex-col">
             <AlbumGrid />
