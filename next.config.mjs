@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/album-shelf'
+const repo = process.env.GITHUB_REPOSITORY ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}` : '/AlbumShelf'
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? repo
 
 const nextConfig = {
   output: 'export',

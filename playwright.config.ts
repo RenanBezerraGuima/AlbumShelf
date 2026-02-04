@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000/album-shelf/',
+    baseURL: 'http://localhost:3000/AlbumShelf/',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm dev',
-    url: 'http://localhost:3000/album-shelf',
+    url: 'http://localhost:3000/AlbumShelf',
     reuseExistingServer: !process.env.CI,
   },
 });

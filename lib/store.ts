@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Folder, Album } from './types';
 
 export type StreamingProvider = 'deezer' | 'apple';
@@ -411,7 +411,17 @@ export const useFolderStore = create<FolderStore>()(
       },
     }),
     {
-      name: 'album-organizer-storage',
+      name: 'album-shelf-storage',
+      storage: createJSONStorage(() => ({
+        getItem: (name) => {
+          const val = localStorage.getItem(name);
+          if (val) return val;
+          // Fallback to old key to restore "disappeared" data
+          return localStorage.getItem('album-organizer-storage');
+        },
+        setItem: (name, value) => localStorage.setItem(name, value),
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );
