@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Settings - Export/Import', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('./');
+    // Handle First Time Setup
+    await page.getByRole('button', { name: 'Deezer' }).click();
   });
 
   test('should open settings dialog', async ({ page }) => {
@@ -14,7 +16,7 @@ test.describe('Settings - Export/Import', () => {
   test('should export data', async ({ page }) => {
     // Create a collection first
     await page.getByRole('button', { name: 'Create collection' }).click();
-    await page.getByPlaceholder('Folder name').fill('Export Test');
+    await page.getByPlaceholder('Collection name').fill('Export Test');
     await page.keyboard.press('Enter');
     await expect(page.getByText('Export Test')).toBeVisible();
 
@@ -31,7 +33,7 @@ test.describe('Settings - Export/Import', () => {
   test('should import data and merge with OLD/NEW naming', async ({ page }) => {
     // 1. Create an existing collection
     await page.getByRole('button', { name: 'Create collection' }).click();
-    await page.getByPlaceholder('Folder name').fill('Collision');
+    await page.getByPlaceholder('Collection name').fill('Collision');
     await page.keyboard.press('Enter');
     await expect(page.getByText('Collision')).toBeVisible();
 

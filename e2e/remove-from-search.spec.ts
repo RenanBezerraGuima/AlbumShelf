@@ -3,14 +3,17 @@ import { test, expect } from '@playwright/test';
 test('add and then remove album from search results', async ({ page }) => {
   await page.goto('./');
 
-  // Create a folder
-  await page.click('button[title="Create folder"]');
-  await page.fill('input[placeholder="Folder name"]', 'Test Folder');
+  // Handle First Time Setup
+  await page.getByRole('button', { name: 'Deezer' }).click();
+
+  // Create a collection
+  await page.click('button[title="Create collection"]');
+  await page.fill('input[placeholder="Collection name"]', 'Test Collection');
   await page.keyboard.press('Enter');
-  await page.click('text=Test Folder');
+  await page.click('text=Test Collection');
 
   // Search for an album
-  await page.fill('input[placeholder="Search albums..."]', 'Thriller');
+  await page.fill('input[placeholder^="SEARCH ALBUMS ON"]', 'Thriller');
 
   // Wait for results
   const albumText = 'Thriller';

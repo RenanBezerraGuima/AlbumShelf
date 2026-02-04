@@ -6,7 +6,7 @@ A fast, local-first album organizer. Search for your favorite albums, organize t
 - **Search**: Discover albums on multiple streaming platforms using the built-in search.
 - **Collections**: Organize your music into a hierarchical folder structure.
 - **Local-First**: All your data stays in your browser's local storage—no account or backend required.
-- **Glassmorphism UI**: A modern, responsive interface with deep indigo and violet accents.
+- **Brutalist Industrial UI**: A monochrome (black/white/gray) aesthetic with neon lime accents, dot grid backgrounds, thick borders, sharp corners, and monospaced technical typography.
 - **Privacy Focused**: No tracking, no analytics, no external data harvesting.
 
 ## Getting Started

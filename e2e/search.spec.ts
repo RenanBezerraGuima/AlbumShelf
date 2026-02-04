@@ -3,14 +3,17 @@ import { test, expect } from '@playwright/test';
 test('search and add multiple albums', async ({ page }) => {
   await page.goto('./');
 
-  // Create a folder
-  await page.click('button[title="Create folder"]');
-  await page.fill('input[placeholder="Folder name"]', 'My Albums');
+  // Handle First Time Setup
+  await page.getByRole('button', { name: 'Deezer' }).click();
+
+  // Create a collection
+  await page.click('button[title="Create collection"]');
+  await page.fill('input[placeholder="Collection name"]', 'My Albums');
   await page.keyboard.press('Enter');
   await page.click('text=My Albums');
 
   // Search for Beatles
-  await page.fill('input[placeholder="Search albums..."]', 'Beatles');
+  await page.fill('input[placeholder^="SEARCH ALBUMS ON"]', 'Beatles');
 
   // Wait for results
   await page.waitForSelector('text=Abbey Road', { timeout: 10000 });

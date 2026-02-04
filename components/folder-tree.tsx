@@ -253,8 +253,8 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                   variant="ghost"
                   className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label="Collection actions"
                 >
-                  <span className="sr-only">Folder actions</span>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="1" />
                     <circle cx="12" cy="5" r="1" />
@@ -348,7 +348,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
               <Input
                 value={newSubfolderName}
                 onChange={(e) => setNewSubfolderName(e.target.value)}
-                placeholder="Subfolder name"
+                placeholder="Sub-collection name"
                 className="h-6 text-sm py-0 flex-1 min-w-0"
                 autoFocus
                 maxLength={100}
@@ -461,7 +461,7 @@ export function FolderTree() {
               <Input
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Folder name"
+                placeholder="Collection name"
                 className="h-7 text-sm flex-1"
                 autoFocus
                 maxLength={100}

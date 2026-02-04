@@ -52,7 +52,7 @@ export function AlbumGrid() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground font-mono uppercase tracking-tighter">
         <Music className="h-16 w-16 mb-4 opacity-10" />
-        <p className="text-lg font-bold">NO_COLLECTION_SELECTED</p>
+        <p className="text-lg font-bold">NO COLLECTION SELECTED</p>
         <p className="text-xs mt-1">Select a catalog entry to begin</p>
       </div>
     );
@@ -63,7 +63,7 @@ export function AlbumGrid() {
   if (!selectedFolder) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground font-mono uppercase">
-        <p>ERROR: COLLECTION_NOT_FOUND</p>
+        <p>ERROR: COLLECTION NOT FOUND</p>
       </div>
     );
   }
@@ -113,7 +113,7 @@ export function AlbumGrid() {
           ))}
         </div>
         <p className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">
-          {selectedFolder.albums.length} ALBUM{selectedFolder.albums.length !== 1 ? 'S' : ''} // CATALOG_DATA
+          {selectedFolder.albums.length} ALBUM{selectedFolder.albums.length !== 1 ? 'S' : ''} // CATALOG DATA
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export function AlbumGrid() {
         {selectedFolder.albums.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-muted-foreground font-mono uppercase tracking-tighter">
             <Music className="h-12 w-12 mb-3 opacity-20" />
-            <p className="text-sm font-bold">FOLDER_EMPTY</p>
+            <p className="text-sm font-bold">COLLECTION EMPTY</p>
             <p className="text-[10px] mt-1">Add albums via search interface</p>
           </div>
         ) : (
