@@ -98,7 +98,7 @@ export function AlbumSearch() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [streamingProvider]);
 
   const debouncedSearch = useDebounce(searchAlbums, 150);
 
@@ -221,10 +221,15 @@ export function AlbumSearch() {
                         <p className="text-sm font-bold truncate uppercase tracking-tighter">
                           {album.name}
                         </p>
-                        <p className="text-xs opacity-80 truncate font-mono uppercase">
-                          {album.artist}
-                          {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs opacity-80 truncate font-mono uppercase">
+                            {album.artist}
+                            {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
+                          </p>
+                          <span className="text-[10px] px-1 bg-muted border border-border font-mono font-bold shrink-0">
+                            {album.id.split('-')[0].toUpperCase()}
+                          </span>
+                        </div>
                       </div>
                       {isAdded && (
                         <Check className="h-4 w-4 shrink-0" />

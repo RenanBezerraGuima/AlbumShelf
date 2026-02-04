@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,14 +14,32 @@ import { useFolderStore, StreamingProvider } from '@/lib/store';
 import { Music, Radio } from 'lucide-react';
 
 export function FirstTimeSetup() {
-  const { hasSetPreference, setStreamingProvider, setHasSetPreference } = useFolderStore();
+  const { folders, hasSetPreference, setStreamingProvider, setHasSetPreference } = useFolderStore();
   const [open, setOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    if (!hasSetPreference) {
-      setOpen(true);
+    setIsHydrated(true);
+  }, []);
+
+  const hasAlbums = useMemo(() => {
+    const checkFolders = (folderList: typeof folders): boolean => {
+      return folderList.some(f => f.albums.length > 0 || checkFolders(f.subfolders));
+    };
+    return checkFolders(folders);
+  }, [folders]);
+
+  useEffect(() => {
+    if (isHydrated) {
+      if (hasAlbums && !hasSetPreference) {
+        // If they have albums but haven't explicitly set preference (legacy data),
+        // we assume they've already used the app and don't show the popup.
+        setHasSetPreference(true);
+      } else if (!hasSetPreference) {
+        setOpen(true);
+      }
     }
-  }, [hasSetPreference]);
+  }, [isHydrated, hasSetPreference, hasAlbums, setHasSetPreference]);
 
   const handleSelect = (provider: StreamingProvider) => {
     setStreamingProvider(provider);
