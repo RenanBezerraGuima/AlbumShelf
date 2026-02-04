@@ -1,49 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Music } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFolderStore } from '@/lib/store';
+import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
 import { AlbumCard } from './album-card';
-import type { Folder, Album } from '@/lib/types';
+import type { Album } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-function findFolder(folders: Folder[], id: string): Folder | null {
-  for (const folder of folders) {
-    if (folder.id === id) return folder;
-    const found = findFolder(folder.subfolders, id);
-    if (found) return found;
-  }
-  return null;
-}
-
-function getBreadcrumb(folders: Folder[], targetId: string): string[] {
-  const path: string[] = [];
-  
-  function find(folderList: Folder[], target: string): boolean {
-    for (const folder of folderList) {
-      if (folder.id === target) {
-        path.push(folder.name);
-        return true;
-      }
-      if (find(folder.subfolders, target)) {
-        path.unshift(folder.name);
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  find(folders, targetId);
-  return path;
-}
-
 export function AlbumGrid() {
-  const folders = useFolderStore(state => state.folders);
+  // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
+  const selectedFolder = useFolderStore(useCallback(state =>
+    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId) : null
+  , []));
+
+  const breadcrumb = useFolderStore(
+    useShallow(state => state.selectedFolderId ? getBreadcrumb(state.folders, state.selectedFolderId) : [])
+  );
+
   const reorderAlbum = useFolderStore(state => state.reorderAlbum);
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
-  const draggedAlbum = useFolderStore(state => state.draggedAlbum);
   const setDraggedAlbum = useFolderStore(state => state.setDraggedAlbum);
 
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -58,8 +36,6 @@ export function AlbumGrid() {
     );
   }
 
-  const selectedFolder = findFolder(folders, selectedFolderId);
-
   if (!selectedFolder) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground font-mono uppercase">
@@ -67,8 +43,6 @@ export function AlbumGrid() {
       </div>
     );
   }
-
-  const breadcrumb = getBreadcrumb(folders, selectedFolderId);
 
   const handleDragStart = (e: React.DragEvent, album: Album, index: number) => {
     setDraggedAlbum(album, selectedFolderId, index);

@@ -1,0 +1,3 @@
+## 2025-05-14 - [Zustand Over-subscription and Structural Sharing]
+**Learning:** Subscribing to the entire `folders` tree in components like `AlbumGrid` or `AlbumSearch` causes them to re-render whenever ANY folder is modified. However, because the store uses structural sharing, only the modified branch gets a new reference. Using granular selectors that find the specific selected folder allows Zustand to skip re-renders if that folder's reference (and its path from root) hasn't changed.
+**Action:** Always use granular selectors and `useShallow` for store subscriptions. Define selectors that return the specific leaf data needed by the component.

@@ -4,8 +4,8 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Search, Loader2, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useFolderStore } from '@/lib/store';
-import type { Album, Folder } from '@/lib/types';
+import { useFolderStore, findFolder } from '@/lib/store';
+import type { Album } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
 import { searchAlbumsDeezer, searchAlbumsApple } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
@@ -20,33 +20,29 @@ export function AlbumSearch() {
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = "album-search-results";
   
-  const { selectedFolderId, addAlbumToFolder, removeAlbumFromFolder, folders, streamingProvider } = useFolderStore();
+  const selectedFolderId = useFolderStore(state => state.selectedFolderId);
+  const addAlbumToFolder = useFolderStore(state => state.addAlbumToFolder);
+  const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
+  const streamingProvider = useFolderStore(state => state.streamingProvider);
+
+  const selectedFolder = useFolderStore(useCallback(state =>
+    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId) : null
+  , []));
   
   // Get albums in selected folder
+  // Memoized based on the specific selectedFolder object reference, leveraging structural sharing
   const albumsInSelectedFolder = useMemo(() => {
-    if (!selectedFolderId) return new Map<string, string[]>();
-    
-    const findFolder = (folderList: Folder[]): Folder | null => {
-      for (const folder of folderList) {
-        if (folder.id === selectedFolderId) return folder;
-        const found = findFolder(folder.subfolders);
-        if (found) return found;
-      }
-      return null;
-    };
-    
-    const folder = findFolder(folders);
-    if (!folder) return new Map<string, string[]>();
+    if (!selectedFolder) return new Map<string, string[]>();
     
     const albumMap = new Map<string, string[]>();
-    folder.albums.forEach(album => {
+    selectedFolder.albums.forEach(album => {
       const key = `${album.name}-${album.artist}`.toLowerCase();
       const existing = albumMap.get(key) || [];
       albumMap.set(key, [...existing, album.id]);
     });
 
     return albumMap;
-  }, [selectedFolderId, folders]);
+  }, [selectedFolder]);
 
   // Reset active index when results change
   useEffect(() => {

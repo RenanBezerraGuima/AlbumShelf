@@ -40,13 +40,34 @@ interface FolderStore {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-const findFolder = (folders: Folder[], id: string): Folder | null => {
+export const findFolder = (folders: Folder[], id: string): Folder | null => {
   for (const folder of folders) {
     if (folder.id === id) return folder;
     const found = findFolder(folder.subfolders, id);
     if (found) return found;
   }
   return null;
+};
+
+export const getBreadcrumb = (folders: Folder[], targetId: string): string[] => {
+  const path: string[] = [];
+
+  function find(folderList: Folder[], target: string): boolean {
+    for (const folder of folderList) {
+      if (folder.id === target) {
+        path.push(folder.name);
+        return true;
+      }
+      if (find(folder.subfolders, target)) {
+        path.unshift(folder.name);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  find(folders, targetId);
+  return path;
 };
 
 const updateFolderInTree = (
