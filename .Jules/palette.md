@@ -1,3 +1,7 @@
 ## 2025-05-15 - [Accessible Search Combobox Pattern]
 **Learning:** Implementing keyboard navigation in a search dropdown requires more than just listening for arrow keys; it requires a full ARIA combobox pattern (aria-expanded, aria-controls, aria-activedescendant) to be truly accessible to screen readers.
 **Action:** Always use the standard ARIA combobox attributes when building search-with-results components to ensure screen readers announce selections correctly.
+
+## 2025-05-16 - [Action Feedback and Input Management]
+**Learning:** In highly interactive components like search-and-add, user confidence is significantly boosted by two simple touches: a one-click reset for the search input (Clear button) and immediate, high-contrast feedback for destructive or additive actions (Toast notifications).
+**Action:** Always include a clear button for search inputs and use success/error toasts to confirm background state changes that might not be immediately obvious in the primary UI.

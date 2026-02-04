@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Search, Loader2, Check } from 'lucide-react';
+import { Search, Loader2, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore, findFolder } from '@/lib/store';
@@ -110,6 +111,12 @@ export function AlbumSearch() {
     }
   };
 
+  const clearSearch = () => {
+    setQuery('');
+    setResults([]);
+    setIsOpen(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       setIsOpen(true);
@@ -144,8 +151,10 @@ export function AlbumSearch() {
     if (existingIds && existingIds.length > 0) {
       // Remove all matching albums
       existingIds.forEach(id => removeAlbumFromFolder(selectedFolderId, id));
+      toast.success(`REMOVED: ${album.name.toUpperCase()}`);
     } else {
       addAlbumToFolder(selectedFolderId, album);
+      toast.success(`ADDED: ${album.name.toUpperCase()}`);
     }
   };
 
@@ -160,7 +169,7 @@ export function AlbumSearch() {
             onChange={handleSearchChange}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
-            className="pl-12 h-12 w-full rounded-none bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all text-lg font-mono uppercase tracking-tighter"
+            className="pl-12 pr-10 h-12 w-full rounded-none bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all text-lg font-mono uppercase tracking-tighter"
             maxLength={200}
             aria-label="Search albums"
             aria-expanded={isOpen}
@@ -169,9 +178,19 @@ export function AlbumSearch() {
             aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
             role="combobox"
           />
-          {isLoading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-          )}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : query ? (
+              <button
+                onClick={clearSearch}
+                className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {!selectedFolderId && query && (
