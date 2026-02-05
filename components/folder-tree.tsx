@@ -49,45 +49,32 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
   const [dropPosition, setDropPosition] = useState<'before' | 'inside' | 'after' | null>(null);
 
   const isSelected = useFolderStore(state => state.selectedFolderId === folder.id);
-  const setSelectedFolder = useFolderStore(state => state.setSelectedFolder);
-  const toggleFolderExpanded = useFolderStore(state => state.toggleFolderExpanded);
-  const renameFolder = useFolderStore(state => state.renameFolder);
-  const deleteFolder = useFolderStore(state => state.deleteFolder);
-  const createFolder = useFolderStore(state => state.createFolder);
-  const draggedAlbum = useFolderStore(state => state.draggedAlbum);
-  const draggedFolderId = useFolderStore(state => state.draggedFolderId);
-  const draggedFolder = useFolderStore(state => state.draggedFolder);
-  const moveAlbum = useFolderStore(state => state.moveAlbum);
-  const moveFolder = useFolderStore(state => state.moveFolder);
-  const setDraggedAlbum = useFolderStore(state => state.setDraggedAlbum);
-  const setDraggedFolderId = useFolderStore(state => state.setDraggedFolderId);
-  const setDraggedFolder = useFolderStore(state => state.setDraggedFolder);
 
   const hasSubfolders = folder.subfolders.length > 0;
 
   const handleClick = () => {
-    setSelectedFolder(folder.id);
+    useFolderStore.getState().setSelectedFolder(folder.id);
   };
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFolderExpanded(folder.id);
+    useFolderStore.getState().toggleFolderExpanded(folder.id);
   };
 
   const handleRename = () => {
     if (editName.trim()) {
-      renameFolder(folder.id, editName.trim());
+      useFolderStore.getState().renameFolder(folder.id, editName.trim());
     }
     setIsEditing(false);
   };
 
   const handleDelete = () => {
-    deleteFolder(folder.id);
+    useFolderStore.getState().deleteFolder(folder.id);
   };
 
   const handleCreateSubfolder = () => {
     if (newSubfolderName.trim()) {
-      createFolder(newSubfolderName.trim(), folder.id);
+      useFolderStore.getState().createFolder(newSubfolderName.trim(), folder.id);
       setNewSubfolderName('');
       setIsCreatingSubfolder(false);
     }
@@ -95,17 +82,19 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
-    setDraggedFolder(folder, parentId);
+    useFolderStore.getState().setDraggedFolder(folder, parentId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragEnd = () => {
-    setDraggedFolder(null, null);
+    useFolderStore.getState().setDraggedFolder(null, null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const { draggedFolder, draggedAlbum } = useFolderStore.getState();
 
     // If dragging a folder
     if (draggedFolder) {
@@ -140,6 +129,16 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
     e.stopPropagation();
     setIsDragOver(false);
     setDropPosition(null);
+
+    const {
+      draggedAlbum,
+      draggedFolderId,
+      moveAlbum,
+      setDraggedAlbum,
+      draggedFolder,
+      moveFolder,
+      setDraggedFolder
+    } = useFolderStore.getState();
 
     // Handle album drop
     if (draggedAlbum && draggedFolderId) {

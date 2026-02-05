@@ -20,9 +20,7 @@ export function AlbumGrid() {
     useShallow(state => state.selectedFolderId ? getBreadcrumb(state.folders, state.selectedFolderId) : [])
   );
 
-  const reorderAlbum = useFolderStore(state => state.reorderAlbum);
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
-  const setDraggedAlbum = useFolderStore(state => state.setDraggedAlbum);
 
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -45,7 +43,7 @@ export function AlbumGrid() {
   }
 
   const handleDragStart = (e: React.DragEvent, album: Album, index: number) => {
-    setDraggedAlbum(album, selectedFolderId, index);
+    useFolderStore.getState().setDraggedAlbum(album, selectedFolderId, index);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -61,6 +59,7 @@ export function AlbumGrid() {
   };
 
   const handleDrop = (index: number) => {
+    const { reorderAlbum, setDraggedAlbum } = useFolderStore.getState();
     if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
       reorderAlbum(selectedFolderId, draggedAlbumIndex, index);
     }
@@ -69,7 +68,7 @@ export function AlbumGrid() {
   };
 
   const handleDragEnd = () => {
-    setDraggedAlbum(null, null, null);
+    useFolderStore.getState().setDraggedAlbum(null, null, null);
     setDropIndex(null);
   };
 

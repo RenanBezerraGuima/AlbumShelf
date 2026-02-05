@@ -14,17 +14,15 @@ interface AlbumCardProps {
 }
 
 export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
-  const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
-  const streamingProvider = useFolderStore(state => state.streamingProvider);
-
   const handleRemove = () => {
-    removeAlbumFromFolder(folderId, album.id);
+    useFolderStore.getState().removeAlbumFromFolder(folderId, album.id);
   };
 
   const handlePlay = () => {
     if (album.externalUrl) {
       window.open(album.externalUrl, '_blank');
     } else {
+      const { streamingProvider } = useFolderStore.getState();
       const searchQuery = `${album.name} ${album.artist}`;
       const url = streamingProvider === 'apple'
         ? `https://music.apple.com/search?term=${encodeURIComponent(searchQuery)}`
