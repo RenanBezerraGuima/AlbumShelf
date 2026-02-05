@@ -34,6 +34,18 @@ A fast, local-first album organizer. Search for your favorite albums, organize t
 
 4. Open [http://localhost:3000/album-shelf/](http://localhost:3000/album-shelf/) in your browser.
 
+### Spotify Integration
+To enable Spotify search, you need to provide a Spotify Client ID:
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Create a new App and get your **Client ID**.
+3. Add `http://localhost:3000/AlbumShelf/` (and your production URL, e.g., `https://<user>.github.io/AlbumShelf/`) to the **Redirect URIs** in your app settings.
+4. For local development, create a `.env.local` file in the root directory and add:
+   ```env
+   NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id_here
+   ```
+5. For GitHub Pages deployment, add a Repository Variable named `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` with your client ID.
+   *(Note: The application uses the PKCE flow, so you do not need to enable "Implicit Grant" in the Spotify Dashboard.)*
+
 ## Deployment
 This project is designed to be hosted as a static site on GitHub Pages.
 

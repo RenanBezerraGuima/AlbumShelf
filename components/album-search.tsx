@@ -10,7 +10,7 @@ import type { Album } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
 import { searchAlbumsDeezer, searchAlbumsApple, searchAlbumsSpotify } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
-import { getSpotifyAuthUrl } from '@/lib/spotify-auth';
+import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
 
 export function AlbumSearch() {
   const [query, setQuery] = useState('');
@@ -116,7 +116,7 @@ export function AlbumSearch() {
     } finally {
       setIsLoading(false);
     }
-  }, [streamingProvider]);
+  }, [streamingProvider, isSpotifyTokenExpired, spotifyToken]);
 
   const debouncedSearch = useDebounce(searchAlbums, 150);
 
@@ -228,12 +228,12 @@ export function AlbumSearch() {
                   <div className="py-6 px-4 text-center space-y-4">
                     <p className="text-sm text-destructive font-mono uppercase">{error}</p>
                     {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
-                      <a
-                        href={getSpotifyAuthUrl()}
-                        className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all"
+                      <button
+                        onClick={() => redirectToSpotifyAuth()}
+                        className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all cursor-pointer"
                       >
                         Connect Spotify
-                      </a>
+                      </button>
                     )}
                   </div>
                 )}

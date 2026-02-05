@@ -56,6 +56,8 @@ jobs:
         run: pnpm install
       - name: Build with Next.js
         run: pnpm build
+        env:
+          NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.NEXT_PUBLIC_SPOTIFY_CLIENT_ID }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

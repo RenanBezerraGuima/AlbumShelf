@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Download, Upload, Settings, Music, Radio, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { getSpotifyAuthUrl } from '@/lib/spotify-auth';
+import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
 import {
   Dialog,
   DialogContent,
@@ -140,7 +140,7 @@ export function SettingsDialog() {
                 </Button>
                 {streamingProvider === 'spotify' && !isSpotifyConnected && (
                   <p className="text-[10px] font-mono mt-1 uppercase text-destructive">
-                    Not connected. <a href={getSpotifyAuthUrl()} className="underline hover:text-primary">Connect now</a>
+                    Not connected. <button onClick={() => redirectToSpotifyAuth()} className="underline hover:text-primary cursor-pointer">Connect now</button>
                   </p>
                 )}
               </div>
