@@ -288,7 +288,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!folder.isExpanded) {
-                      toggleFolderExpanded(folder.id);
+                      useFolderStore.getState().toggleFolderExpanded(folder.id);
                     }
                     setIsCreatingSubfolder(true);
                   }}
@@ -327,7 +327,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
             onClick={(e) => {
               e.stopPropagation();
               if (!folder.isExpanded) {
-                toggleFolderExpanded(folder.id);
+                useFolderStore.getState().toggleFolderExpanded(folder.id);
               }
               setIsCreatingSubfolder(true);
             }}
