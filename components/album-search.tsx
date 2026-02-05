@@ -8,8 +8,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore, findFolder } from '@/lib/store';
 import type { Album } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
-import { searchAlbumsDeezer, searchAlbumsApple } from '@/lib/search-service';
+import { searchAlbumsDeezer, searchAlbumsApple, searchAlbumsSpotify } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
+import { getSpotifyAuthUrl } from '@/lib/spotify-auth';
 
 export function AlbumSearch() {
   const [query, setQuery] = useState('');
@@ -25,6 +26,15 @@ export function AlbumSearch() {
   const addAlbumToFolder = useFolderStore(state => state.addAlbumToFolder);
   const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
   const streamingProvider = useFolderStore(state => state.streamingProvider);
+  const spotifyToken = useFolderStore(state => state.spotifyToken);
+  const spotifyTokenExpiry = useFolderStore(state => state.spotifyTokenExpiry);
+  const spotifyTokenTimestamp = useFolderStore(state => state.spotifyTokenTimestamp);
+
+  const isSpotifyTokenExpired = useMemo(() => {
+    if (!spotifyToken || !spotifyTokenExpiry || !spotifyTokenTimestamp) return true;
+    const now = Date.now();
+    return now > spotifyTokenTimestamp + (spotifyTokenExpiry * 1000);
+  }, [spotifyToken, spotifyTokenExpiry, spotifyTokenTimestamp]);
 
   const selectedFolder = useFolderStore(useCallback(state =>
     state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId) : null
@@ -83,9 +93,20 @@ export function AlbumSearch() {
     setError(null);
 
     try {
-      const data = streamingProvider === 'apple'
-        ? await searchAlbumsApple(searchQuery)
-        : await searchAlbumsDeezer(searchQuery);
+      let data: Album[] = [];
+      if (streamingProvider === 'apple') {
+        data = await searchAlbumsApple(searchQuery);
+      } else if (streamingProvider === 'deezer') {
+        data = await searchAlbumsDeezer(searchQuery);
+      } else if (streamingProvider === 'spotify') {
+        if (isSpotifyTokenExpired) {
+          setError('Spotify session expired or not connected.');
+          setResults([]);
+          setIsOpen(true);
+          return;
+        }
+        data = await searchAlbumsSpotify(searchQuery, spotifyToken);
+      }
       setResults(data);
       setIsOpen(true);
     } catch (err) {
@@ -204,7 +225,17 @@ export function AlbumSearch() {
             <ScrollArea className="h-[400px]">
               <div className="p-2 space-y-1" role="listbox" id={listboxId}>
                 {error && (
-                  <p className="text-sm text-destructive text-center py-2 font-mono uppercase">{error}</p>
+                  <div className="py-6 px-4 text-center space-y-4">
+                    <p className="text-sm text-destructive font-mono uppercase">{error}</p>
+                    {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
+                      <a
+                        href={getSpotifyAuthUrl()}
+                        className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all"
+                      >
+                        Connect Spotify
+                      </a>
+                    )}
+                  </div>
                 )}
 
                 {results.map((album, index) => {

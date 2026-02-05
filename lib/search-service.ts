@@ -52,6 +52,45 @@ export async function searchAlbumsDeezer(query: string): Promise<Album[]> {
   }
 }
 
+export async function searchAlbumsSpotify(query: string, token: string | null): Promise<Album[]> {
+  if (!query.trim() || !token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=album&limit=20`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Spotify session expired. Please reconnect.');
+      }
+      throw new Error('Spotify search failed');
+    }
+
+    const data = await response.json();
+
+    return data.albums.items.map((item: any) => ({
+      id: `spotify-${item.id}`,
+      spotifyId: item.id,
+      name: item.name,
+      artist: item.artists.map((a: any) => a.name).join(', '),
+      imageUrl: item.images[0]?.url || '/placeholder.svg',
+      releaseDate: item.release_date,
+      totalTracks: item.total_tracks,
+      externalUrl: item.external_urls.spotify,
+      spotifyUrl: item.external_urls.spotify,
+    }));
+  } catch (error) {
+    console.error('Spotify search error:', error);
+    throw error;
+  }
+}
+
 export async function searchAlbumsApple(query: string): Promise<Album[]> {
   if (!query.trim()) return [];
 

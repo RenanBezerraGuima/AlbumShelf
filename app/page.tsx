@@ -4,6 +4,7 @@ import { FolderTree } from '@/components/folder-tree';
 import { AlbumGrid } from '@/components/album-grid';
 import { AlbumSearch } from '@/components/album-search';
 import { FirstTimeSetup } from '@/components/first-time-setup';
+import { SpotifyCallbackHandler } from '@/components/spotify-callback-handler';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -14,6 +15,7 @@ export default function Home() {
   return (
     <main className="h-screen flex flex-col bg-background relative overflow-hidden">
       <FirstTimeSetup />
+      <SpotifyCallbackHandler />
       <AlbumSearch />
 
       <div className="flex-1 min-h-0 z-10">

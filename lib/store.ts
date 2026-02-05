@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Folder, Album } from './types';
 import { sanitizeUrl, sanitizeImageUrl } from './security';
 
-export type StreamingProvider = 'deezer' | 'apple';
+export type StreamingProvider = 'deezer' | 'apple' | 'spotify';
 
 interface FolderStore {
   folders: Folder[];
@@ -15,6 +15,9 @@ interface FolderStore {
   draggedFolderParentId: string | null;
   streamingProvider: StreamingProvider;
   hasSetPreference: boolean;
+  spotifyToken: string | null;
+  spotifyTokenExpiry: number | null;
+  spotifyTokenTimestamp: number | null;
   
   // Folder actions
   createFolder: (name: string, parentId: string | null) => void;
@@ -37,6 +40,7 @@ interface FolderStore {
   importFolders: (folders: Folder[]) => void;
   setStreamingProvider: (provider: StreamingProvider) => void;
   setHasSetPreference: (hasSet: boolean) => void;
+  setSpotifyToken: (token: string | null, expiresIn: number | null, timestamp: number | null) => void;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -220,6 +224,9 @@ export const useFolderStore = create<FolderStore>()(
       draggedFolderParentId: null,
       streamingProvider: 'deezer',
       hasSetPreference: false,
+      spotifyToken: null,
+      spotifyTokenExpiry: null,
+      spotifyTokenTimestamp: null,
 
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
@@ -453,6 +460,14 @@ export const useFolderStore = create<FolderStore>()(
 
       setHasSetPreference: (hasSet) => {
         set({ hasSetPreference: hasSet });
+      },
+
+      setSpotifyToken: (token, expiresIn, timestamp) => {
+        set({
+          spotifyToken: token,
+          spotifyTokenExpiry: expiresIn,
+          spotifyTokenTimestamp: timestamp,
+        });
       },
     }),
     {
