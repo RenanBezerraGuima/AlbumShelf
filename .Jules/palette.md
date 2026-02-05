@@ -5,3 +5,7 @@
 ## 2025-05-16 - [Action Feedback and Input Management]
 **Learning:** In highly interactive components like search-and-add, user confidence is significantly boosted by two simple touches: a one-click reset for the search input (Clear button) and immediate, high-contrast feedback for destructive or additive actions (Toast notifications).
 **Action:** Always include a clear button for search inputs and use success/error toasts to confirm background state changes that might not be immediately obvious in the primary UI.
+
+## 2026-02-05 - [Accessibility Standards for Icon-Only Buttons]
+**Learning:** Icon-only buttons (like expansion toggles or inline action buttons) are completely inaccessible to screen readers without ARIA labels, and confusing for sighted users without tooltips. Combining `aria-label` with the `title` attribute provides a baseline of accessibility and usability.
+**Action:** All icon-only interactive elements must have a descriptive `aria-label` and a matching `title` attribute for tooltips.
