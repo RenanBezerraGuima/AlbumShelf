@@ -13,7 +13,10 @@ export const getSpotifyAuthUrl = () => {
   // Use the same logic as in next.config.mjs or a default
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AlbumShelf';
 
-  const redirectUri = `${origin}${basePath}`;
+  let redirectUri = `${origin}${basePath}`;
+  if (!redirectUri.endsWith('/')) {
+    redirectUri += '/';
+  }
 
   const params = new URLSearchParams({
     client_id: clientId,

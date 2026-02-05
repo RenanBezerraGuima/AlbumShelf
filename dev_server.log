@@ -2,11 +2,14 @@
 > album-shelf@0.1.0 dev /app
 > next dev
 
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
 ▲ Next.js 16.1.5 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://192.168.0.2:3000
+- Local:         http://localhost:3001
+- Network:       http://192.168.0.2:3001
 
 ✓ Starting...
-✓ Ready in 661ms
-○ Compiling / ...
- GET / 200 in 7.5s (compile: 6.2s, render: 1308ms)
+⨯ Unab GET / 200 in 1807ms (compile: 668ms, render: 1139ms)
+instance of next dev running?
+  Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+[?25h
+ ELIFECYCLE  Command failed with exit code 1.
