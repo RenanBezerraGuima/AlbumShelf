@@ -190,7 +190,8 @@ export function AlbumSearch() {
             onChange={handleSearchChange}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
-            className="pl-12 pr-10 h-12 w-full rounded-none bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all text-lg font-mono uppercase tracking-tighter"
+            className="pl-12 pr-10 h-12 w-full bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all text-lg uppercase tracking-tighter"
+            style={{ borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)' }}
             maxLength={200}
             aria-label="Search albums"
             aria-expanded={isOpen}
@@ -221,12 +222,12 @@ export function AlbumSearch() {
         )}
 
         {isOpen && (results.length > 0 || error) && (
-          <div className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border rounded-none brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" style={{ borderRadius: 'var(--radius)' }}>
             <ScrollArea className="h-[400px]">
               <div className="p-2 space-y-1" role="listbox" id={listboxId}>
                 {error && (
                   <div className="py-6 px-4 text-center space-y-4">
-                    <p className="text-sm text-destructive font-mono uppercase">{error}</p>
+                    <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>{error}</p>
                     {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
                       <button
                         onClick={() => redirectToSpotifyAuth()}
@@ -257,18 +258,20 @@ export function AlbumSearch() {
                         isAdded && "bg-accent/20 border-accent",
                         isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
                       )}
+                      style={{ borderRadius: 'var(--radius)' }}
                     >
                       <img
                         src={album.imageUrl || "/placeholder.svg"}
                         alt={album.name}
-                        className="w-12 h-12 rounded-none border border-border object-cover shrink-0 bg-muted"
+                        className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
+                        style={{ borderRadius: 'calc(var(--radius) / 2)' }}
                       />
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm font-bold truncate uppercase tracking-tighter">
+                        <p className="text-sm font-bold truncate uppercase tracking-tighter" style={{ fontFamily: 'var(--font-display)' }}>
                           {album.name}
                         </p>
                         <div className="flex items-center gap-2">
-                          <p className="text-xs opacity-80 truncate font-mono uppercase">
+                          <p className="text-xs opacity-80 truncate uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
                             {album.artist}
                             {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
                           </p>

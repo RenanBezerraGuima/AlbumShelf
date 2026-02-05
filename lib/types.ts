@@ -1,3 +1,5 @@
+export type Theme = 'industrial' | 'editorial' | 'glitch' | 'organic' | 'refined';
+
 export interface Album {
   id: string;
   spotifyId?: string;

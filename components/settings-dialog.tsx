@@ -15,12 +15,15 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useFolderStore } from '@/lib/store';
+import { Theme } from '@/lib/types';
 
 export function SettingsDialog() {
   const folders = useFolderStore((state) => state.folders);
   const importFolders = useFolderStore((state) => state.importFolders);
   const streamingProvider = useFolderStore((state) => state.streamingProvider);
   const setStreamingProvider = useFolderStore((state) => state.setStreamingProvider);
+  const theme = useFolderStore((state) => state.theme);
+  const setTheme = useFolderStore((state) => state.setTheme);
   const spotifyToken = useFolderStore((state) => state.spotifyToken);
   const spotifyTokenExpiry = useFolderStore((state) => state.spotifyTokenExpiry);
   const spotifyTokenTimestamp = useFolderStore((state) => state.spotifyTokenTimestamp);
@@ -101,6 +104,28 @@ export function SettingsDialog() {
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
+          <div className="space-y-4">
+            <h4 className="text-sm font-black uppercase tracking-tight border-b-2 border-border pb-1">
+              Design Iteration
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {(['industrial', 'editorial', 'glitch', 'organic', 'refined'] as Theme[]).map((t) => (
+                <Button
+                  key={t}
+                  variant={theme === t ? 'default' : 'outline'}
+                  className="justify-start gap-2 rounded-none h-12 relative overflow-hidden group"
+                  onClick={() => setTheme(t)}
+                >
+                  <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest">{t}</span>
+                  {theme === t && (
+                    <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                  )}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-4">
             <h4 className="text-sm font-black uppercase tracking-tight border-b-2 border-border pb-1">
               Streaming Provider

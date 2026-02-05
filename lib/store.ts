@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Folder, Album } from './types';
+import type { Folder, Album, Theme } from './types';
 import { sanitizeUrl, sanitizeImageUrl } from './security';
 
 export type StreamingProvider = 'deezer' | 'apple' | 'spotify';
@@ -18,6 +18,7 @@ interface FolderStore {
   spotifyToken: string | null;
   spotifyTokenExpiry: number | null;
   spotifyTokenTimestamp: number | null;
+  theme: Theme;
   
   // Folder actions
   createFolder: (name: string, parentId: string | null) => void;
@@ -41,6 +42,7 @@ interface FolderStore {
   setStreamingProvider: (provider: StreamingProvider) => void;
   setHasSetPreference: (hasSet: boolean) => void;
   setSpotifyToken: (token: string | null, expiresIn: number | null, timestamp: number | null) => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -227,6 +229,7 @@ export const useFolderStore = create<FolderStore>()(
       spotifyToken: null,
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
+      theme: 'industrial',
 
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
@@ -469,6 +472,8 @@ export const useFolderStore = create<FolderStore>()(
           spotifyTokenTimestamp: timestamp,
         });
       },
+
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'album-shelf-storage',

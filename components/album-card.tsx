@@ -34,11 +34,12 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
   return (
     <div
       className={cn(
-        'group relative bg-card rounded-none overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'
+        'group relative bg-card overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'
       )}
+      style={{ borderRadius: 'var(--radius)' }}
     >
       <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10">
-        <div className="bg-background border border-border p-1">
+        <div className="bg-background border border-border p-1" style={{ borderRadius: 'calc(var(--radius) / 2)' }}>
           <GripVertical className="h-4 w-4 text-foreground" />
         </div>
       </div>
@@ -47,7 +48,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <Button
           size="icon"
           variant="destructive"
-          className="h-7 w-7 rounded-none border-2 border-border brutalist-shadow-sm"
+          className="h-7 w-7 border-2 border-border brutalist-shadow-sm"
+          style={{ borderRadius: 'var(--radius)' }}
           onClick={handleRemove}
           aria-label="Remove album"
         >
@@ -73,14 +75,14 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         </button>
       </div>
 
-      <div className="p-3 bg-card font-mono uppercase tracking-tighter">
-        <h3 className="font-black text-sm text-foreground truncate" title={album.name}>
+      <div className="p-3 bg-card uppercase tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
+        <h3 className="font-black text-sm text-foreground truncate" title={album.name} style={{ fontFamily: 'var(--font-display)' }}>
           {album.name}
         </h3>
         <p className="text-[10px] text-muted-foreground truncate mt-0.5" title={album.artist}>
           {album.artist}
         </p>
-        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
           <span className="bg-foreground text-background px-1 font-bold">
             {album.id.split('-')[0].toUpperCase()}
           </span>
