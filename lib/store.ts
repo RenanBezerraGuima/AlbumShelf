@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Folder, Album } from './types';
+import { sanitizeUrl, sanitizeImageUrl } from './security';
 
 export type StreamingProvider = 'deezer' | 'apple';
 
@@ -299,9 +300,17 @@ export const useFolderStore = create<FolderStore>()(
             if (isDuplicate) {
               return folder;
             }
+
+            // Sanitize URLs before adding to store
+            const sanitizedAlbum = {
+              ...album,
+              imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
+              externalUrl: sanitizeUrl(album.externalUrl),
+            };
+
             return {
               ...folder,
-              albums: [...folder.albums, album],
+              albums: [...folder.albums, sanitizedAlbum],
             };
           }),
         }));
@@ -389,11 +398,11 @@ export const useFolderStore = create<FolderStore>()(
               id: String(album.id || generateId()),
               name: String(album.name || '').slice(0, 200),
               artist: String(album.artist || '').slice(0, 200),
-              imageUrl: String(album.imageUrl || ''),
+              imageUrl: sanitizeImageUrl(String(album.imageUrl || '')) || '/placeholder.svg',
               releaseDate: album.releaseDate ? String(album.releaseDate) : undefined,
               totalTracks: Number(album.totalTracks) || 0,
               spotifyId: album.spotifyId ? String(album.spotifyId) : undefined,
-              externalUrl: album.externalUrl ? String(album.externalUrl) : undefined,
+              externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
             }));
 
             return {

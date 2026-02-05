@@ -3,7 +3,9 @@ import type { Album } from './types';
 // Helper for JSONP requests to Deezer API
 function jsonp<T>(url: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    const callbackName = `jsonp_callback_${Math.round(100000 * Math.random())}`;
+    const randomArray = new Uint32Array(1);
+    crypto.getRandomValues(randomArray);
+    const callbackName = `jsonp_callback_${randomArray[0]}`;
     const script = document.createElement('script');
 
     // @ts-ignore
