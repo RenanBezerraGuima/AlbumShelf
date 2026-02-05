@@ -201,6 +201,8 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
             'p-0.5 rounded-none hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0',
             !hasSubfolders && 'invisible'
           )}
+          aria-label={folder.isExpanded ? "Collapse collection" : "Expand collection"}
+          title={folder.isExpanded ? "Collapse" : "Expand"}
         >
           {folder.isExpanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -223,12 +225,20 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
               className="h-6 text-sm py-0 flex-1 min-w-0 rounded-none border-border"
               autoFocus
               maxLength={100}
+              aria-label="Rename collection"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleRename();
                 if (e.key === 'Escape') setIsEditing(false);
               }}
             />
-            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={handleRename}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 shrink-0"
+              onClick={handleRename}
+              aria-label="Confirm rename"
+              title="Confirm rename"
+            >
               <Check className="h-3 w-3" />
             </Button>
             <Button
@@ -236,6 +246,8 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
               variant="ghost"
               className="h-6 w-6 shrink-0"
               onClick={() => setIsEditing(false)}
+              aria-label="Cancel rename"
+              title="Cancel rename"
             >
               <X className="h-3 w-3" />
             </Button>
@@ -352,6 +364,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                 className="h-6 text-sm py-0 flex-1 min-w-0"
                 autoFocus
                 maxLength={100}
+                aria-label="Sub-collection name"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateSubfolder();
                   if (e.key === 'Escape') {
@@ -360,7 +373,14 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                   }
                 }}
               />
-              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={handleCreateSubfolder}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0"
+                onClick={handleCreateSubfolder}
+                aria-label="Create sub-collection"
+                title="Create sub-collection"
+              >
                 <Check className="h-3 w-3" />
               </Button>
               <Button
@@ -371,6 +391,8 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                   setIsCreatingSubfolder(false);
                   setNewSubfolderName('');
                 }}
+                aria-label="Cancel sub-collection creation"
+                title="Cancel sub-collection creation"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -465,6 +487,7 @@ export function FolderTree() {
                 className="h-7 text-sm flex-1"
                 autoFocus
                 maxLength={100}
+                aria-label="Collection name"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateFolder();
                   if (e.key === 'Escape') {
@@ -473,7 +496,14 @@ export function FolderTree() {
                   }
                 }}
               />
-              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={handleCreateFolder}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0"
+                onClick={handleCreateFolder}
+                aria-label="Create collection"
+                title="Create collection"
+              >
                 <Check className="h-3 w-3" />
               </Button>
               <Button
@@ -484,6 +514,8 @@ export function FolderTree() {
                   setIsCreating(false);
                   setNewFolderName('');
                 }}
+                aria-label="Cancel collection creation"
+                title="Cancel collection creation"
               >
                 <X className="h-3 w-3" />
               </Button>
