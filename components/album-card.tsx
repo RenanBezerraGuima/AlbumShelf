@@ -52,6 +52,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           style={{ borderRadius: 'var(--radius)' }}
           onClick={handleRemove}
           aria-label="Remove album"
+          title="Remove album"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -67,6 +68,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <button
           onClick={handlePlay}
           aria-label="Play album"
+          title="Play album"
           className="absolute inset-0 flex items-center justify-center bg-primary/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
         >
           <div className="bg-primary text-primary-foreground border-2 border-border p-4 brutalist-shadow hover:scale-110 transition-transform duration-200">

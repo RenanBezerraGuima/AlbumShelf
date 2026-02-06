@@ -265,6 +265,7 @@ const FolderItem = React.memo(function FolderItem({ folder, depth, parentId }: F
                   className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   aria-label="Collection actions"
+                  title="Collection actions"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="1" />

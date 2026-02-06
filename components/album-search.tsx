@@ -208,6 +208,7 @@ export function AlbumSearch() {
                 onClick={clearSearch}
                 className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
                 aria-label="Clear search"
+                title="Clear search"
               >
                 <X className="h-4 w-4" />
               </button>

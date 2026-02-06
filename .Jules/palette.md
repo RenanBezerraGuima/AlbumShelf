@@ -9,3 +9,7 @@
 ## 2026-02-05 - [Accessibility Standards for Icon-Only Buttons]
 **Learning:** Icon-only buttons (like expansion toggles or inline action buttons) are completely inaccessible to screen readers without ARIA labels, and confusing for sighted users without tooltips. Combining `aria-label` with the `title` attribute provides a baseline of accessibility and usability.
 **Action:** All icon-only interactive elements must have a descriptive `aria-label` and a matching `title` attribute for tooltips.
+
+## 2025-05-20 - [Native Tooltips for Icon-Only Buttons]
+**Learning:** While ARIA labels are essential for screen readers, sighted users often benefit from the immediate visual context provided by hover tooltips. Using the native `title` attribute in conjunction with `aria-label` provides a lightweight, dependency-free way to improve discovery for icon-only interactive elements.
+**Action:** Consistently apply both `aria-label` and a matching `title` attribute to all icon-only buttons to ensure they are both accessible and intuitive.
