@@ -62,6 +62,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <img
           src={album.imageUrl || "/placeholder.svg"}
           alt={album.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         

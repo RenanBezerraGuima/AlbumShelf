@@ -1,5 +1,47 @@
 import type { Album } from './types';
 
+// Simple in-memory cache for search results
+const searchCache = new Map<string, { data: Album[], timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 50;
+
+/**
+ * Wraps a search function with a simple in-memory cache.
+ * Improves performance for repeated searches and reduces network requests.
+ */
+function withCache<T extends any[]>(
+  provider: string,
+  fn: (query: string, ...args: T) => Promise<Album[]>
+) {
+  return async (query: string, ...args: T): Promise<Album[]> => {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) return [];
+
+    // Note: token is intentionally omitted from the cache key as search results
+    // for the same query are expected to be identical across valid tokens.
+    const cacheKey = `${provider}:${trimmedQuery}`;
+    const cached = searchCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+
+    const data = await fn(query, ...args);
+
+    // Maintain cache size
+    if (searchCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = searchCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        searchCache.delete(oldestKey);
+      }
+    }
+
+    searchCache.set(cacheKey, { data, timestamp: now });
+    return data;
+  };
+}
+
 // Helper for JSONP requests to Deezer API
 function jsonp<T>(url: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -25,9 +67,7 @@ function jsonp<T>(url: string): Promise<T> {
   });
 }
 
-export async function searchAlbumsDeezer(query: string): Promise<Album[]> {
-  if (!query.trim()) return [];
-
+async function searchAlbumsDeezerInternal(query: string): Promise<Album[]> {
   try {
     const data = await jsonp<any>(
       `https://api.deezer.com/search/album?q=${encodeURIComponent(query)}&limit=20&output=jsonp`
@@ -52,8 +92,8 @@ export async function searchAlbumsDeezer(query: string): Promise<Album[]> {
   }
 }
 
-export async function searchAlbumsSpotify(query: string, token: string | null): Promise<Album[]> {
-  if (!query.trim() || !token) return [];
+async function searchAlbumsSpotifyInternal(query: string, token: string | null): Promise<Album[]> {
+  if (!token) return [];
 
   try {
     const response = await fetch(
@@ -91,9 +131,7 @@ export async function searchAlbumsSpotify(query: string, token: string | null): 
   }
 }
 
-export async function searchAlbumsApple(query: string): Promise<Album[]> {
-  if (!query.trim()) return [];
-
+async function searchAlbumsAppleInternal(query: string): Promise<Album[]> {
   try {
     const data = await jsonp<any>(
       `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=20`
@@ -117,3 +155,7 @@ export async function searchAlbumsApple(query: string): Promise<Album[]> {
     throw error;
   }
 }
+
+export const searchAlbumsDeezer = withCache('deezer', searchAlbumsDeezerInternal);
+export const searchAlbumsApple = withCache('apple', searchAlbumsAppleInternal);
+export const searchAlbumsSpotify = withCache('spotify', searchAlbumsSpotifyInternal);
