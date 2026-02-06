@@ -286,6 +286,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                       <img
                         src={album.imageUrl || "/placeholder.svg"}
                         alt={album.name}
+                        decoding="async"
                         className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
                         style={{ borderRadius: 'calc(var(--radius) / 2)' }}
                       />
