@@ -2,6 +2,30 @@ export const SPOTIFY_AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 export const SPOTIFY_TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
 export const SPOTIFY_SEARCH_ENDPOINT = "https://api.spotify.com/v1/search";
 
+const resolveBasePath = () => {
+  if (process.env.NEXT_PUBLIC_BASE_PATH !== undefined) {
+    return process.env.NEXT_PUBLIC_BASE_PATH;
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.location.pathname.startsWith('/AlbumShelf') ? '/AlbumShelf' : '';
+};
+
+const resolveRedirectUri = () => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const basePath = resolveBasePath();
+  const normalizedBasePath = basePath === '/' ? '' : basePath;
+
+  let redirectUri = `${origin}${normalizedBasePath}`;
+  if (!redirectUri.endsWith('/')) {
+    redirectUri += '/';
+  }
+  return redirectUri;
+};
+
 function generateRandomString(length: number) {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const values = new Uint32Array(length);
@@ -27,15 +51,7 @@ export const redirectToSpotifyAuth = async () => {
     console.warn('Spotify Client ID is not configured. Please set NEXT_PUBLIC_SPOTIFY_CLIENT_ID environment variable.');
   }
 
-  // Get the current origin and base path to construct the redirect URI
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  // Use the same logic as in next.config.mjs or a default
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AlbumShelf';
-
-  let redirectUri = `${origin}${basePath}`;
-  if (!redirectUri.endsWith('/')) {
-    redirectUri += '/';
-  }
+  const redirectUri = resolveRedirectUri();
 
   const verifier = generateRandomString(128);
   const challenge = await generateCodeChallenge(verifier);
@@ -59,12 +75,7 @@ export const redirectToSpotifyAuth = async () => {
 
 export const exchangeCodeForToken = async (code: string) => {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || 'YOUR_SPOTIFY_CLIENT_ID';
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AlbumShelf';
-  let redirectUri = `${origin}${basePath}`;
-  if (!redirectUri.endsWith('/')) {
-    redirectUri += '/';
-  }
+  const redirectUri = resolveRedirectUri();
   const verifier = localStorage.getItem('spotify_code_verifier');
 
   const params = new URLSearchParams({
@@ -98,15 +109,7 @@ export const getSpotifyAuthUrl = () => {
     console.warn('Spotify Client ID is not configured. Please set NEXT_PUBLIC_SPOTIFY_CLIENT_ID environment variable.');
   }
 
-  // Get the current origin and base path to construct the redirect URI
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  // Use the same logic as in next.config.mjs or a default
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/AlbumShelf';
-
-  let redirectUri = `${origin}${basePath}`;
-  if (!redirectUri.endsWith('/')) {
-    redirectUri += '/';
-  }
+  const redirectUri = resolveRedirectUri();
 
   const state = generateRandomString(16);
   localStorage.setItem('spotify_auth_state', state);

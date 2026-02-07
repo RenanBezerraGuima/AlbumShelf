@@ -69,6 +69,15 @@ To enable Spotify search functionality, you must provide a Client ID from the Sp
 - **SECURITY**: Built-in URL and image sanitization; PKCE flow for Spotify authentication.
 - **COMPLIANCE**: Fully accessible via ARIA patterns; Keyboard navigable.
 
+## HOSTED ALTERNATIVE (FREE TIER)
+
+If you want a second deployment (while keeping GitHub Pages as backup) and cross-device sync, the recommended combo is:
+
+- **Hosting:** Vercel (free hobby plan)
+- **Database:** Supabase (free tier Postgres)
+
+See [docs/hosted-deployment.md](docs/hosted-deployment.md) for setup steps and a suggested schema.
+
 ## LICENSE
 
 Licensed under the [GNU GPL-3.0 License](LICENSE).
