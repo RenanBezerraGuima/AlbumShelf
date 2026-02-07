@@ -12,6 +12,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { searchAlbumsDeezer, searchAlbumsApple, searchAlbumsSpotify } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
+import { SupabaseAuthPanel } from '@/components/supabase-auth-panel';
 
 interface AlbumSearchProps {
   isMobile?: boolean;
@@ -236,8 +237,9 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 <X className="h-4 w-4" />
               </button>
             ) : null}
-          </div>
         </div>
+        <SupabaseAuthPanel />
+      </div>
 
         {!selectedFolderId && query && (
           <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">

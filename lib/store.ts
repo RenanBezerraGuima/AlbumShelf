@@ -45,7 +45,37 @@ interface FolderStore {
   setTheme: (theme: Theme) => void;
 }
 
+export type SyncState = Pick<
+  FolderStore,
+  | 'folders'
+  | 'selectedFolderId'
+  | 'streamingProvider'
+  | 'hasSetPreference'
+  | 'spotifyToken'
+  | 'spotifyTokenExpiry'
+  | 'spotifyTokenTimestamp'
+  | 'theme'
+>;
+
 const generateId = () => crypto.randomUUID();
+
+export const selectSyncState = (state: FolderStore): SyncState => ({
+  folders: state.folders,
+  selectedFolderId: state.selectedFolderId,
+  streamingProvider: state.streamingProvider,
+  hasSetPreference: state.hasSetPreference,
+  spotifyToken: state.spotifyToken,
+  spotifyTokenExpiry: state.spotifyTokenExpiry,
+  spotifyTokenTimestamp: state.spotifyTokenTimestamp,
+  theme: state.theme,
+});
+
+export const applySyncState = (incoming: SyncState) => {
+  useFolderStore.setState((state) => ({
+    ...state,
+    ...incoming,
+  }));
+};
 
 export const findFolder = (folders: Folder[], id: string): Folder | null => {
   for (const folder of folders) {

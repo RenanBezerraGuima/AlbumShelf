@@ -57,6 +57,7 @@ jobs:
       - name: Build with Next.js
         run: pnpm build
         env:
+          NEXT_PUBLIC_BASE_PATH: "/${{ github.event.repository.name }}"
           NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.NEXT_PUBLIC_SPOTIFY_CLIENT_ID }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
