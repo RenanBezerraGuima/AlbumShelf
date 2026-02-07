@@ -18,6 +18,30 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const buildUrl = (path: string) => `${SUPABASE_URL}${path}`;
 
+const resolveBasePath = () => {
+  if (process.env.NEXT_PUBLIC_BASE_PATH !== undefined) {
+    return process.env.NEXT_PUBLIC_BASE_PATH;
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.location.pathname.startsWith('/AlbumShelf') ? '/AlbumShelf' : '';
+};
+
+export const resolveSupabaseRedirectUrl = () => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const basePath = resolveBasePath();
+  const normalizedBasePath = basePath === '/' ? '' : basePath;
+
+  let redirectUrl = `${origin}${normalizedBasePath}`;
+  if (!redirectUrl.endsWith('/')) {
+    redirectUrl += '/';
+  }
+  return redirectUrl;
+};
+
 const saveSession = (session: SupabaseSession | null) => {
   if (typeof window === 'undefined') return;
   if (!session) {
@@ -124,6 +148,7 @@ export const signInWithPassword = async (email: string, password: string) => {
 };
 
 export const signUpWithPassword = async (email: string, password: string) => {
+  const emailRedirectTo = resolveSupabaseRedirectUrl();
   const payload = await request<{
     session?: {
       access_token: string;
@@ -133,7 +158,11 @@ export const signUpWithPassword = async (email: string, password: string) => {
     };
   }>(`/auth/v1/signup`, {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      ...(emailRedirectTo ? { email_redirect_to: emailRedirectTo } : {}),
+    }),
   });
 
   if (payload.session) {
