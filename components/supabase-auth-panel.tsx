@@ -58,16 +58,18 @@ export function SupabaseAuthPanel() {
       try {
         const rows = await fetchUserLibrary(session.user.id);
         const remoteData = rows[0]?.data as SyncState | undefined;
+        const currentLocalSyncState = selectSyncState(useFolderStore.getState());
+
         if (remoteData) {
-          if (emptySyncState(localSyncState)) {
+          if (emptySyncState(currentLocalSyncState)) {
             applySyncState(remoteData);
             toast.success('Loaded your cloud library.');
           } else {
             setRemoteSnapshot(remoteData);
             setNeedsConflictResolution(true);
           }
-        } else if (!emptySyncState(localSyncState)) {
-          await upsertUserLibrary(session.user.id, localSyncState);
+        } else if (!emptySyncState(currentLocalSyncState)) {
+          await upsertUserLibrary(session.user.id, currentLocalSyncState);
           toast.success('Uploaded your local library.');
         }
       } catch (error) {
@@ -79,7 +81,7 @@ export function SupabaseAuthPanel() {
     };
 
     loadRemote();
-  }, [hasLoadedRemote, isConfigured, localSyncState, session]);
+  }, [hasLoadedRemote, isConfigured, session]);
 
   useEffect(() => {
     if (!session || !isConfigured || !hasLoadedRemote) return;
