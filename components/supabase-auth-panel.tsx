@@ -40,6 +40,12 @@ export function SupabaseAuthPanel() {
   const [hasLoadedRemote, setHasLoadedRemote] = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedRemote = useRef(false);
+  const isGitHubPages = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      window.location.hostname.endsWith('github.io'),
+    []
+  );
 
   const isConfigured = isSupabaseConfigured;
 
@@ -198,6 +204,10 @@ export function SupabaseAuthPanel() {
     if (!session) return 'ACCOUNT';
     return session.user.email ? `ACCOUNT: ${session.user.email}` : 'ACCOUNT';
   }, [isConfigured, session]);
+
+  if (isGitHubPages) {
+    return null;
+  }
 
   return (
     <>

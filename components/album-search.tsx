@@ -187,11 +187,16 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   };
 
   return (
-    <div className={cn(
-      "w-full flex justify-center border-b-2 border-border bg-background z-50",
-      isMobile ? "px-2 py-4" : "px-4 py-6"
-    )}>
-      <div className="w-full max-w-2xl flex items-center gap-2 relative" ref={containerRef}>
+    <div
+      className={cn(
+        "w-full flex justify-center border-b-2 border-border bg-background z-50",
+        isMobile ? "px-2 py-4" : "px-4 py-6"
+      )}
+    >
+      <div
+        className="w-full max-w-2xl flex flex-nowrap items-center gap-3 relative"
+        ref={containerRef}
+      >
         {isMobile && onMenuClick && (
           <Button
             variant="ghost"
@@ -203,8 +208,11 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             <Menu className="h-6 w-6" />
           </Button>
         )}
-        <div className="relative group flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <div className="relative group flex-1 min-w-0" data-testid="search-input-wrapper">
+          <Search
+            data-testid="search-icon"
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors"
+          />
           <Input
             placeholder={isMobile ? "SEARCH..." : `SEARCH ALBUMS ON ${streamingProvider.toUpperCase()}...`}
             value={query}
@@ -237,87 +245,97 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 <X className="h-4 w-4" />
               </button>
             ) : null}
+          </div>
         </div>
-        <SupabaseAuthPanel />
+        <div className="ml-auto shrink-0" data-testid="account-panel-slot">
+          <SupabaseAuthPanel />
+        </div>
       </div>
 
-        {!selectedFolderId && query && (
-          <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">
-            Select a collection to add albums
-          </p>
-        )}
+      {!selectedFolderId && query && (
+        <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">
+          Select a collection to add albums
+        </p>
+      )}
 
-        {isOpen && (results.length > 0 || error) && (
-          <div className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" style={{ borderRadius: 'var(--radius)' }}>
-            <ScrollArea className="h-[400px]">
-              <div className="p-2 space-y-1" role="listbox" id={listboxId}>
-                {error && (
-                  <div className="py-6 px-4 text-center space-y-4">
-                    <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>{error}</p>
-                    {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
-                      <button
-                        onClick={() => redirectToSpotifyAuth()}
-                        className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all cursor-pointer"
+      {isOpen && (results.length > 0 || error) && (
+        <div
+          className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{ borderRadius: 'var(--radius)' }}
+        >
+          <ScrollArea className="h-[400px]">
+            <div className="p-2 space-y-1" role="listbox" id={listboxId}>
+              {error && (
+                <div className="py-6 px-4 text-center space-y-4">
+                  <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {error}
+                  </p>
+                  {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
+                    <button
+                      onClick={() => redirectToSpotifyAuth()}
+                      className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all cursor-pointer"
+                    >
+                      Connect Spotify
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {results.map((album, index) => {
+                const isAdded = albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase());
+                const isActive = index === activeIndex;
+
+                return (
+                  <div
+                    key={album.id}
+                    id={`option-${index}`}
+                    onClick={() => handleAddAlbum(album)}
+                    role="option"
+                    aria-selected={isActive}
+                    className={cn(
+                      "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
+                      selectedFolderId
+                        ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
+                        : "opacity-60 cursor-not-allowed",
+                      isAdded && "bg-accent/20 border-accent",
+                      isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
+                    )}
+                    style={{ borderRadius: 'var(--radius)' }}
+                  >
+                    <img
+                      src={album.imageUrl || "/placeholder.svg"}
+                      alt={album.name}
+                      decoding="async"
+                      className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
+                      style={{ borderRadius: 'calc(var(--radius) / 2)' }}
+                    />
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p
+                        className="text-sm font-bold truncate uppercase tracking-tighter"
+                        style={{ fontFamily: 'var(--font-display)' }}
                       >
-                        Connect Spotify
-                      </button>
+                        {album.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs opacity-80 truncate uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+                          {album.artist}
+                          {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
+                        </p>
+                        <span className="text-[10px] px-1 bg-muted border border-border font-mono font-bold shrink-0">
+                          {album.id.split('-')[0].toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    {isAdded && (
+                      <Check className="h-4 w-4 shrink-0" />
                     )}
                   </div>
-                )}
-
-                {results.map((album, index) => {
-                  const isAdded = albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase());
-                  const isActive = index === activeIndex;
-                  
-                  return (
-                    <div
-                      key={album.id}
-                      id={`option-${index}`}
-                      onClick={() => handleAddAlbum(album)}
-                      role="option"
-                      aria-selected={isActive}
-                      className={cn(
-                        "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
-                        selectedFolderId 
-                          ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
-                          : "opacity-60 cursor-not-allowed",
-                        isAdded && "bg-accent/20 border-accent",
-                        isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
-                      )}
-                      style={{ borderRadius: 'var(--radius)' }}
-                    >
-                      <img
-                        src={album.imageUrl || "/placeholder.svg"}
-                        alt={album.name}
-                        decoding="async"
-                        className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
-                        style={{ borderRadius: 'calc(var(--radius) / 2)' }}
-                      />
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm font-bold truncate uppercase tracking-tighter" style={{ fontFamily: 'var(--font-display)' }}>
-                          {album.name}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs opacity-80 truncate uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
-                            {album.artist}
-                            {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
-                          </p>
-                          <span className="text-[10px] px-1 bg-muted border border-border font-mono font-bold shrink-0">
-                            {album.id.split('-')[0].toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      {isAdded && (
-                        <Check className="h-4 w-4 shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
     </div>
   );
 }
