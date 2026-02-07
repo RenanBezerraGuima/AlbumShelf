@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Folder, Album, Theme } from './types';
-import { sanitizeUrl, sanitizeImageUrl } from './security';
+import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from './security';
 
 export type StreamingProvider = 'deezer' | 'apple' | 'spotify';
 
@@ -341,12 +341,8 @@ export const useFolderStore = create<FolderStore>()(
               return folder;
             }
 
-            // Sanitize URLs before adding to store
-            const sanitizedAlbum = {
-              ...album,
-              imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
-              externalUrl: sanitizeUrl(album.externalUrl),
-            };
+            // Sanitize album before adding to store
+            const sanitizedAlbum = sanitizeAlbum(album);
 
             return {
               ...folder,
@@ -434,15 +430,9 @@ export const useFolderStore = create<FolderStore>()(
             const newId = generateId();
 
             // Sanitize albums
-            const sanitizedAlbums: Album[] = (folder.albums || []).map((album: any) => ({
-              id: String(album.id || generateId()),
-              name: String(album.name || '').slice(0, 200),
-              artist: String(album.artist || '').slice(0, 200),
-              imageUrl: sanitizeImageUrl(String(album.imageUrl || '')) || '/placeholder.svg',
-              releaseDate: album.releaseDate ? String(album.releaseDate) : undefined,
-              totalTracks: Number(album.totalTracks) || 0,
-              spotifyId: album.spotifyId ? String(album.spotifyId) : undefined,
-              externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
+            const sanitizedAlbums: Album[] = (folder.albums || []).map((album: any) => sanitizeAlbum({
+              ...album,
+              id: album.id || generateId(),
             }));
 
             return {
@@ -507,6 +497,19 @@ export const useFolderStore = create<FolderStore>()(
     }),
     {
       name: 'album-shelf-storage',
+      // Exclude drag-and-drop state from persistence to avoid unnecessary
+      // localStorage writes and expensive serialization during drag operations.
+      partialize: (state) => {
+        const {
+          draggedAlbum,
+          draggedFolderId,
+          draggedAlbumIndex,
+          draggedFolder,
+          draggedFolderParentId,
+          ...persistedState
+        } = state;
+        return persistedState;
+      },
       storage: createJSONStorage(() => ({
         getItem: (name) => {
           const val = localStorage.getItem(name);

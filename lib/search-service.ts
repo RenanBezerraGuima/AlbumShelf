@@ -1,4 +1,5 @@
 import type { Album } from './types';
+import { sanitizeAlbum } from './security';
 
 // Simple in-memory cache for search results
 const searchCache = new Map<string, { data: Album[], timestamp: number }>();
@@ -77,7 +78,7 @@ async function searchAlbumsDeezerInternal(query: string): Promise<Album[]> {
       throw new Error(data.error.message || 'Deezer search error');
     }
 
-    return data.data.map((item: any) => ({
+    return data.data.map((item: any) => sanitizeAlbum({
       id: `deezer-${item.id}`,
       name: item.title,
       artist: item.artist.name,
@@ -114,7 +115,7 @@ async function searchAlbumsSpotifyInternal(query: string, token: string | null):
 
     const data = await response.json();
 
-    return data.albums.items.map((item: any) => ({
+    return data.albums.items.map((item: any) => sanitizeAlbum({
       id: `spotify-${item.id}`,
       spotifyId: item.id,
       name: item.name,
@@ -141,7 +142,7 @@ async function searchAlbumsAppleInternal(query: string): Promise<Album[]> {
       return [];
     }
 
-    return data.results.map((item: any) => ({
+    return data.results.map((item: any) => sanitizeAlbum({
       id: `apple-${item.collectionId}`,
       name: item.collectionName,
       artist: item.artistName,

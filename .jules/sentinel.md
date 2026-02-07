@@ -19,3 +19,8 @@
 **Vulnerability:** Use of insecure `Math.random()` for OAuth PKCE verifiers and lack of `state` parameter in Spotify auth flow.
 **Learning:** OAuth 2.0 flows, even with PKCE, should always use a `state` parameter to prevent CSRF attacks. Cryptographically secure random number generators (CSPRNG) like `crypto.getRandomValues()` are mandatory for any security-sensitive value (verifiers, states, IDs).
 **Prevention:** Always implement the `state` parameter in OAuth flows and verify it in the callback. Use `crypto.getRandomValues()` instead of `Math.random()` for any value that must be unpredictable.
+
+## 2026-02-07 - [Centralized Sanitization for External Data]
+**Vulnerability:** Inconsistent and missing input sanitization for Album data across search results and state management.
+**Learning:** Fragmented sanitization logic (e.g., sanitizing in the store but not in the search service) creates windows where unsanitized data is rendered in the UI. Early sanitization at the edge (API service) combined with defense-in-depth sanitization at the state level ensures safety.
+**Prevention:** Implement a centralized sanitization utility (e.g., `sanitizeAlbum`) that handles all fields (URLs and text) and apply it at every entry point where untrusted data is converted into application objects.

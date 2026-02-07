@@ -1,13 +1,22 @@
+import type { Album } from './types';
+
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+const MAX_URL_LENGTH = 2048;
+const MAX_TEXT_LENGTH = 200;
 
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
  * Allows only http:, https: and relative paths by default.
+ * Enforces a maximum length to prevent potential DoS or memory issues.
  */
 export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
-  if (!url) return undefined;
+  if (!url || typeof url !== 'string') return undefined;
 
   const trimmedUrl = url.trim();
+
+  if (trimmedUrl.length > MAX_URL_LENGTH) {
+    return undefined;
+  }
 
   try {
     const parsed = new URL(trimmedUrl);
@@ -28,17 +37,38 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
  * Sanitize an image URL, allowing only safe data:image/ protocols for inline images.
  */
 export function sanitizeImageUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
+  if (!url || typeof url !== 'string') return undefined;
 
   const trimmedUrl = url.trim();
 
   if (trimmedUrl.startsWith('data:')) {
     // Only allow data:image/ protocols
     if (trimmedUrl.startsWith('data:image/')) {
+      // Data URLs can be long, but let's still apply a reasonable limit for data images
+      // usually 1MB is more than enough for small album covers if they are base64
+      if (trimmedUrl.length > 1024 * 1024) return undefined;
       return trimmedUrl;
     }
     return undefined;
   }
 
   return sanitizeUrl(trimmedUrl, ALLOWED_PROTOCOLS);
+}
+
+/**
+ * Centralized sanitization for Album objects.
+ * Truncates text fields and sanitizes all URLs.
+ */
+export function sanitizeAlbum(album: any): Album {
+  return {
+    id: String(album.id || ''),
+    spotifyId: album.spotifyId ? String(album.spotifyId).slice(0, 100) : undefined,
+    name: String(album.name || 'Unknown Album').slice(0, MAX_TEXT_LENGTH),
+    artist: String(album.artist || 'Unknown Artist').slice(0, MAX_TEXT_LENGTH),
+    imageUrl: sanitizeImageUrl(String(album.imageUrl || '')) || '/placeholder.svg',
+    releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, 50) : undefined,
+    totalTracks: Number(album.totalTracks) || 0,
+    spotifyUrl: sanitizeUrl(album.spotifyUrl ? String(album.spotifyUrl) : undefined),
+    externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
+  };
 }

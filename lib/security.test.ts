@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useFolderStore } from './store';
-import { sanitizeUrl, sanitizeImageUrl } from './security';
+import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from './security';
 
 describe('Security: Input Validation', () => {
   beforeEach(() => {
@@ -127,6 +127,57 @@ describe('Security Utilities', () => {
 
     it('should reject other data: protocols', () => {
       expect(sanitizeImageUrl('data:text/html,<html>')).toBeUndefined();
+    });
+
+    it('should reject excessively long data URLs', () => {
+      const longDataUrl = 'data:image/png;base64,' + 'A'.repeat(1024 * 1024 + 1);
+      expect(sanitizeImageUrl(longDataUrl)).toBeUndefined();
+    });
+  });
+
+  describe('sanitizeAlbum', () => {
+    it('should truncate name and artist to 200 characters', () => {
+      const longText = 'A'.repeat(300);
+      const album = {
+        id: '1',
+        name: longText,
+        artist: longText,
+        imageUrl: 'https://example.com/image.jpg',
+        totalTracks: 10
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.name.length).toBe(200);
+      expect(sanitized.artist.length).toBe(200);
+    });
+
+    it('should sanitize all URL fields in an album', () => {
+      const album = {
+        id: '1',
+        name: 'Test',
+        artist: 'Test',
+        imageUrl: 'javascript:alert(1)',
+        externalUrl: 'javascript:alert(2)',
+        spotifyUrl: 'javascript:alert(3)'
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.imageUrl).toBe('/placeholder.svg');
+      expect(sanitized.externalUrl).toBeUndefined();
+      expect(sanitized.spotifyUrl).toBeUndefined();
+    });
+
+    it('should handle missing or invalid fields gracefully', () => {
+      const album = {
+        id: '1',
+        // missing name, artist
+        totalTracks: 'invalid'
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.name).toBe('Unknown Album');
+      expect(sanitized.artist).toBe('Unknown Artist');
+      expect(sanitized.totalTracks).toBe(0);
     });
   });
 });
