@@ -189,7 +189,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   return (
     <div
       className={cn(
-        "w-full flex justify-center border-b-2 border-border bg-background z-50",
+        "w-full flex flex-col items-center border-b-2 border-border bg-background z-50",
         isMobile ? "px-2 py-4" : "px-4 py-6"
       )}
     >
@@ -250,19 +250,12 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
         <div className="ml-auto shrink-0" data-testid="account-panel-slot">
           <SupabaseAuthPanel />
         </div>
-      </div>
 
-      {!selectedFolderId && query && (
-        <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">
-          Select a collection to add albums
-        </p>
-      )}
-
-      {isOpen && (results.length > 0 || error) && (
-        <div
-          className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-          style={{ borderRadius: 'var(--radius)' }}
-        >
+        {isOpen && (results.length > 0 || error) && (
+          <div
+            className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+            style={{ borderRadius: 'var(--radius)' }}
+          >
           <ScrollArea className="h-[400px]">
             <div className="p-2 space-y-1" role="listbox" id={listboxId}>
               {error && (
@@ -334,7 +327,14 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
               })}
             </div>
           </ScrollArea>
-        </div>
+          </div>
+        )}
+      </div>
+
+      {!selectedFolderId && query && (
+        <p className="text-xs text-primary font-mono mt-2 text-center uppercase tracking-tighter">
+          Select a collection to add albums
+        </p>
       )}
     </div>
   );
