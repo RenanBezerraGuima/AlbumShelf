@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { resolveSupabaseRedirectUrl } from './supabase-client';
+import { resolveSupabaseRedirectUrl, handleAuthCallback } from './supabase-client';
 
 const setLocation = (path: string) => {
   window.history.pushState({}, '', path);
@@ -37,5 +36,41 @@ describe('resolveSupabaseRedirectUrl', () => {
     setLocation('/other');
 
     expect(resolveSupabaseRedirectUrl()).toBe(`${window.location.origin}/`);
+  });
+});
+
+describe('handleAuthCallback', () => {
+  it('parses hash and saves session', async () => {
+    const mockUser = { id: 'user-123', email: 'test@example.com' };
+
+    // Mock fetch for getUser
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockUser),
+    }));
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+    const hash = '#access_token=abc&refresh_token=xyz&expires_in=3600&token_type=bearer&type=signup';
+    const session = await handleAuthCallback(hash);
+
+    expect(session).not.toBeNull();
+    expect(session?.accessToken).toBe('abc');
+    expect(session?.refreshToken).toBe('xyz');
+    expect(session?.user).toEqual(mockUser);
+
+    expect(setItemSpy).toHaveBeenCalledWith(
+      'albumshelf_supabase_session',
+      expect.stringContaining('"accessToken":"abc"')
+    );
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event));
+    expect(dispatchSpy.mock.calls[0][0].type).toBe('supabase-auth-change');
+  });
+
+  it('returns null if parameters are missing', async () => {
+    const hash = '#access_token=abc';
+    const session = await handleAuthCallback(hash);
+    expect(session).toBeNull();
   });
 });

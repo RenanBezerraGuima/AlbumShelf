@@ -147,6 +147,35 @@ export const signInWithPassword = async (email: string, password: string) => {
   return session;
 };
 
+export const getUser = async (accessToken: string) => {
+  return request<SupabaseUser>(`/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+};
+
+export const handleAuthCallback = async (hash: string) => {
+  const params = new URLSearchParams(hash.substring(1));
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const expiresIn = params.get('expires_in');
+
+  if (accessToken && refreshToken && expiresIn) {
+    const user = await getUser(accessToken);
+    const session = toSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: parseInt(expiresIn, 10),
+      user,
+    });
+    saveSession(session);
+    window.dispatchEvent(new Event('supabase-auth-change'));
+    return session;
+  }
+  return null;
+};
+
 export const signUpWithPassword = async (email: string, password: string) => {
   const emailRedirectTo = resolveSupabaseRedirectUrl();
   const payload = await request<{

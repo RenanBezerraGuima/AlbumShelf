@@ -54,6 +54,16 @@ export function SupabaseAuthPanel() {
     getSession()
       .then(setSession)
       .catch(() => setSession(null));
+
+    const handleAuthChange = () => {
+      getSession()
+        .then(setSession)
+        .catch(() => setSession(null));
+    };
+
+    window.addEventListener('supabase-auth-change', handleAuthChange);
+    return () =>
+      window.removeEventListener('supabase-auth-change', handleAuthChange);
   }, [isConfigured]);
 
   useEffect(() => {

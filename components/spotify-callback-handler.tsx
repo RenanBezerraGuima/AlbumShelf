@@ -14,7 +14,7 @@ export function SpotifyCallbackHandler() {
     const handleCallback = async () => {
       // 1. Handle Implicit Grant (Hash)
       const hash = window.location.hash;
-      if (hash && hash.includes('access_token')) {
+      if (hash && hash.includes('access_token=') && hash.includes('state=')) {
         const authData = parseSpotifyHash(hash);
 
         if (authData) {
