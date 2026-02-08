@@ -29,19 +29,7 @@ vi.mock('@/lib/search-service', () => ({
   searchAlbumsSpotify: vi.fn(),
 }));
 
-vi.mock('@/components/supabase-auth-panel', () => ({
-  SupabaseAuthPanel: () => <div data-testid="account-panel">Account</div>,
-}));
-
 describe('AlbumSearch top panel layout', () => {
-  it('places the account panel on the right side of the top panel', () => {
-    render(<AlbumSearch />);
-
-    const accountPanelSlot = screen.getByTestId('account-panel-slot');
-    expect(accountPanelSlot).toHaveClass('ml-auto');
-    expect(accountPanelSlot).toHaveClass('shrink-0');
-  });
-
   it('keeps the search icon inside the search input wrapper', () => {
     render(<AlbumSearch />);
 
