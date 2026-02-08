@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveSupabaseRedirectUrl, handleAuthCallback } from './supabase-client';
+import { resolveSupabaseRedirectUrl, handleAuthCallback, fetchUserLibrary } from './supabase-client';
 
 const setLocation = (path: string) => {
   window.history.pushState({}, '', path);
@@ -72,5 +72,51 @@ describe('handleAuthCallback', () => {
     const hash = '#access_token=abc';
     const session = await handleAuthCallback(hash);
     expect(session).toBeNull();
+  });
+});
+
+describe('fetchUserLibrary authorization', () => {
+  beforeEach(() => {
+    vi.stubGlobal('window', {
+      ...window,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('throws error if userId does not match session user id', async () => {
+    const mockSession = {
+      accessToken: 'token',
+      user: { id: 'correct-user' },
+      expiresAt: Date.now() + 100000
+    };
+
+    // Mock getSession to return our mock session
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify(mockSession));
+
+    // Attempt to fetch library for a different user
+    await expect(fetchUserLibrary('wrong-user')).rejects.toThrow('Unauthorized: User ID mismatch');
+  });
+
+  it('does not throw error if userId matches session user id', async () => {
+    const mockSession = {
+      accessToken: 'token',
+      user: { id: 'correct-user' },
+      expiresAt: Date.now() + 100000
+    };
+
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify(mockSession));
+
+    // Mock fetch for the request
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    }));
+
+    await expect(fetchUserLibrary('correct-user')).resolves.not.toThrow();
   });
 });

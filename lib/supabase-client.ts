@@ -223,6 +223,12 @@ export const signOut = async () => {
 export const fetchUserLibrary = async (userId: string) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
+
+  // Security enhancement: Verify that the requested userId matches the session user
+  if (userId !== session.user.id) {
+    throw new Error('Unauthorized: User ID mismatch');
+  }
+
   return request<{ data: unknown; updated_at: string | null }[]>(
     `/rest/v1/albumshelf_items?user_id=eq.${userId}&select=data,updated_at&order=updated_at.desc&limit=1`,
     {
@@ -236,6 +242,11 @@ export const fetchUserLibrary = async (userId: string) => {
 export const upsertUserLibrary = async (userId: string, data: unknown) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
+
+  // Security enhancement: Verify that the target userId matches the session user
+  if (userId !== session.user.id) {
+    throw new Error('Unauthorized: User ID mismatch');
+  }
 
   try {
     return await request(
