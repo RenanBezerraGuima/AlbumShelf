@@ -119,9 +119,6 @@ export const getSession = async () => {
       user: SupabaseUser;
     }>(`/auth/v1/token?grant_type=refresh_token`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${stored.refreshToken}`,
-      },
       body: JSON.stringify({ refresh_token: stored.refreshToken }),
     });
     const session = toSession(refreshed);
@@ -220,7 +217,7 @@ export const fetchUserLibrary = async (userId: string) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
   return request<{ data: unknown; updated_at: string | null }[]>(
-    `/rest/v1/albumshelf_items?user_id=eq.${userId}&select=data,updated_at`,
+    `/rest/v1/albumshelf_items?user_id=eq.${userId}&select=data,updated_at&order=updated_at.desc&limit=1`,
     {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,

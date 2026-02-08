@@ -38,6 +38,7 @@ export function SupabaseAuthPanel() {
   const [remoteSnapshot, setRemoteSnapshot] = useState<SyncState | null>(null);
   const [needsConflictResolution, setNeedsConflictResolution] = useState(false);
   const [hasLoadedRemote, setHasLoadedRemote] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedRemote = useRef(false);
   const lastPushedVersion = useRef<number>(0);
@@ -65,6 +66,7 @@ export function SupabaseAuthPanel() {
     if (!session || !isConfigured) return;
 
     const syncWithRemote = async (isInitial = false) => {
+      if (!isInitial) setIsSyncing(true);
       try {
         const rows = await fetchUserLibrary(session.user.id);
         const remoteData = rows[0]?.data as SyncState | undefined;
@@ -82,8 +84,13 @@ export function SupabaseAuthPanel() {
             // Already in sync
             lastPushedVersion.current = localVersion;
           } else if (localVersion > remoteVersion) {
-            // Local is newer, existing push effect will handle it
-            if (isInitial) toast.success('USING LOCAL VERSION (NEWER)');
+            // Local is newer, push it to cloud immediately if initial load
+            lastPushedVersion.current = remoteVersion; // Set lower so push is triggered
+            if (isInitial) {
+              await upsertUserLibrary(session.user.id, currentLocalSyncState);
+              lastPushedVersion.current = localVersion;
+              toast.success('SYNCED LOCAL LIBRARY TO CLOUD');
+            }
           } else {
             setRemoteSnapshot(remoteData);
             setNeedsConflictResolution(true);
@@ -98,6 +105,7 @@ export function SupabaseAuthPanel() {
         if (isInitial) toast.error('CLOUD SYNC FAILED');
       } finally {
         if (isInitial) setHasLoadedRemote(true);
+        setIsSyncing(false);
       }
     };
 
@@ -134,11 +142,14 @@ export function SupabaseAuthPanel() {
         clearTimeout(syncTimer.current);
       }
       syncTimer.current = setTimeout(async () => {
+        setIsSyncing(true);
         try {
           await upsertUserLibrary(session.user.id, selectedState);
           lastPushedVersion.current = selectedState.lastUpdated;
         } catch (error) {
           console.error('Auto-push failed:', error);
+        } finally {
+          setIsSyncing(false);
         }
       }, 1500); // Slightly longer debounce for auto-push
     });
@@ -275,8 +286,15 @@ export function SupabaseAuthPanel() {
             </div>
           ) : session ? (
             <div className="space-y-4">
-              <div className="text-xs font-mono uppercase">
-                Signed in as {session.user.email ?? session.user.id}
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-mono uppercase">
+                  Signed in as {session.user.email ?? session.user.id}
+                </div>
+                {isSyncing && (
+                  <div className="text-[10px] font-mono uppercase animate-pulse text-primary">
+                    Syncing...
+                  </div>
+                )}
               </div>
               {needsConflictResolution && (
                 <div className="rounded-md border-2 border-border p-3 text-xs font-mono uppercase">
