@@ -42,11 +42,13 @@ const resolveBasePath = () => {
 
 export const resolveSupabaseRedirectUrl = () => {
   if (typeof window === 'undefined') return '';
-  const origin = window.location.origin;
-  const basePath = resolveBasePath();
-  const normalizedBasePath = basePath === '/' ? '' : basePath.replace(/\/$/, '');
 
-  let redirectUrl = `${origin}${normalizedBasePath}`;
+  // Use current URL without hash or search params to ensure we stay on the same page
+  const url = new URL(window.location.href);
+  url.hash = '';
+  url.search = '';
+
+  let redirectUrl = url.toString();
   if (!redirectUrl.endsWith('/')) {
     redirectUrl += '/';
   }
@@ -205,7 +207,10 @@ export const signUpWithPassword = async (email: string, password: string) => {
       ...(emailRedirectTo
         ? {
             email_redirect_to: emailRedirectTo,
-            options: { email_redirect_to: emailRedirectTo },
+            options: {
+              email_redirect_to: emailRedirectTo,
+              redirectTo: emailRedirectTo // Support both snake_case and camelCase
+            },
           }
         : {}),
     }),
@@ -235,6 +240,12 @@ export const signOut = async () => {
 export const fetchUserLibrary = async (userId: string) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
+
+  // Defense-in-depth: Ensure the requested data belongs to the current user
+  if (userId !== session.user.id) {
+    throw new Error('Authorization failed: User ID mismatch.');
+  }
+
   return request<{ data: unknown; updated_at: string | null }[]>(
     `/rest/v1/albumshelf_items?user_id=eq.${userId}&select=data,updated_at&order=updated_at.desc&limit=1`,
     {
@@ -248,6 +259,11 @@ export const fetchUserLibrary = async (userId: string) => {
 export const upsertUserLibrary = async (userId: string, data: unknown) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
+
+  // Defense-in-depth: Ensure we only update the current user's data
+  if (userId !== session.user.id) {
+    throw new Error('Authorization failed: User ID mismatch.');
+  }
 
   try {
     // PostgREST UPSERT requires on_conflict query parameter and Prefer: resolution=merge-duplicates

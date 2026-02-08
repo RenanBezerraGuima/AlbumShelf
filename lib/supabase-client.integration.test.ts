@@ -67,11 +67,7 @@ describe('Supabase Client Integration', () => {
     // Mock window.location
     const originalLocation = window.location;
     delete (window as any).location;
-    window.location = {
-      ...originalLocation,
-      origin: 'https://album-shelf.vercel.app',
-      pathname: '/',
-    } as any;
+    window.location = new URL('https://album-shelf.vercel.app/') as any;
 
     await signUpWithPassword('test@example.com', 'password123');
 
@@ -86,6 +82,7 @@ describe('Supabase Client Integration', () => {
     expect(body.email).toBe('test@example.com');
     expect(body.email_redirect_to).toBe('https://album-shelf.vercel.app/');
     expect(body.options.email_redirect_to).toBe('https://album-shelf.vercel.app/');
+    expect(body.options.redirectTo).toBe('https://album-shelf.vercel.app/');
 
     window.location = originalLocation;
   });
@@ -169,5 +166,18 @@ describe('Supabase Client Integration', () => {
     } as Response);
 
     await expect(fetchUserLibrary('user-123')).rejects.toThrow('Permission denied');
+  });
+
+  it('enforces userId match with session for security', async () => {
+    const session = {
+      accessToken: 'token-123',
+      refreshToken: 'ref-123',
+      expiresAt: Date.now() + 3600000,
+      user: { id: 'user-123' }
+    };
+    localStorage.setItem('albumshelf_supabase_session', JSON.stringify(session));
+
+    await expect(fetchUserLibrary('other-user')).rejects.toThrow('User ID mismatch');
+    await expect(upsertUserLibrary('other-user', {})).rejects.toThrow('User ID mismatch');
   });
 });
