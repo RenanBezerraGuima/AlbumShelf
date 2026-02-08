@@ -17,6 +17,7 @@ import {
   signOut,
   signUpWithPassword,
 } from '@/lib/supabase-client';
+import { formatCloudError } from '@/lib/cloud-errors';
 import { toast } from 'sonner';
 import { useSync } from '@/hooks/use-sync';
 
@@ -58,7 +59,7 @@ export function SupabaseAuthPanel() {
       }
     } catch (error) {
       console.error(error);
-      toast.error('Authentication failed.');
+      toast.error(formatCloudError('Authentication failed.', error));
     } finally {
       setIsBusy(false);
     }
@@ -71,7 +72,7 @@ export function SupabaseAuthPanel() {
       setSession(null);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to sign out.');
+      toast.error(formatCloudError('Failed to sign out.', error));
     } finally {
       setIsBusy(false);
     }
@@ -79,22 +80,22 @@ export function SupabaseAuthPanel() {
 
   const handleManualPush = async () => {
     setIsBusy(true);
-    const success = await pushToCloud();
-    if (success) {
+    const result = await pushToCloud();
+    if (result.success) {
       toast.success('Uploaded to cloud.');
     } else {
-      toast.error('Upload failed.');
+      toast.error(result.error ?? 'Upload failed.');
     }
     setIsBusy(false);
   };
 
   const handleManualPull = async () => {
     setIsBusy(true);
-    const success = await pullFromCloud();
-    if (success) {
+    const result = await pullFromCloud();
+    if (result.success) {
       toast.success('Loaded from cloud.');
     } else {
-      toast.error('Download failed.');
+      toast.error(result.error ?? 'Download failed.');
     }
     setIsBusy(false);
   };

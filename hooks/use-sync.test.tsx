@@ -84,6 +84,7 @@ describe('useSync', () => {
 
   it('should auto-push when local state changes', async () => {
     vi.useFakeTimers();
+    const intervalSpy = vi.spyOn(global, 'setInterval').mockImplementation(() => 0 as any);
     const localState = { lastUpdated: 100, folders: [] };
     (selectSyncState as any).mockReturnValue(localState);
 
@@ -93,12 +94,16 @@ describe('useSync', () => {
       return vi.fn();
     });
 
-    renderHook(() => useSync());
+    await act(async () => {
+      renderHook(() => useSync());
+    });
 
     // Wait for initial sync to finish so auto-push can start
     await act(async () => {
-        vi.runAllTimers();
+      await Promise.resolve();
+      vi.runAllTimers();
     });
+    expect(useFolderStore.subscribe).toHaveBeenCalled();
 
     const newState = { lastUpdated: 200, folders: [{ id: 'new' }] };
     (selectSyncState as any).mockReturnValue(newState);
@@ -108,11 +113,13 @@ describe('useSync', () => {
     });
 
     // Debounce is 2000ms
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(2000);
+      await Promise.resolve();
     });
 
     expect(supabase.upsertUserLibrary).toHaveBeenCalledWith('user-1', newState);
+    intervalSpy.mockRestore();
     vi.useRealTimers();
   });
 });

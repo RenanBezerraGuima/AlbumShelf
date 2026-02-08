@@ -20,6 +20,10 @@ Vercel supports Next.js out of the box and makes it easy to attach environment v
    - Leave the **Custom Prefix** blank (so the default Supabase env vars are created).
 4. For Spotify (if used), add:
    - `NEXT_PUBLIC_SPOTIFY_CLIENT_ID`
+5. To ensure Supabase email confirmations land on the hosted URL (instead of localhost), set:  
+   - `NEXT_PUBLIC_SITE_URL=https://album-shelf.vercel.app`  
+   If you want **Preview** deployments to use their preview domain instead, either set a preview-specific
+   `NEXT_PUBLIC_SITE_URL` value in Vercel or add each preview URL to Supabase’s allowed redirect URLs.
 
 > ✅ Keep GitHub Pages: do **not** remove your existing GitHub Actions deployment; this Vercel deploy is a second target.
 

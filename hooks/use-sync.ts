@@ -9,7 +9,13 @@ import {
   upsertUserLibrary,
   type SupabaseSession,
 } from '@/lib/supabase-client';
+import { formatCloudError } from '@/lib/cloud-errors';
 import { toast } from 'sonner';
+
+type CloudResult = {
+  success: boolean;
+  error?: string;
+};
 
 export function useSync() {
   const [session, setSession] = useState<SupabaseSession | null>(null);
@@ -48,25 +54,29 @@ export function useSync() {
       window.removeEventListener('supabase-auth-change', handleAuthChange);
   }, [isConfigured]);
 
-  const pushToCloud = useCallback(async (stateToPush?: SyncState) => {
-    if (!session || !isConfigured) return;
+  const pushToCloud = useCallback(async (stateToPush?: SyncState): Promise<CloudResult> => {
+    if (!session || !isConfigured) {
+      return { success: false, error: formatCloudError('Upload failed. Sign in first.') };
+    }
     const state = stateToPush || selectSyncState(useFolderStore.getState());
     setIsSyncing(true);
     try {
       await upsertUserLibrary(session.user.id, state);
       lastPushedVersion.current = state.lastUpdated;
       setNeedsConflictResolution(false);
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Push failed:', error);
-      return false;
+      return { success: false, error: formatCloudError('Upload failed.', error) };
     } finally {
       setIsSyncing(false);
     }
   }, [isConfigured, session]);
 
-  const pullFromCloud = useCallback(async (specificState?: SyncState) => {
-    if (!session || !isConfigured) return;
+  const pullFromCloud = useCallback(async (specificState?: SyncState): Promise<CloudResult> => {
+    if (!session || !isConfigured) {
+      return { success: false, error: formatCloudError('Download failed. Sign in first.') };
+    }
     setIsSyncing(true);
     try {
       let state = specificState;
@@ -80,12 +90,12 @@ export function useSync() {
         applySyncState(state);
         setNeedsConflictResolution(false);
         setRemoteSnapshot(null);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: formatCloudError('Download failed. No cloud data found.') };
     } catch (error) {
       console.error('Pull failed:', error);
-      return false;
+      return { success: false, error: formatCloudError('Download failed.', error) };
     } finally {
       setIsSyncing(false);
     }
@@ -106,24 +116,40 @@ export function useSync() {
 
         if (localVersion === 0 || remoteVersion > localVersion) {
           // Cloud is newer or local is fresh
-          await pullFromCloud(remoteData);
-          if (isInitial) toast.success('LOADED YOUR CLOUD LIBRARY');
+          const result = await pullFromCloud(remoteData);
+          if (isInitial) {
+            if (result.success) {
+              toast.success('LOADED YOUR CLOUD LIBRARY');
+            } else {
+              toast.error(result.error ?? 'CLOUD SYNC FAILED');
+            }
+          }
         } else if (localVersion > remoteVersion) {
           // Local is newer
-          await pushToCloud(localState);
-          if (isInitial) toast.success('SYNCED LOCAL LIBRARY TO CLOUD');
+          const result = await pushToCloud(localState);
+          if (isInitial) {
+            if (result.success) {
+              toast.success('SYNCED LOCAL LIBRARY TO CLOUD');
+            } else {
+              toast.error(result.error ?? 'CLOUD SYNC FAILED');
+            }
+          }
         } else {
           // Already in sync
           lastPushedVersion.current = localVersion;
         }
       } else if (isInitial && localState.lastUpdated > 0) {
         // No cloud data, but local has data
-        await pushToCloud(localState);
-        toast.success('UPLOADED LOCAL LIBRARY TO CLOUD');
+        const result = await pushToCloud(localState);
+        if (result.success) {
+          toast.success('UPLOADED LOCAL LIBRARY TO CLOUD');
+        } else {
+          toast.error(result.error ?? 'CLOUD SYNC FAILED');
+        }
       }
     } catch (error) {
       console.error('Sync error:', error);
-      if (isInitial) toast.error('CLOUD SYNC FAILED');
+      if (isInitial) toast.error(formatCloudError('CLOUD SYNC FAILED', error));
     } finally {
       if (isInitial) setHasLoadedRemote(true);
       setIsSyncing(false);

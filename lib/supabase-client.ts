@@ -24,6 +24,22 @@ export const isSupabaseConfigured = () => Boolean(SUPABASE_URL() && SUPABASE_ANO
 
 const buildUrl = (path: string) => `${SUPABASE_URL()}${path}`;
 
+const resolveOrigin = () => {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.location.origin;
+};
+
 const resolveBasePath = () => {
   if (process.env.NEXT_PUBLIC_BASE_PATH !== undefined) {
     return process.env.NEXT_PUBLIC_BASE_PATH;
@@ -37,7 +53,7 @@ const resolveBasePath = () => {
 };
 
 export const resolveSupabaseRedirectUrl = () => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const origin = resolveOrigin();
   const basePath = resolveBasePath();
   const normalizedBasePath = basePath === '/' ? '' : basePath;
 
