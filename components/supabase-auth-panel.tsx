@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { User, LogOut, CloudDownload, CloudUpload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,156 +11,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useFolderStore, selectSyncState, applySyncState, type SyncState } from '@/lib/store';
 import {
-  fetchUserLibrary,
-  getSession,
   isSupabaseConfigured,
   signInWithPassword,
   signOut,
   signUpWithPassword,
-  upsertUserLibrary,
-  type SupabaseSession,
 } from '@/lib/supabase-client';
 import { toast } from 'sonner';
-import { useRef } from 'react';
-
-const emptySyncState = (state: SyncState) =>
-  state.folders.length === 0;
+import { useSync } from '@/hooks/use-sync';
 
 export function SupabaseAuthPanel() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [session, setSession] = useState<SupabaseSession | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [remoteSnapshot, setRemoteSnapshot] = useState<SyncState | null>(null);
-  const [needsConflictResolution, setNeedsConflictResolution] = useState(false);
-  const [hasLoadedRemote, setHasLoadedRemote] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasRequestedRemote = useRef(false);
-  const lastPushedVersion = useRef<number>(0);
+
+  const {
+    session,
+    isSyncing,
+    needsConflictResolution,
+    pushToCloud,
+    pullFromCloud,
+    setSession,
+  } = useSync();
 
   const isConfigured = isSupabaseConfigured;
-
-  useEffect(() => {
-    if (!isConfigured) return;
-    getSession()
-      .then(setSession)
-      .catch(() => setSession(null));
-
-    const handleAuthChange = () => {
-      getSession()
-        .then(setSession)
-        .catch(() => setSession(null));
-    };
-
-    window.addEventListener('supabase-auth-change', handleAuthChange);
-    return () =>
-      window.removeEventListener('supabase-auth-change', handleAuthChange);
-  }, [isConfigured]);
-
-  useEffect(() => {
-    if (!session || !isConfigured) return;
-
-    const syncWithRemote = async (isInitial = false) => {
-      if (!isInitial) setIsSyncing(true);
-      try {
-        const rows = await fetchUserLibrary(session.user.id);
-        const remoteData = rows[0]?.data as SyncState | undefined;
-        const currentLocalSyncState = selectSyncState(useFolderStore.getState());
-
-        if (remoteData) {
-          const remoteVersion = remoteData.lastUpdated || 0;
-          const localVersion = currentLocalSyncState.lastUpdated || 0;
-
-          if (emptySyncState(currentLocalSyncState) || remoteVersion > localVersion) {
-            lastPushedVersion.current = remoteVersion;
-            applySyncState(remoteData);
-            if (isInitial) toast.success('LOADED YOUR CLOUD LIBRARY');
-          } else if (remoteVersion === localVersion) {
-            // Already in sync
-            lastPushedVersion.current = localVersion;
-          } else if (localVersion > remoteVersion) {
-            // Local is newer, push it to cloud immediately if initial load
-            lastPushedVersion.current = remoteVersion; // Set lower so push is triggered
-            if (isInitial) {
-              await upsertUserLibrary(session.user.id, currentLocalSyncState);
-              lastPushedVersion.current = localVersion;
-              toast.success('SYNCED LOCAL LIBRARY TO CLOUD');
-            }
-          } else {
-            setRemoteSnapshot(remoteData);
-            setNeedsConflictResolution(true);
-          }
-        } else if (isInitial && !emptySyncState(currentLocalSyncState)) {
-          await upsertUserLibrary(session.user.id, currentLocalSyncState);
-          lastPushedVersion.current = currentLocalSyncState.lastUpdated;
-          toast.success('UPLOADED LOCAL LIBRARY TO CLOUD');
-        }
-      } catch (error) {
-        console.error('Sync error:', error);
-        if (isInitial) toast.error('CLOUD SYNC FAILED');
-      } finally {
-        if (isInitial) setHasLoadedRemote(true);
-        setIsSyncing(false);
-      }
-    };
-
-    if (!hasLoadedRemote && !hasRequestedRemote.current) {
-      hasRequestedRemote.current = true;
-      syncWithRemote(true);
-    }
-
-    // Automatic pulling on window focus
-    const handleFocus = () => syncWithRemote();
-    window.addEventListener('focus', handleFocus);
-
-    // Periodic pulling (every 2 minutes)
-    const intervalId = setInterval(() => syncWithRemote(), 1000 * 60 * 2);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(intervalId);
-    };
-  }, [hasLoadedRemote, isConfigured, session]);
-
-  useEffect(() => {
-    if (!session || !isConfigured || !hasLoadedRemote) return;
-    const unsubscribe = useFolderStore.subscribe(async (state) => {
-      if (needsConflictResolution) return;
-      const selectedState = selectSyncState(state);
-
-      // Optimization: Only push if the version (timestamp) has actually increased
-      if (selectedState.lastUpdated <= lastPushedVersion.current) {
-        return;
-      }
-
-      if (syncTimer.current) {
-        clearTimeout(syncTimer.current);
-      }
-      syncTimer.current = setTimeout(async () => {
-        setIsSyncing(true);
-        try {
-          await upsertUserLibrary(session.user.id, selectedState);
-          lastPushedVersion.current = selectedState.lastUpdated;
-        } catch (error) {
-          console.error('Auto-push failed:', error);
-        } finally {
-          setIsSyncing(false);
-        }
-      }, 1500); // Slightly longer debounce for auto-push
-    });
-
-    return () => {
-      unsubscribe();
-      if (syncTimer.current) {
-        clearTimeout(syncTimer.current);
-      }
-    };
-  }, [hasLoadedRemote, isConfigured, needsConflictResolution, session]);
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -193,11 +69,6 @@ export function SupabaseAuthPanel() {
     try {
       await signOut();
       setSession(null);
-      setHasLoadedRemote(false);
-      setNeedsConflictResolution(false);
-      setRemoteSnapshot(null);
-      hasRequestedRemote.current = false;
-      lastPushedVersion.current = 0;
     } catch (error) {
       console.error(error);
       toast.error('Failed to sign out.');
@@ -206,47 +77,26 @@ export function SupabaseAuthPanel() {
     }
   };
 
-  const pushToCloud = async () => {
-    if (!session) return;
+  const handleManualPush = async () => {
     setIsBusy(true);
-    try {
-      const currentLocalSyncState = selectSyncState(useFolderStore.getState());
-      await upsertUserLibrary(session.user.id, currentLocalSyncState);
-      lastPushedVersion.current = currentLocalSyncState.lastUpdated;
-      setNeedsConflictResolution(false);
+    const success = await pushToCloud();
+    if (success) {
       toast.success('Uploaded to cloud.');
-    } catch (error) {
-      console.error(error);
+    } else {
       toast.error('Upload failed.');
-    } finally {
-      setIsBusy(false);
     }
+    setIsBusy(false);
   };
 
-  const pullFromCloud = async () => {
-    if (!session) return;
+  const handleManualPull = async () => {
     setIsBusy(true);
-    try {
-      if (remoteSnapshot) {
-        applySyncState(remoteSnapshot);
-        lastPushedVersion.current = remoteSnapshot.lastUpdated;
-      } else {
-        const rows = await fetchUserLibrary(session.user.id);
-        const remoteData = rows[0]?.data as SyncState | undefined;
-        if (remoteData) {
-          applySyncState(remoteData);
-          setRemoteSnapshot(remoteData);
-          lastPushedVersion.current = remoteData.lastUpdated;
-        }
-      }
-      setNeedsConflictResolution(false);
+    const success = await pullFromCloud();
+    if (success) {
       toast.success('Loaded from cloud.');
-    } catch (error) {
-      console.error(error);
+    } else {
       toast.error('Download failed.');
-    } finally {
-      setIsBusy(false);
     }
+    setIsBusy(false);
   };
 
   const buttonLabel = useMemo(() => {
@@ -290,7 +140,7 @@ export function SupabaseAuthPanel() {
                 <div className="text-xs font-mono uppercase">
                   Signed in as {session.user.email ?? session.user.id}
                 </div>
-                {isSyncing && (
+                {(isSyncing || isBusy) && (
                   <div className="text-[10px] font-mono uppercase animate-pulse text-primary">
                     Syncing...
                   </div>
@@ -303,19 +153,19 @@ export function SupabaseAuthPanel() {
               )}
               <div className="flex flex-wrap gap-2">
                 <Button
-                  onClick={pullFromCloud}
+                  onClick={handleManualPull}
                   variant="outline"
                   className="border-2 border-border"
-                  disabled={isBusy}
+                  disabled={isBusy || isSyncing}
                 >
                   <CloudDownload className="mr-2 h-4 w-4" />
                   Pull from cloud
                 </Button>
                 <Button
-                  onClick={pushToCloud}
+                  onClick={handleManualPush}
                   variant="outline"
                   className="border-2 border-border"
-                  disabled={isBusy}
+                  disabled={isBusy || isSyncing}
                 >
                   <CloudUpload className="mr-2 h-4 w-4" />
                   Push to cloud
@@ -324,7 +174,7 @@ export function SupabaseAuthPanel() {
                   onClick={handleSignOut}
                   variant="outline"
                   className="border-2 border-border"
-                  disabled={isBusy}
+                  disabled={isBusy || isSyncing}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out
