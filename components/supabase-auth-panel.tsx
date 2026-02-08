@@ -188,6 +188,7 @@ export function SupabaseAuthPanel() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className="border-2 border-border uppercase tracking-tight"
+                  maxLength={200}
                 />
                 <Input
                   type="password"
@@ -195,6 +196,7 @@ export function SupabaseAuthPanel() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="border-2 border-border uppercase tracking-tight"
+                  maxLength={100}
                 />
               </div>
               <div className="flex flex-wrap gap-2">
