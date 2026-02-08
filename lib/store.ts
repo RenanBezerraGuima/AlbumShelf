@@ -263,7 +263,7 @@ export const useFolderStore = create<FolderStore>()(
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
       theme: 'industrial',
-      lastUpdated: Date.now(),
+      lastUpdated: 0,
 
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
