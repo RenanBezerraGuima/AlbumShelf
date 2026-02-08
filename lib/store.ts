@@ -19,6 +19,7 @@ interface FolderStore {
   spotifyTokenExpiry: number | null;
   spotifyTokenTimestamp: number | null;
   theme: Theme;
+  lastUpdated: number;
   
   // Folder actions
   createFolder: (name: string, parentId: string | null) => void;
@@ -55,6 +56,7 @@ export type SyncState = Pick<
   | 'spotifyTokenExpiry'
   | 'spotifyTokenTimestamp'
   | 'theme'
+  | 'lastUpdated'
 >;
 
 const generateId = () => crypto.randomUUID();
@@ -68,6 +70,7 @@ export const selectSyncState = (state: FolderStore): SyncState => ({
   spotifyTokenExpiry: state.spotifyTokenExpiry,
   spotifyTokenTimestamp: state.spotifyTokenTimestamp,
   theme: state.theme,
+  lastUpdated: state.lastUpdated,
 });
 
 export const applySyncState = (incoming: SyncState) => {
@@ -260,6 +263,7 @@ export const useFolderStore = create<FolderStore>()(
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
       theme: 'industrial',
+      lastUpdated: Date.now(),
 
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
@@ -272,6 +276,7 @@ export const useFolderStore = create<FolderStore>()(
         };
         set((state) => ({
           folders: addFolderToTree(state.folders, parentId, newFolder),
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -281,6 +286,7 @@ export const useFolderStore = create<FolderStore>()(
             ...folder,
             name: name.slice(0, 100),
           })),
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -289,6 +295,7 @@ export const useFolderStore = create<FolderStore>()(
           folders: deleteFolderFromTree(state.folders, id),
           selectedFolderId:
             state.selectedFolderId === id ? null : state.selectedFolderId,
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -298,11 +305,12 @@ export const useFolderStore = create<FolderStore>()(
             ...folder,
             isExpanded: !folder.isExpanded,
           })),
+          lastUpdated: Date.now(),
         }));
       },
 
       setSelectedFolder: (id) => {
-        set({ selectedFolderId: id });
+        set({ selectedFolderId: id, lastUpdated: Date.now() });
       },
 
       moveFolder: (folderId, newParentId, targetFolderId) => {
@@ -324,7 +332,7 @@ export const useFolderStore = create<FolderStore>()(
         const movedFolder = { ...folder, parentId: newParentId };
         newFolders = insertFolderAtPosition(newFolders, newParentId, movedFolder, targetFolderId);
         
-        set({ folders: newFolders });
+        set({ folders: newFolders, lastUpdated: Date.now() });
       },
 
       addAlbumToFolder: (folderId, album) => {
@@ -349,6 +357,7 @@ export const useFolderStore = create<FolderStore>()(
               albums: [...folder.albums, sanitizedAlbum],
             };
           }),
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -358,6 +367,7 @@ export const useFolderStore = create<FolderStore>()(
             ...folder,
             albums: folder.albums.filter((a) => a.id !== albumId),
           })),
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -389,7 +399,7 @@ export const useFolderStore = create<FolderStore>()(
           albums: [...folder.albums, album],
         }));
 
-        set({ folders: newFolders });
+        set({ folders: newFolders, lastUpdated: Date.now() });
       },
 
       reorderAlbum: (folderId, fromIndex, toIndex) => {
@@ -403,6 +413,7 @@ export const useFolderStore = create<FolderStore>()(
               albums: newAlbums,
             };
           }),
+          lastUpdated: Date.now(),
         }));
       },
 
@@ -471,18 +482,18 @@ export const useFolderStore = create<FolderStore>()(
             return f;
           });
 
-          set({ folders: [...updatedExisting, ...updatedImported] });
+          set({ folders: [...updatedExisting, ...updatedImported], lastUpdated: Date.now() });
         } else {
-          set({ folders: [...existingFolders, ...processedImported] });
+          set({ folders: [...existingFolders, ...processedImported], lastUpdated: Date.now() });
         }
       },
 
       setStreamingProvider: (provider) => {
-        set({ streamingProvider: provider });
+        set({ streamingProvider: provider, lastUpdated: Date.now() });
       },
 
       setHasSetPreference: (hasSet) => {
-        set({ hasSetPreference: hasSet });
+        set({ hasSetPreference: hasSet, lastUpdated: Date.now() });
       },
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
@@ -490,10 +501,11 @@ export const useFolderStore = create<FolderStore>()(
           spotifyToken: token,
           spotifyTokenExpiry: expiresIn,
           spotifyTokenTimestamp: timestamp,
+          lastUpdated: Date.now(),
         });
       },
 
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => set({ theme, lastUpdated: Date.now() }),
     }),
     {
       name: 'album-shelf-storage',

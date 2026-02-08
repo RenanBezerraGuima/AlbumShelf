@@ -159,4 +159,31 @@ describe('useFolderStore', () => {
     expect(rockNew.subfolders[0].id).not.toBe('old-id-2');
     expect(rockNew.subfolders[0].parentId).toBe(rockNew.id);
   });
+
+  it('should update lastUpdated on all data-modifying actions', async () => {
+    const { createFolder, renameFolder, addAlbumToFolder, setTheme } = useFolderStore.getState();
+
+    const initialLastUpdated = useFolderStore.getState().lastUpdated;
+
+    await new Promise(r => setTimeout(r, 2));
+    createFolder('Folder', null);
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(initialLastUpdated);
+
+    let currentLastUpdated = useFolderStore.getState().lastUpdated;
+    const folderId = useFolderStore.getState().folders[0].id;
+
+    await new Promise(r => setTimeout(r, 2));
+    renameFolder(folderId, 'New Name');
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(currentLastUpdated);
+
+    currentLastUpdated = useFolderStore.getState().lastUpdated;
+    await new Promise(r => setTimeout(r, 2));
+    addAlbumToFolder(folderId, { id: 'a1', name: 'A1', artist: 'Art' } as any);
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(currentLastUpdated);
+
+    currentLastUpdated = useFolderStore.getState().lastUpdated;
+    await new Promise(r => setTimeout(r, 2));
+    setTheme('organic');
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(currentLastUpdated);
+  });
 });

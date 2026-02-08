@@ -53,9 +53,12 @@ Create a table called `albumshelf_items`:
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | `uuid` | Primary key, default `gen_random_uuid()` |
-| `user_id` | `text` | Identifier for a device or user (optional, if you add auth later) |
+| `user_id` | `text` | **UNIQUE** Identifier (essential for automatic sync/upsert) |
 | `data` | `jsonb` | Serialized library data |
 | `updated_at` | `timestamptz` | default `now()` |
+
+> ⚠️ **CRITICAL**: The `user_id` column MUST have a **UNIQUE** constraint for the automatic sync (upsert) to work. If you already created the table without it, run:
+> `ALTER TABLE public.albumshelf_items ADD CONSTRAINT unique_user_id UNIQUE (user_id);`
 
 This keeps the initial integration simple: store the entire library JSON as a single record, then evolve later.
 
