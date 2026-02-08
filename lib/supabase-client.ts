@@ -10,13 +10,20 @@ export type SupabaseSession = {
   user: SupabaseUser;
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const getEnv = (key: string) => {
+  if (typeof window !== 'undefined' && (window as any)[key]) {
+    return (window as any)[key];
+  }
+  return (process.env as any)[key] ?? '';
+};
+
+const SUPABASE_URL = () => getEnv('NEXT_PUBLIC_SUPABASE_URL');
+const SUPABASE_ANON_KEY = () => getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 const SESSION_STORAGE_KEY = 'albumshelf_supabase_session';
 
-export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isSupabaseConfigured = () => Boolean(SUPABASE_URL() && SUPABASE_ANON_KEY());
 
-const buildUrl = (path: string) => `${SUPABASE_URL}${path}`;
+const buildUrl = (path: string) => `${SUPABASE_URL()}${path}`;
 
 const resolveBasePath = () => {
   if (process.env.NEXT_PUBLIC_BASE_PATH !== undefined) {
@@ -69,7 +76,7 @@ const request = async <T>(
   const response = await fetch(buildUrl(path), {
     ...options,
     headers: {
-      apikey: SUPABASE_ANON_KEY,
+      apikey: SUPABASE_ANON_KEY(),
       'Content-Type': 'application/json',
       ...(options.headers ?? {}),
     },
@@ -104,7 +111,7 @@ const toSession = (payload: {
 };
 
 export const getSession = async () => {
-  if (!isSupabaseConfigured) return null;
+  if (!isSupabaseConfigured()) return null;
   const stored = readSession();
   if (!stored) return null;
   if (stored.expiresAt > Date.now() + 30_000) {

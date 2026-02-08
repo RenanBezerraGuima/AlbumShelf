@@ -22,7 +22,7 @@ export function useSync() {
   const hasRequestedRemote = useRef(false);
   const lastPushedVersion = useRef<number>(0);
 
-  const isConfigured = isSupabaseConfigured;
+  const isConfigured = isSupabaseConfigured();
 
   // Handle Session
   useEffect(() => {
@@ -76,8 +76,8 @@ export function useSync() {
       }
 
       if (state) {
-        applySyncState(state);
         lastPushedVersion.current = state.lastUpdated;
+        applySyncState(state);
         setNeedsConflictResolution(false);
         setRemoteSnapshot(null);
         return true;

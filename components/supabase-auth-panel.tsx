@@ -36,7 +36,7 @@ export function SupabaseAuthPanel() {
     setSession,
   } = useSync();
 
-  const isConfigured = isSupabaseConfigured;
+  const isConfigured = isSupabaseConfigured();
 
   const handleAuth = async () => {
     if (!email || !password) {

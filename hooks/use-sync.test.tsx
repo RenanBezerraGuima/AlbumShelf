@@ -18,7 +18,7 @@ vi.mock('@/lib/store', () => ({
 vi.mock('@/lib/supabase-client', () => ({
   fetchUserLibrary: vi.fn(),
   getSession: vi.fn(),
-  isSupabaseConfigured: true,
+  isSupabaseConfigured: vi.fn(() => true),
   upsertUserLibrary: vi.fn(),
 }));
 
