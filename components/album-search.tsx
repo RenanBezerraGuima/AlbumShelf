@@ -27,6 +27,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = "album-search-results";
   
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
@@ -87,6 +88,21 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Global shortcut for search (/)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+
+      if (e.key === '/' && !isInputActive && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   const searchAlbums = useCallback(async (searchQuery: string) => {
@@ -204,6 +220,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             onClick={onMenuClick}
             className="shrink-0 h-12 w-12"
             aria-label="Open menu"
+            title="Open menu"
           >
             <Menu className="h-6 w-6" />
           </Button>
@@ -214,7 +231,8 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors"
           />
           <Input
-            placeholder={isMobile ? "SEARCH..." : `SEARCH ALBUMS ON ${streamingProvider.toUpperCase()}...`}
+            ref={inputRef}
+            placeholder={isMobile ? "SEARCH..." : `SEARCH ON ${streamingProvider.toUpperCase()} [/]...`}
             value={query}
             onChange={handleSearchChange}
             onFocus={handleFocus}
@@ -251,7 +269,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
           <SupabaseAuthPanel />
         </div>
 
-        {isOpen && (results.length > 0 || error) && (
+        {isOpen && (results.length > 0 || error || (query.trim() && !isLoading)) && (
           <div
             className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
             style={{ borderRadius: 'var(--radius)' }}
@@ -271,6 +289,14 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                       Connect Spotify
                     </button>
                   )}
+                </div>
+              )}
+
+              {results.length === 0 && !error && query.trim() && !isLoading && (
+                <div className="py-8 px-4 text-center">
+                  <p className="text-sm text-muted-foreground uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+                    No albums found for "{query}"
+                  </p>
                 </div>
               )}
 
