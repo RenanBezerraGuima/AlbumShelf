@@ -10,15 +10,14 @@ export type SupabaseSession = {
   user: SupabaseUser;
 };
 
-const getEnv = (key: string) => {
-  if (typeof window !== 'undefined' && (window as any)[key]) {
-    return (window as any)[key];
-  }
-  return (process.env as any)[key] ?? '';
-};
-
-const SUPABASE_URL = () => getEnv('NEXT_PUBLIC_SUPABASE_URL');
-const SUPABASE_ANON_KEY = () => getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+const SUPABASE_URL = () =>
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  (typeof window !== 'undefined' ? (window as any).NEXT_PUBLIC_SUPABASE_URL : '') ||
+  '';
+const SUPABASE_ANON_KEY = () =>
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  (typeof window !== 'undefined' ? (window as any).NEXT_PUBLIC_SUPABASE_ANON_KEY : '') ||
+  '';
 const SESSION_STORAGE_KEY = 'albumshelf_supabase_session';
 
 export const isSupabaseConfigured = () => Boolean(SUPABASE_URL() && SUPABASE_ANON_KEY());

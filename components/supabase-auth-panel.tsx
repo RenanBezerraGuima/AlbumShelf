@@ -100,10 +100,9 @@ export function SupabaseAuthPanel() {
   };
 
   const buttonLabel = useMemo(() => {
-    if (!isConfigured) return 'ACCOUNT (DISABLED)';
     if (!session) return 'ACCOUNT';
     return session.user.email ? `ACCOUNT: ${session.user.email}` : 'ACCOUNT';
-  }, [isConfigured, session]);
+  }, [session]);
 
   return (
     <>
@@ -112,7 +111,6 @@ export function SupabaseAuthPanel() {
         size="sm"
         className="h-12 border-2 border-border uppercase tracking-tight"
         onClick={() => setOpen(true)}
-        disabled={!isConfigured}
       >
         <User className="mr-2 h-4 w-4" />
         {buttonLabel}
