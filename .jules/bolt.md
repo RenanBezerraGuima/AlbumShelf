@@ -13,3 +13,7 @@
 ## 2024-05-20 - [Search Result Caching and Image Attributes]
 **Learning:** Client-side search for album data is highly repetitive (users often re-type or tweak queries). Caching these results in a simple Map with a TTL dramatically improves perceived responsiveness. Additionally, standard `<img>` attributes like `loading="lazy"` and `decoding="async"` provide easy performance wins for media-heavy grids by reducing main-thread contention.
 **Action:** Implement caching for external API calls when data is relatively static. Use `decoding="async"` for all significant images to keep the UI smooth during scroll.
+
+## 2025-05-25 - [Tree Traversal Caching and Subscription Pruning]
+**Learning:** Recursive O(N) tree traversals (like `findFolder` and `getBreadcrumb`) in Zustand selectors run on every state change and component re-render. Using a `WeakMap` cache keyed by the immutable `folders` array reference turns these into O(1) lookups for stable state versions. Additionally, subscribing to store actions in components like `FolderTree` is unnecessary; accessing them via `getState()` in handlers eliminates redundant listeners.
+**Action:** Use `WeakMap` to cache expensive computations on immutable state trees. Prefer `getState()` for store actions used exclusively in event handlers.

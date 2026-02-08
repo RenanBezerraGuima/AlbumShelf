@@ -1,9 +1,9 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Folder, Album, Theme } from './types';
-import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from './security';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { Folder, Album, Theme } from "./types";
+import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from "./security";
 
-export type StreamingProvider = 'deezer' | 'apple' | 'spotify';
+export type StreamingProvider = "deezer" | "apple" | "spotify";
 
 interface FolderStore {
   folders: Folder[];
@@ -20,43 +20,59 @@ interface FolderStore {
   spotifyTokenTimestamp: number | null;
   theme: Theme;
   lastUpdated: number;
-  
+
   // Folder actions
   createFolder: (name: string, parentId: string | null) => void;
   renameFolder: (id: string, name: string) => void;
   deleteFolder: (id: string) => void;
   toggleFolderExpanded: (id: string) => void;
   setSelectedFolder: (id: string | null) => void;
-  moveFolder: (folderId: string, newParentId: string | null, targetFolderId: string | null) => void;
-  
+  moveFolder: (
+    folderId: string,
+    newParentId: string | null,
+    targetFolderId: string | null,
+  ) => void;
+
   // Album actions
   addAlbumToFolder: (folderId: string, album: Album) => void;
   removeAlbumFromFolder: (folderId: string, albumId: string) => void;
-  moveAlbum: (fromFolderId: string, toFolderId: string, albumId: string) => void;
+  moveAlbum: (
+    fromFolderId: string,
+    toFolderId: string,
+    albumId: string,
+  ) => void;
   reorderAlbum: (folderId: string, fromIndex: number, toIndex: number) => void;
-  
+
   // Drag and drop
-  setDraggedAlbum: (album: Album | null, folderId: string | null, index: number | null) => void;
+  setDraggedAlbum: (
+    album: Album | null,
+    folderId: string | null,
+    index: number | null,
+  ) => void;
   setDraggedFolderId: (folderId: string | null) => void;
   setDraggedFolder: (folder: Folder | null, parentId: string | null) => void;
   importFolders: (folders: Folder[]) => void;
   setStreamingProvider: (provider: StreamingProvider) => void;
   setHasSetPreference: (hasSet: boolean) => void;
-  setSpotifyToken: (token: string | null, expiresIn: number | null, timestamp: number | null) => void;
+  setSpotifyToken: (
+    token: string | null,
+    expiresIn: number | null,
+    timestamp: number | null,
+  ) => void;
   setTheme: (theme: Theme) => void;
 }
 
 export type SyncState = Pick<
   FolderStore,
-  | 'folders'
-  | 'selectedFolderId'
-  | 'streamingProvider'
-  | 'hasSetPreference'
-  | 'spotifyToken'
-  | 'spotifyTokenExpiry'
-  | 'spotifyTokenTimestamp'
-  | 'theme'
-  | 'lastUpdated'
+  | "folders"
+  | "selectedFolderId"
+  | "streamingProvider"
+  | "hasSetPreference"
+  | "spotifyToken"
+  | "spotifyTokenExpiry"
+  | "spotifyTokenTimestamp"
+  | "theme"
+  | "lastUpdated"
 >;
 
 const generateId = () => crypto.randomUUID();
@@ -80,16 +96,47 @@ export const applySyncState = (incoming: SyncState) => {
   }));
 };
 
+// Caches for tree traversal to avoid O(N) operations during re-renders or state updates.
+// WeakMap uses the 'folders' array reference as a key, ensuring cache is invalidated when tree changes.
+const findCache = new WeakMap<Folder[], Map<string, Folder | null>>();
+const breadcrumbCache = new WeakMap<Folder[], Map<string, string[]>>();
+
 export const findFolder = (folders: Folder[], id: string): Folder | null => {
-  for (const folder of folders) {
-    if (folder.id === id) return folder;
-    const found = findFolder(folder.subfolders, id);
-    if (found) return found;
+  let cache = findCache.get(folders);
+  if (!cache) {
+    cache = new Map();
+    findCache.set(folders, cache);
   }
-  return null;
+  if (cache.has(id)) return cache.get(id)!;
+
+  let result: Folder | null = null;
+  for (const folder of folders) {
+    if (folder.id === id) {
+      result = folder;
+      break;
+    }
+    const found = findFolder(folder.subfolders, id);
+    if (found) {
+      result = found;
+      break;
+    }
+  }
+
+  cache.set(id, result);
+  return result;
 };
 
-export const getBreadcrumb = (folders: Folder[], targetId: string): string[] => {
+export const getBreadcrumb = (
+  folders: Folder[],
+  targetId: string,
+): string[] => {
+  let cache = breadcrumbCache.get(folders);
+  if (!cache) {
+    cache = new Map();
+    breadcrumbCache.set(folders, cache);
+  }
+  if (cache.has(targetId)) return cache.get(targetId)!;
+
   const path: string[] = [];
 
   function find(folderList: Folder[], target: string): boolean {
@@ -107,13 +154,14 @@ export const getBreadcrumb = (folders: Folder[], targetId: string): string[] => 
   }
 
   find(folders, targetId);
+  cache.set(targetId, path);
   return path;
 };
 
 const updateFolderInTree = (
   folders: Folder[],
   id: string,
-  updater: (folder: Folder) => Folder
+  updater: (folder: Folder) => Folder,
 ): Folder[] => {
   let changed = false;
   const newFolders = folders.map((folder) => {
@@ -162,7 +210,7 @@ const deleteFolderFromTree = (folders: Folder[], id: string): Folder[] => {
 const addFolderToTree = (
   folders: Folder[],
   parentId: string | null,
-  newFolder: Folder
+  newFolder: Folder,
 ): Folder[] => {
   if (parentId === null) {
     return [...folders, newFolder];
@@ -177,7 +225,11 @@ const addFolderToTree = (
         subfolders: [...folder.subfolders, newFolder],
       };
     }
-    const newSubfolders = addFolderToTree(folder.subfolders, parentId, newFolder);
+    const newSubfolders = addFolderToTree(
+      folder.subfolders,
+      parentId,
+      newFolder,
+    );
     if (newSubfolders !== folder.subfolders) {
       changed = true;
       return {
@@ -191,15 +243,19 @@ const addFolderToTree = (
   return changed ? newFolders : folders;
 };
 
-const isDescendant = (folders: Folder[], ancestorId: string, descendantId: string): boolean => {
+const isDescendant = (
+  folders: Folder[],
+  ancestorId: string,
+  descendantId: string,
+): boolean => {
   const ancestor = findFolder(folders, ancestorId);
   if (!ancestor) return false;
-  
+
   const checkDescendant = (folder: Folder): boolean => {
     if (folder.id === descendantId) return true;
     return folder.subfolders.some(checkDescendant);
   };
-  
+
   return checkDescendant(ancestor);
 };
 
@@ -207,34 +263,40 @@ const insertFolderAtPosition = (
   folders: Folder[],
   parentId: string | null,
   folder: Folder,
-  targetId: string | null
+  targetId: string | null,
 ): Folder[] => {
   if (parentId === null) {
     // Insert at root level
     if (targetId === null) {
       return [...folders, folder];
     }
-    const targetIndex = folders.findIndex(f => f.id === targetId);
+    const targetIndex = folders.findIndex((f) => f.id === targetId);
     if (targetIndex === -1) return [...folders, folder];
     const newFolders = [...folders];
     newFolders.splice(targetIndex, 0, folder);
     return newFolders;
   }
-  
+
   let changed = false;
-  const newFolders = folders.map(f => {
+  const newFolders = folders.map((f) => {
     if (f.id === parentId) {
       changed = true;
       if (targetId === null) {
         return { ...f, subfolders: [...f.subfolders, folder] };
       }
-      const targetIndex = f.subfolders.findIndex(sf => sf.id === targetId);
-      if (targetIndex === -1) return { ...f, subfolders: [...f.subfolders, folder] };
+      const targetIndex = f.subfolders.findIndex((sf) => sf.id === targetId);
+      if (targetIndex === -1)
+        return { ...f, subfolders: [...f.subfolders, folder] };
       const newSubfolders = [...f.subfolders];
       newSubfolders.splice(targetIndex, 0, folder);
       return { ...f, subfolders: newSubfolders };
     }
-    const newSubfolders = insertFolderAtPosition(f.subfolders, parentId, folder, targetId);
+    const newSubfolders = insertFolderAtPosition(
+      f.subfolders,
+      parentId,
+      folder,
+      targetId,
+    );
     if (newSubfolders !== f.subfolders) {
       changed = true;
       return {
@@ -257,12 +319,12 @@ export const useFolderStore = create<FolderStore>()(
       draggedAlbumIndex: null,
       draggedFolder: null,
       draggedFolderParentId: null,
-      streamingProvider: 'deezer',
+      streamingProvider: "deezer",
       hasSetPreference: false,
       spotifyToken: null,
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
-      theme: 'industrial',
+      theme: "industrial",
       lastUpdated: 0,
 
       createFolder: (name, parentId) => {
@@ -315,23 +377,28 @@ export const useFolderStore = create<FolderStore>()(
 
       moveFolder: (folderId, newParentId, targetFolderId) => {
         const state = get();
-        
+
         // Prevent moving a folder into itself or its descendants
         if (newParentId && isDescendant(state.folders, folderId, newParentId)) {
           return;
         }
         if (folderId === newParentId) return;
-        
+
         const folder = findFolder(state.folders, folderId);
         if (!folder) return;
-        
+
         // Remove folder from its current position
         let newFolders = deleteFolderFromTree(state.folders, folderId);
-        
+
         // Add folder to new position
         const movedFolder = { ...folder, parentId: newParentId };
-        newFolders = insertFolderAtPosition(newFolders, newParentId, movedFolder, targetFolderId);
-        
+        newFolders = insertFolderAtPosition(
+          newFolders,
+          newParentId,
+          movedFolder,
+          targetFolderId,
+        );
+
         set({ folders: newFolders, lastUpdated: Date.now() });
       },
 
@@ -341,7 +408,12 @@ export const useFolderStore = create<FolderStore>()(
             // Check by id or spotifyId to prevent duplicates
             const isDuplicate = folder.albums.some((a) => {
               if (a.id === album.id) return true;
-              if (a.spotifyId && album.spotifyId && a.spotifyId === album.spotifyId) return true;
+              if (
+                a.spotifyId &&
+                album.spotifyId &&
+                a.spotifyId === album.spotifyId
+              )
+                return true;
               return false;
             });
 
@@ -391,7 +463,7 @@ export const useFolderStore = create<FolderStore>()(
           (folder) => ({
             ...folder,
             albums: folder.albums.filter((a) => a.id !== albumId),
-          })
+          }),
         );
 
         newFolders = updateFolderInTree(newFolders, toFolderId, (folder) => ({
@@ -421,7 +493,7 @@ export const useFolderStore = create<FolderStore>()(
         set({
           draggedAlbum: album,
           draggedFolderId: folderId,
-          draggedAlbumIndex: index
+          draggedAlbumIndex: index,
         });
       },
 
@@ -436,19 +508,25 @@ export const useFolderStore = create<FolderStore>()(
       importFolders: (importedFolders) => {
         const state = get();
 
-        const sanitizeAndRegenerate = (folders: any[], parentId: string | null): Folder[] => {
+        const sanitizeAndRegenerate = (
+          folders: any[],
+          parentId: string | null,
+        ): Folder[] => {
           return folders.map((folder) => {
             const newId = generateId();
 
             // Sanitize albums
-            const sanitizedAlbums: Album[] = (folder.albums || []).map((album: any) => sanitizeAlbum({
-              ...album,
-              id: album.id || generateId(),
-            }));
+            const sanitizedAlbums: Album[] = (folder.albums || []).map(
+              (album: any) =>
+                sanitizeAlbum({
+                  ...album,
+                  id: album.id || generateId(),
+                }),
+            );
 
             return {
               id: newId,
-              name: String(folder.name || 'Untitled').slice(0, 100),
+              name: String(folder.name || "Untitled").slice(0, 100),
               parentId,
               albums: sanitizedAlbums,
               subfolders: sanitizeAndRegenerate(folder.subfolders || [], newId),
@@ -460,31 +538,39 @@ export const useFolderStore = create<FolderStore>()(
         const processedImported = sanitizeAndRegenerate(importedFolders, null);
         const existingFolders = [...state.folders];
 
-        const existingNames = new Set(existingFolders.map(f => f.name));
-        const importedNames = new Set(processedImported.map(f => f.name));
+        const existingNames = new Set(existingFolders.map((f) => f.name));
+        const importedNames = new Set(processedImported.map((f) => f.name));
 
-        const collidingNames = [...importedNames].filter(name => existingNames.has(name));
+        const collidingNames = [...importedNames].filter((name) =>
+          existingNames.has(name),
+        );
 
         if (collidingNames.length > 0) {
           const collidingSet = new Set(collidingNames);
 
-          const updatedExisting = existingFolders.map(f => {
+          const updatedExisting = existingFolders.map((f) => {
             if (collidingSet.has(f.name)) {
               return { ...f, name: `${f.name} (OLD)` };
             }
             return f;
           });
 
-          const updatedImported = processedImported.map(f => {
+          const updatedImported = processedImported.map((f) => {
             if (collidingSet.has(f.name)) {
               return { ...f, name: `${f.name} (NEW)` };
             }
             return f;
           });
 
-          set({ folders: [...updatedExisting, ...updatedImported], lastUpdated: Date.now() });
+          set({
+            folders: [...updatedExisting, ...updatedImported],
+            lastUpdated: Date.now(),
+          });
         } else {
-          set({ folders: [...existingFolders, ...processedImported], lastUpdated: Date.now() });
+          set({
+            folders: [...existingFolders, ...processedImported],
+            lastUpdated: Date.now(),
+          });
         }
       },
 
@@ -508,7 +594,7 @@ export const useFolderStore = create<FolderStore>()(
       setTheme: (theme) => set({ theme, lastUpdated: Date.now() }),
     }),
     {
-      name: 'album-shelf-storage',
+      name: "album-shelf-storage",
       // Exclude drag-and-drop state from persistence to avoid unnecessary
       // localStorage writes and expensive serialization during drag operations.
       partialize: (state) => {
@@ -527,11 +613,11 @@ export const useFolderStore = create<FolderStore>()(
           const val = localStorage.getItem(name);
           if (val) return val;
           // Fallback to old key to restore "disappeared" data
-          return localStorage.getItem('album-organizer-storage');
+          return localStorage.getItem("album-organizer-storage");
         },
         setItem: (name, value) => localStorage.setItem(name, value),
         removeItem: (name) => localStorage.removeItem(name),
       })),
-    }
-  )
+    },
+  ),
 );
