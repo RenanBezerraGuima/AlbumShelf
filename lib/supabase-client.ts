@@ -77,6 +77,7 @@ const request = async <T>(
 
   if (!response.ok) {
     const payload = await response.text();
+    console.error(`Supabase request failed [${options.method || 'GET'} ${path}]:`, response.status, payload);
     throw new Error(payload || `Request failed with status ${response.status}`);
   }
 
@@ -231,19 +232,27 @@ export const fetchUserLibrary = async (userId: string) => {
 export const upsertUserLibrary = async (userId: string, data: unknown) => {
   const session = await getSession();
   if (!session) throw new Error('No active session.');
-  return request(
-    `/rest/v1/albumshelf_items?on_conflict=user_id`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-        Prefer: 'resolution=merge-duplicates,return=minimal',
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        data,
-        updated_at: new Date().toISOString(),
-      }),
+
+  try {
+    return await request(
+      `/rest/v1/albumshelf_items?on_conflict=user_id`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          Prefer: 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          data,
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    );
+  } catch (error: any) {
+    if (error.message?.includes('column "user_id" is not unique') || error.message?.includes('there is no unique or exclusion constraint')) {
+      console.error('UPSERT FAIL: The "user_id" column requires a UNIQUE constraint in Supabase.');
     }
-  );
+    throw error;
+  }
 };

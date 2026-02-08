@@ -40,12 +40,7 @@ export function SupabaseAuthPanel() {
   const [hasLoadedRemote, setHasLoadedRemote] = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedRemote = useRef(false);
-  const isGitHubPages = useMemo(
-    () =>
-      typeof window !== 'undefined' &&
-      window.location.hostname.endsWith('github.io'),
-    []
-  );
+  const lastPushedVersion = useRef<number>(0);
 
   const isConfigured = isSupabaseConfigured;
 
@@ -68,37 +63,60 @@ export function SupabaseAuthPanel() {
 
   useEffect(() => {
     if (!session || !isConfigured) return;
-    if (hasLoadedRemote) return;
-    if (hasRequestedRemote.current) return;
-    hasRequestedRemote.current = true;
 
-    const loadRemote = async () => {
+    const syncWithRemote = async (isInitial = false) => {
       try {
         const rows = await fetchUserLibrary(session.user.id);
         const remoteData = rows[0]?.data as SyncState | undefined;
         const currentLocalSyncState = selectSyncState(useFolderStore.getState());
 
         if (remoteData) {
-          if (emptySyncState(currentLocalSyncState)) {
+          const remoteVersion = remoteData.lastUpdated || 0;
+          const localVersion = currentLocalSyncState.lastUpdated || 0;
+
+          if (emptySyncState(currentLocalSyncState) || remoteVersion > localVersion) {
+            lastPushedVersion.current = remoteVersion;
             applySyncState(remoteData);
-            toast.success('Loaded your cloud library.');
+            if (isInitial) toast.success('LOADED YOUR CLOUD LIBRARY');
+          } else if (remoteVersion === localVersion) {
+            // Already in sync
+            lastPushedVersion.current = localVersion;
+          } else if (localVersion > remoteVersion) {
+            // Local is newer, existing push effect will handle it
+            if (isInitial) toast.success('USING LOCAL VERSION (NEWER)');
           } else {
             setRemoteSnapshot(remoteData);
             setNeedsConflictResolution(true);
           }
-        } else if (!emptySyncState(currentLocalSyncState)) {
+        } else if (isInitial && !emptySyncState(currentLocalSyncState)) {
           await upsertUserLibrary(session.user.id, currentLocalSyncState);
-          toast.success('Uploaded your local library.');
+          lastPushedVersion.current = currentLocalSyncState.lastUpdated;
+          toast.success('UPLOADED LOCAL LIBRARY TO CLOUD');
         }
       } catch (error) {
-        console.error(error);
-        toast.error('Unable to reach Supabase. Check your config.');
+        console.error('Sync error:', error);
+        if (isInitial) toast.error('CLOUD SYNC FAILED');
       } finally {
-        setHasLoadedRemote(true);
+        if (isInitial) setHasLoadedRemote(true);
       }
     };
 
-    loadRemote();
+    if (!hasLoadedRemote && !hasRequestedRemote.current) {
+      hasRequestedRemote.current = true;
+      syncWithRemote(true);
+    }
+
+    // Automatic pulling on window focus
+    const handleFocus = () => syncWithRemote();
+    window.addEventListener('focus', handleFocus);
+
+    // Periodic pulling (every 2 minutes)
+    const intervalId = setInterval(() => syncWithRemote(), 1000 * 60 * 2);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
   }, [hasLoadedRemote, isConfigured, session]);
 
   useEffect(() => {
@@ -106,16 +124,23 @@ export function SupabaseAuthPanel() {
     const unsubscribe = useFolderStore.subscribe(async (state) => {
       if (needsConflictResolution) return;
       const selectedState = selectSyncState(state);
+
+      // Optimization: Only push if the version (timestamp) has actually increased
+      if (selectedState.lastUpdated <= lastPushedVersion.current) {
+        return;
+      }
+
       if (syncTimer.current) {
         clearTimeout(syncTimer.current);
       }
       syncTimer.current = setTimeout(async () => {
         try {
           await upsertUserLibrary(session.user.id, selectedState);
+          lastPushedVersion.current = selectedState.lastUpdated;
         } catch (error) {
-          console.error(error);
+          console.error('Auto-push failed:', error);
         }
-      }, 800);
+      }, 1500); // Slightly longer debounce for auto-push
     });
 
     return () => {
@@ -161,6 +186,7 @@ export function SupabaseAuthPanel() {
       setNeedsConflictResolution(false);
       setRemoteSnapshot(null);
       hasRequestedRemote.current = false;
+      lastPushedVersion.current = 0;
     } catch (error) {
       console.error(error);
       toast.error('Failed to sign out.');
@@ -175,6 +201,7 @@ export function SupabaseAuthPanel() {
     try {
       const currentLocalSyncState = selectSyncState(useFolderStore.getState());
       await upsertUserLibrary(session.user.id, currentLocalSyncState);
+      lastPushedVersion.current = currentLocalSyncState.lastUpdated;
       setNeedsConflictResolution(false);
       toast.success('Uploaded to cloud.');
     } catch (error) {
@@ -191,12 +218,14 @@ export function SupabaseAuthPanel() {
     try {
       if (remoteSnapshot) {
         applySyncState(remoteSnapshot);
+        lastPushedVersion.current = remoteSnapshot.lastUpdated;
       } else {
         const rows = await fetchUserLibrary(session.user.id);
         const remoteData = rows[0]?.data as SyncState | undefined;
         if (remoteData) {
           applySyncState(remoteData);
           setRemoteSnapshot(remoteData);
+          lastPushedVersion.current = remoteData.lastUpdated;
         }
       }
       setNeedsConflictResolution(false);
@@ -214,10 +243,6 @@ export function SupabaseAuthPanel() {
     if (!session) return 'ACCOUNT';
     return session.user.email ? `ACCOUNT: ${session.user.email}` : 'ACCOUNT';
   }, [isConfigured, session]);
-
-  if (isGitHubPages) {
-    return null;
-  }
 
   return (
     <>
