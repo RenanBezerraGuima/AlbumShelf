@@ -22,7 +22,11 @@ const SESSION_STORAGE_KEY = 'albumshelf_supabase_session';
 
 export const isSupabaseConfigured = () => Boolean(SUPABASE_URL() && SUPABASE_ANON_KEY());
 
-const buildUrl = (path: string) => `${SUPABASE_URL()}${path}`;
+const buildUrl = (path: string) => {
+  const base = SUPABASE_URL().replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+};
 
 const resolveBasePath = () => {
   if (process.env.NEXT_PUBLIC_BASE_PATH !== undefined) {
@@ -37,9 +41,10 @@ const resolveBasePath = () => {
 };
 
 export const resolveSupabaseRedirectUrl = () => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  if (typeof window === 'undefined') return '';
+  const origin = window.location.origin;
   const basePath = resolveBasePath();
-  const normalizedBasePath = basePath === '/' ? '' : basePath;
+  const normalizedBasePath = basePath === '/' ? '' : basePath.replace(/\/$/, '');
 
   let redirectUrl = `${origin}${normalizedBasePath}`;
   if (!redirectUrl.endsWith('/')) {
@@ -77,6 +82,7 @@ const request = async <T>(
     headers: {
       apikey: SUPABASE_ANON_KEY(),
       'Content-Type': 'application/json',
+      'x-client-info': 'album-shelf-web',
       ...(options.headers ?? {}),
     },
   });
@@ -182,6 +188,8 @@ export const handleAuthCallback = async (hash: string) => {
 
 export const signUpWithPassword = async (email: string, password: string) => {
   const emailRedirectTo = resolveSupabaseRedirectUrl();
+  const queryParams = emailRedirectTo ? `?redirect_to=${encodeURIComponent(emailRedirectTo)}` : '';
+
   const payload = await request<{
     session?: {
       access_token: string;
@@ -189,12 +197,17 @@ export const signUpWithPassword = async (email: string, password: string) => {
       expires_in: number;
       user: SupabaseUser;
     };
-  }>(`/auth/v1/signup`, {
+  }>(`/auth/v1/signup${queryParams}`, {
     method: 'POST',
     body: JSON.stringify({
       email,
       password,
-      ...(emailRedirectTo ? { email_redirect_to: emailRedirectTo } : {}),
+      ...(emailRedirectTo
+        ? {
+            email_redirect_to: emailRedirectTo,
+            options: { email_redirect_to: emailRedirectTo },
+          }
+        : {}),
     }),
   });
 
@@ -237,6 +250,7 @@ export const upsertUserLibrary = async (userId: string, data: unknown) => {
   if (!session) throw new Error('No active session.');
 
   try {
+    // PostgREST UPSERT requires on_conflict query parameter and Prefer: resolution=merge-duplicates
     return await request(
       `/rest/v1/albumshelf_items?on_conflict=user_id`,
       {
