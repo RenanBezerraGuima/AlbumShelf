@@ -48,8 +48,10 @@ func (s *FolderService) RemoveAlbum(ctx context.Context, albumID string) error {
 }
 
 func (s *FolderService) ToggleFolder(ctx context.Context, folderID string) error {
-	// Get folder, toggle expanded, update
-	// Note: For brevity in this alternative, I'll just assume we have the folder or we use a partial update
-	// A better repo would have a ToggleFolder method
-	return nil
+	folder, err := s.repo.GetFolderByID(ctx, folderID)
+	if err != nil {
+		return err
+	}
+	folder.IsExpanded = !folder.IsExpanded
+	return s.repo.UpdateFolder(ctx, folder)
 }

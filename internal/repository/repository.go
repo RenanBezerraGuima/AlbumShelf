@@ -6,14 +6,9 @@ import (
 )
 
 type Repository interface {
-	// User
-	CreateUser(ctx context.Context, user *models.User) error
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUserByID(ctx context.Context, id string) (*models.User, error)
-	UpdateUserTheme(ctx context.Context, userID, theme string) error
-
 	// Folders
 	CreateFolder(ctx context.Context, folder *models.Folder) error
+	GetFolderByID(ctx context.Context, id string) (*models.Folder, error)
 	GetFoldersByUserID(ctx context.Context, userID string) ([]*models.Folder, error)
 	UpdateFolder(ctx context.Context, folder *models.Folder) error
 	DeleteFolder(ctx context.Context, id string) error

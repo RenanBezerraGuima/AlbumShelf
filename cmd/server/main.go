@@ -36,14 +36,6 @@ func main() {
 
 	// Initialize schema
 	schema := `
-	CREATE TABLE IF NOT EXISTS users (
-		id TEXT PRIMARY KEY,
-		email TEXT UNIQUE NOT NULL,
-		password_hash TEXT NOT NULL,
-		theme TEXT DEFAULT 'industrial',
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);
-
 	CREATE TABLE IF NOT EXISTS folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -51,7 +43,6 @@ func main() {
 		name TEXT NOT NULL,
 		is_expanded BOOLEAN DEFAULT TRUE,
 		position INTEGER DEFAULT 0,
-		FOREIGN KEY (user_id) REFERENCES users(id),
 		FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
 	);
 
@@ -67,20 +58,18 @@ func main() {
 		total_tracks INTEGER,
 		external_url TEXT,
 		position INTEGER DEFAULT 0,
-		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
-		FOREIGN KEY (user_id) REFERENCES users(id)
+		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 	);`
 	db.MustExec(schema)
 
 	repo := sqlite.NewSQLiteRepository(db)
-	userService := service.NewUserService(repo)
 	folderService := service.NewFolderService(repo)
 
 	spotifyID := os.Getenv("SPOTIFY_CLIENT_ID")
 	spotifySecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 	searchService := service.NewSearchService(spotifyID, spotifySecret)
 
-	authHandler := handlers.NewAuthHandler(userService)
+	authHandler := handlers.NewAuthHandler()
 	appHandler := handlers.NewAppHandler(folderService, searchService)
 
 	r := chi.NewRouter()
@@ -90,8 +79,6 @@ func main() {
 	// Auth routes
 	r.Get("/login", appHandler.ShowLogin)
 	r.Post("/login", authHandler.Login)
-	r.Get("/signup", appHandler.ShowSignup)
-	r.Post("/signup", authHandler.Signup)
 	r.Get("/logout", authHandler.Logout)
 
 	// Protected routes

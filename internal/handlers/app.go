@@ -33,10 +33,6 @@ func (h *AppHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
 	templates.Login().Render(r.Context(), w)
 }
 
-func (h *AppHandler) ShowSignup(w http.ResponseWriter, r *http.Request) {
-	templates.Signup().Render(r.Context(), w)
-}
-
 func (h *AppHandler) GetFolderAlbums(w http.ResponseWriter, r *http.Request) {
 	folderID := chi.URLParam(r, "id")
 	albums, _ := h.folderService.GetAlbums(r.Context(), folderID)
@@ -65,17 +61,10 @@ func (h *AppHandler) RemoveAlbum(w http.ResponseWriter, r *http.Request) {
 func (h *AppHandler) ToggleFolder(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r)
 	folderID := chi.URLParam(r, "id")
-	// For now, just reload the folder tree
+
+	h.folderService.ToggleFolder(r.Context(), folderID)
+
 	allFolders, _ := h.folderService.GetUserTree(r.Context(), userID)
-
-	// Find and toggle
-	for _, f := range allFolders {
-		if f.ID == folderID {
-			f.IsExpanded = !f.IsExpanded
-			// Ideally update in DB too
-		}
-	}
-
 	selectedFolderID := "" // You might want to track this
 	templates.FolderTree(allFolders, selectedFolderID).Render(r.Context(), w)
 }

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"github.com/gorilla/sessions"
-	"github.com/user/album-shelf/internal/service"
 )
 
 var sessionSecret = os.Getenv("SESSION_SECRET")
@@ -17,30 +16,10 @@ func init() {
 	store = sessions.NewCookieStore([]byte(sessionSecret))
 }
 
-type AuthHandler struct {
-	userService *service.UserService
-}
+type AuthHandler struct{}
 
-func NewAuthHandler(us *service.UserService) *AuthHandler {
-	return &AuthHandler{userService: us}
-}
-
-func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	_, err := h.userService.Signup(r.Context(), email, password)
-	if err != nil {
-		http.Error(w, "Signup failed", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+func NewAuthHandler() *AuthHandler {
+	return &AuthHandler{}
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -49,17 +28,21 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
 	password := r.FormValue("password")
+	appPassword := os.Getenv("APP_PASSWORD")
 
-	user, err := h.userService.Login(r.Context(), email, password)
-	if err != nil || user == nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+	if appPassword == "" {
+		http.Error(w, "Application password not configured", http.StatusInternalServerError)
+		return
+	}
+
+	if password != appPassword {
+		http.Error(w, "Invalid password", http.StatusUnauthorized)
 		return
 	}
 
 	session, _ := store.Get(r, "session")
-	session.Values["userID"] = user.ID
+	session.Values["authenticated"] = true
 	session.Save(r, w)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -73,18 +56,14 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserID(r *http.Request) string {
-	session, _ := store.Get(r, "session")
-	userID, ok := session.Values["userID"].(string)
-	if !ok {
-		return ""
-	}
-	return userID
+	return "dev"
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := GetUserID(r)
-		if userID == "" {
+		session, _ := store.Get(r, "session")
+		authenticated, ok := session.Values["authenticated"].(bool)
+		if !ok || !authenticated {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}

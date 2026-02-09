@@ -2,8 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/user/album-shelf/internal/models"
@@ -17,49 +15,18 @@ func NewSQLiteRepository(db *sqlx.DB) *SQLiteRepository {
 	return &SQLiteRepository{db: db}
 }
 
-func (r *SQLiteRepository) CreateUser(ctx context.Context, user *models.User) error {
-	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO users (id, email, password_hash, theme)
-		VALUES (:id, :email, :password_hash, :theme)
-	`, user)
-	return err
-}
-
-func (r *SQLiteRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	var user models.User
-	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE email = ?", email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
-func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
-	var user models.User
-	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = ?", id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
-func (r *SQLiteRepository) UpdateUserTheme(ctx context.Context, userID, theme string) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE users SET theme = ? WHERE id = ?", theme, userID)
-	return err
-}
-
 func (r *SQLiteRepository) CreateFolder(ctx context.Context, folder *models.Folder) error {
 	_, err := r.db.NamedExecContext(ctx, `
 		INSERT INTO folders (id, user_id, parent_id, name, is_expanded, position)
 		VALUES (:id, :user_id, :parent_id, :name, :is_expanded, :position)
 	`, folder)
 	return err
+}
+
+func (r *SQLiteRepository) GetFolderByID(ctx context.Context, id string) (*models.Folder, error) {
+	var folder models.Folder
+	err := r.db.GetContext(ctx, &folder, "SELECT * FROM folders WHERE id = ?", id)
+	return &folder, err
 }
 
 func (r *SQLiteRepository) GetFoldersByUserID(ctx context.Context, userID string) ([]*models.Folder, error) {

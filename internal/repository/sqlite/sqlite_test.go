@@ -17,14 +17,6 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 	}
 
 	schema := `
-	CREATE TABLE users (
-		id TEXT PRIMARY KEY,
-		email TEXT UNIQUE NOT NULL,
-		password_hash TEXT NOT NULL,
-		theme TEXT DEFAULT 'industrial',
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);
-
 	CREATE TABLE folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -32,7 +24,6 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 		name TEXT NOT NULL,
 		is_expanded BOOLEAN DEFAULT TRUE,
 		position INTEGER DEFAULT 0,
-		FOREIGN KEY (user_id) REFERENCES users(id),
 		FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
 	);
 
@@ -48,8 +39,7 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 		total_tracks INTEGER,
 		external_url TEXT,
 		position INTEGER DEFAULT 0,
-		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
-		FOREIGN KEY (user_id) REFERENCES users(id)
+		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 	);`
 
 	db.MustExec(schema)
@@ -57,32 +47,9 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 	return db, repo
 }
 
-func TestCreateUser(t *testing.T) {
-	_, repo := setupTestDB(t)
-	ctx := context.Background()
-
-	user := &models.User{
-		ID:           "user-1",
-		Email:        "test@example.com",
-		PasswordHash: "hashed",
-		Theme:        "industrial",
-	}
-
-	err := repo.CreateUser(ctx, user)
-	assert.NoError(t, err)
-
-	fetched, err := repo.GetUserByEmail(ctx, "test@example.com")
-	assert.NoError(t, err)
-	assert.Equal(t, user.ID, fetched.ID)
-	assert.Equal(t, user.Email, fetched.Email)
-}
-
 func TestFolders(t *testing.T) {
 	_, repo := setupTestDB(t)
 	ctx := context.Background()
-
-	user := &models.User{ID: "user-1", Email: "test@example.com", PasswordHash: "hashed", Theme: "industrial"}
-	repo.CreateUser(ctx, user)
 
 	folder := &models.Folder{
 		ID:     "folder-1",
@@ -103,8 +70,6 @@ func TestAlbums(t *testing.T) {
 	_, repo := setupTestDB(t)
 	ctx := context.Background()
 
-	user := &models.User{ID: "user-1", Email: "test@example.com", PasswordHash: "hashed", Theme: "industrial"}
-	repo.CreateUser(ctx, user)
 	folder := &models.Folder{ID: "folder-1", UserID: "user-1", Name: "Favorites"}
 	repo.CreateFolder(ctx, folder)
 

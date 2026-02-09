@@ -1,37 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('AlbumShelf Online', () => {
-  test('should allow signup and login', async ({ page }) => {
-    const email = `user-${Date.now()}@example.com`;
-    // Signup
-    await page.goto('http://localhost:3000/signup');
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', 'password123');
+  test.beforeEach(async ({ page }) => {
+    // Perform login with password wall
+    await page.goto('http://localhost:3000/login');
+    await page.fill('input[name="password"]', process.env.APP_PASSWORD || 'secret123');
     await page.click('button[type="submit"]');
-
-    // Login (should be redirected to /login after signup)
-    await expect(page).toHaveURL(/.*login/);
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-
-    // Dashboard
     await expect(page).toHaveURL('http://localhost:3000/');
+  });
+
+  test('should allow access via password wall', async ({ page }) => {
+    // Already authenticated in beforeEach
     await expect(page.locator('h2')).toContainText('Collections', { ignoreCase: true });
   });
 
   test('should search and add an album', async ({ page }) => {
-    const email = `search-${Date.now()}@example.com`;
-    // Signup
-    await page.goto('http://localhost:3000/signup');
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-
-    // Login
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
 
     // Create a folder first if none exists
     await page.click('button:has-text("+")');

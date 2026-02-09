@@ -41,60 +41,13 @@ func Login() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"flex flex-col items-center justify-center min-h-screen\"><form action=\"/login\" method=\"POST\" class=\"w-full max-w-md p-8 border-2 border-white space-y-4\"><h1 class=\"text-2xl font-bold uppercase tracking-tighter\">Login</h1><div><label class=\"block text-xs uppercase mb-1\">Email</label> <input type=\"email\" name=\"email\" required class=\"w-full bg-black border border-white p-2 focus:outline-none focus:border-lime-400\"></div><div><label class=\"block text-xs uppercase mb-1\">Password</label> <input type=\"password\" name=\"password\" required class=\"w-full bg-black border border-white p-2 focus:outline-none focus:border-lime-400\"></div><button type=\"submit\" class=\"w-full bg-white text-black font-bold py-2 uppercase hover:bg-lime-400 transition-colors\">Enter</button><p class=\"text-xs text-center\">Don't have an account? <a href=\"/signup\" class=\"underline hover:text-lime-400\">Sign Up</a></p></form></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"flex flex-col items-center justify-center min-h-screen\"><form action=\"/login\" method=\"POST\" class=\"w-full max-w-md p-8 border-2 border-white space-y-4\"><h1 class=\"text-2xl font-bold uppercase tracking-tighter text-center border-b-2 border-white pb-4 mb-8\">Access Denied</h1><div><label class=\"block text-xs uppercase mb-1\">System Password</label> <input type=\"password\" name=\"password\" autofocus required class=\"w-full bg-black border border-white p-2 focus:outline-none focus:border-lime-400\"></div><button type=\"submit\" class=\"w-full bg-white text-black font-bold py-2 uppercase hover:bg-lime-400 transition-colors\">Authorize</button></form></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
 		templ_7745c5c3_Err = Layout("Login - AlbumShelf").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
-}
-
-func Signup() templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var3 == nil {
-			templ_7745c5c3_Var3 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-			if !templ_7745c5c3_IsBuffer {
-				defer func() {
-					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err == nil {
-						templ_7745c5c3_Err = templ_7745c5c3_BufErr
-					}
-				}()
-			}
-			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"flex flex-col items-center justify-center min-h-screen\"><form action=\"/signup\" method=\"POST\" class=\"w-full max-w-md p-8 border-2 border-white space-y-4\"><h1 class=\"text-2xl font-bold uppercase tracking-tighter\">Sign Up</h1><div><label class=\"block text-xs uppercase mb-1\">Email</label> <input type=\"email\" name=\"email\" required class=\"w-full bg-black border border-white p-2 focus:outline-none focus:border-lime-400\"></div><div><label class=\"block text-xs uppercase mb-1\">Password</label> <input type=\"password\" name=\"password\" required class=\"w-full bg-black border border-white p-2 focus:outline-none focus:border-lime-400\"></div><button type=\"submit\" class=\"w-full bg-white text-black font-bold py-2 uppercase hover:bg-lime-400 transition-colors\">Create Account</button><p class=\"text-xs text-center\">Already have an account? <a href=\"/login\" class=\"underline hover:text-lime-400\">Login</a></p></form></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			return nil
-		})
-		templ_7745c5c3_Err = Layout("Signup - AlbumShelf").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
