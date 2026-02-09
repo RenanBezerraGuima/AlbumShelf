@@ -1,15 +1,5 @@
 package models
 
-import "time"
-
-type User struct {
-	ID           string    `db:"id" json:"id"`
-	Email        string    `db:"email" json:"email"`
-	PasswordHash string    `db:"password_hash" json:"-"`
-	Theme        string    `db:"theme" json:"theme"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-}
-
 type Folder struct {
 	ID         string    `db:"id" json:"id"`
 	UserID     string    `db:"user_id" json:"user_id"`
