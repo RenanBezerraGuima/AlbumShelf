@@ -1,0 +1,33 @@
+package templates
+
+import (
+	"github.com/user/album-shelf/internal/service"
+	"fmt"
+)
+
+templ SearchResults(results []service.SearchResult, folderID string) {
+	<div class="absolute top-full left-0 right-0 bg-black border-2 border-white mt-2 max-h-[70vh] overflow-y-auto z-50 brutalist-shadow-lime">
+		if len(results) == 0 {
+			<div class="p-6 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-500">No results found</div>
+		} else {
+			for _, r := range results {
+				<div class="flex items-center p-3 hover:bg-zinc-900 border-b-2 border-zinc-800 last:border-0 cursor-pointer group transition-colors"
+					 hx-post="/albums"
+					 hx-vals={ fmt.Sprintf(`{"id": "%s", "name": "%s", "artist": "%s", "imageUrl": "%s", "externalUrl": "%s", "folder_id": "%s"}`, r.ID, r.Name, r.Artist, r.ImageUrl, r.ExternalUrl, folderID) }
+					 hx-target="#album-grid-container"
+					 hx-swap="beforeend">
+					<div class="relative w-12 h-12 mr-4 border border-zinc-700 group-hover:border-lime-400">
+						<img src={ r.ImageUrl } alt={ r.Name } class="w-full h-full object-cover grayscale group-hover:grayscale-0" />
+					</div>
+					<div class="flex-1 min-w-0">
+						<p class="text-[11px] font-black uppercase truncate group-hover:text-lime-400 tracking-tight">{ r.Name }</p>
+						<p class="text-[9px] font-bold uppercase text-zinc-500 truncate">{ r.Artist }</p>
+					</div>
+					<div class="text-zinc-700 group-hover:text-lime-400 ml-2">
+						<span class="text-lg">+</span>
+					</div>
+				</div>
+			}
+		}
+	</div>
+}

@@ -1,0 +1,98 @@
+package templates
+
+import (
+	"github.com/user/album-shelf/internal/models"
+	"fmt"
+)
+
+templ Dashboard(folders []*models.Folder, selectedFolderID string) {
+	@Layout("AlbumShelf") {
+		<div class="flex h-screen overflow-hidden">
+			<!-- Sidebar -->
+			<aside class="w-72 border-r-2 border-white flex flex-col bg-black z-20">
+				<div class="p-6 border-b-2 border-white flex justify-between items-center">
+					<h2 class="text-xl font-black uppercase tracking-tighter font-display">Collections</h2>
+					<button hx-post="/folders" hx-target="#folder-tree" hx-swap="beforeend" class="brutalist-button !p-1 !px-2 text-xs">+</button>
+				</div>
+				<div id="folder-tree" class="flex-1 overflow-y-auto p-2">
+					@FolderTree(folders, selectedFolderID)
+				</div>
+				<div class="p-4 border-t-2 border-white bg-zinc-900">
+					<div class="flex items-center justify-between">
+						<span class="text-[10px] uppercase font-bold text-zinc-500 tracking-widest">v1.0.0-ONLINE</span>
+						<a href="/logout" class="text-xs uppercase font-bold underline hover:text-lime-400">Logout</a>
+					</div>
+				</div>
+			</aside>
+
+			<!-- Main Content -->
+			<main class="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a]">
+				<header class="p-6 border-b-2 border-white flex justify-between items-center bg-black">
+					<div id="breadcrumb" class="text-xs font-bold uppercase tracking-[0.3em] text-zinc-400">
+						<span class="text-zinc-600">Collections /</span> { getFolderName(folders, selectedFolderID) }
+					</div>
+					<div class="flex items-center space-x-4 relative">
+						<input type="search"
+							   name="q"
+							   placeholder="SEARCH CATALOG [/]"
+							   hx-get="/search"
+							   hx-vals={ fmt.Sprintf(`{"folder_id": "%s"}`, selectedFolderID) }
+							   hx-trigger="input changed delay:300ms"
+							   hx-target="#search-results"
+							   class="brutalist-input text-xs w-80 font-bold uppercase tracking-widest" />
+						<div id="search-results"></div>
+					</div>
+				</header>
+				<div id="album-grid-container" class="flex-1 overflow-y-auto p-6" hx-get={ "/folders/" + selectedFolderID + "/albums" } hx-trigger="load">
+					<!-- Albums will load here -->
+					<div class="animate-pulse text-xs uppercase">Loading collection...</div>
+				</div>
+			</main>
+		</div>
+	}
+}
+
+func getFolderName(folders []*models.Folder, id string) string {
+	for _, f := range folders {
+		if f.ID == id {
+			return f.Name
+		}
+	}
+	return "Inbox"
+}
+
+templ FolderTree(folders []*models.Folder, selectedID string) {
+	<ul class="space-y-1">
+		for _, f := range folders {
+			if f.ParentID == nil {
+				@FolderItem(f, folders, selectedID)
+			}
+		}
+	</ul>
+}
+
+templ FolderItem(f *models.Folder, allFolders []*models.Folder, selectedID string) {
+	<li class="group">
+		<div class={ "flex items-center justify-between p-1 cursor-pointer hover:bg-zinc-900", templ.KV("bg-zinc-800 text-lime-400", f.ID == selectedID) }>
+			<div class="flex items-center flex-1">
+				<span class="mr-2 text-[10px] cursor-pointer hover:text-lime-400" hx-post={ "/folders/" + f.ID + "/toggle" } hx-target="closest li" hx-swap="outerHTML">
+					if f.IsExpanded {
+						▼
+					} else {
+						▶
+					}
+				</span>
+				<span class="text-xs uppercase truncate cursor-pointer hover:text-lime-400" hx-get={ "/folders/" + f.ID } hx-target="#album-grid-container" hx-push-url="true">{ f.Name }</span>
+			</div>
+		</div>
+		if f.IsExpanded {
+			<ul class="ml-4 border-l border-zinc-800">
+				for _, sub := range allFolders {
+					if sub.ParentID != nil && *sub.ParentID == f.ID {
+						@FolderItem(sub, allFolders, selectedID)
+					}
+				}
+			</ul>
+		}
+	</li>
+}

@@ -1,73 +1,52 @@
-# ALBUMSHELF [VER. 1.0.0]
-> HIGH-SPEED LOCAL-FIRST ALBUM ORGANIZATION SYSTEM.
+# ALBUMSHELF ONLINE [VER. 1.0.0]
+> EXPERIMENTAL GO + HTMX ALTERNATIVE.
 
-AlbumShelf is a brutalist, industrial-grade web application designed for collectors who value speed, privacy, and data ownership. Search the global catalog, organize your library into hierarchical collections, and keep your data exactly where it belongs: with you.
+AlbumShelf Online is the high-performance, server-side sibling of the original local-first system. It features a technical, brutalist aesthetic powered by a clean Go backend and dynamic HTMX frontend.
 
 ## KEY SYSTEMS
 
-- **LOCAL-FIRST ARCHITECTURE**: All data is stored in your browser's `localStorage`. No accounts, no backends, no tracking.
-- **HIERARCHICAL COLLECTIONS**: Organize your music into deeply nested structures. Rename, move, and reorder with ease.
-- **DRAG & DROP INTERFACE**: Seamlessly manage your library using a low-latency drag-and-drop system for both albums and collections.
-- **DATA PORTABILITY**: Export your entire database to JSON and import it back instantly. Your data is never locked in.
-- **BRUTALIST INDUSTRIAL UI**: A high-contrast, technical aesthetic featuring monochrome tones, neon lime accents, and monospaced typography.
+- **SERVER-SIDE ACCOUNTS**: Synchronize your library across devices. Your data is stored securely in a SQLite/PostgreSQL database.
+- **GO + HTMX STACK**: Low-bloat, high-performance architecture using Go for logic and HTMX for seamless, single-page-like interactions.
+- **BRUTALIST INDUSTRIAL UI**: A high-contrast aesthetic featuring monochrome tones and neon lime accents.
+- **DRAG & DROP**: Seamless collection management powered by SortableJS.
 
 ## SUPPORTED PROVIDERS
 
-AlbumShelf integrates with multiple streaming services to provide a comprehensive search experience:
-
-- **APPLE MUSIC**: Search the entire iTunes Search API catalog. No configuration required.
-- **DEEZER**: Access millions of tracks via the Deezer search engine. No configuration required.
-- **SPOTIFY**: Full Spotify catalog search. Requires a Spotify Developer Client ID (see [Spotify Integration](#spotify-integration)).
+- **APPLE MUSIC**: Direct integration. No configuration required.
+- **DEEZER**: Global search via Deezer API.
+- **SPOTIFY**: Optional. Requires `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` environment variables.
 
 ## GETTING STARTED
 
 ### PREREQUISITES
-- [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/)
+- [Go](https://go.dev/) (v1.24+)
+- [Templ](https://templ.guide/) (`go install github.com/a-h/templ/cmd/templ@latest`)
 
-### DEPLOYMENT & DEVELOPMENT
-1. **CLONE REPOSITORY**:
+### LOCAL DEVELOPMENT
+1. **INSTALL DEPENDENCIES**:
    ```bash
-   git clone https://github.com/your-username/album-shelf.git
-   cd album-shelf
+   go mod tidy
    ```
 
-2. **INSTALL DEPENDENCIES**:
+2. **GENERATE TEMPLATES**:
    ```bash
-   pnpm install
+   templ generate
    ```
 
-3. **EXECUTE DEVELOPMENT SERVER**:
+3. **RUN SERVER**:
    ```bash
-   pnpm dev
+   go run cmd/server/main.go
    ```
 
-4. **ACCESS INTERFACE**:
-   Open [http://localhost:3000/AlbumShelf/](http://localhost:3000/AlbumShelf/) in your browser.
+4. **ACCESS**:
+   Open [http://localhost:3000](http://localhost:3000)
 
-## SPOTIFY INTEGRATION
+## DEPLOYMENT
 
-To enable Spotify search functionality, you must provide a Client ID from the Spotify Developer Dashboard:
+This version is optimized for containerized deployment (e.g., Render, Railway, Fly.io).
 
-1. **CREATE APP**: Visit the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create a new application.
-2. **GET CLIENT ID**: Copy your **Client ID**.
-3. **CONFIGURE REDIRECT URIS**: Add the following URIs to your app settings (include the trailing slash):
-   - `http://localhost:3000/AlbumShelf/` (Local Development)
-   - `https://<your-username>.github.io/AlbumShelf/` (Production)
-4. **SET ENVIRONMENT VARIABLES**:
-   - **Local**: Create a `.env.local` file:
-     ```env
-     NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id_here
-     ```
-   - **Production (GitHub Actions)**: Add a Repository Variable `NEXT_PUBLIC_SPOTIFY_CLIENT_ID`.
-
-## TECHNICAL SPECIFICATIONS
-
-- **FRAMEWORK**: [Next.js](https://nextjs.org/) (App Router, Static Export)
-- **STATE MANAGEMENT**: [Zustand](https://github.com/pmndrs/zustand) + Persistence Middleware
-- **STYLING**: [Tailwind CSS](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/)
-- **SECURITY**: Built-in URL and image sanitization; PKCE flow for Spotify authentication.
-- **COMPLIANCE**: Fully accessible via ARIA patterns; Keyboard navigable.
+1. Set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (optional).
+2. The `Dockerfile` handles template generation and building.
 
 ## LICENSE
 

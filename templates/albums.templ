@@ -1,0 +1,35 @@
+package templates
+
+import "github.com/user/album-shelf/internal/models"
+
+templ AlbumGrid(albums []*models.Album) {
+	if len(albums) == 0 {
+		<div class="flex flex-col items-center justify-center h-full text-zinc-600 space-y-4">
+			<p class="text-xs uppercase tracking-[0.2em]">No albums in this collection</p>
+			<p class="text-[10px] uppercase">Search and add music to get started</p>
+		</div>
+	} else {
+		<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 htmx-sortable" hx-post="/albums/reorder" hx-trigger="end">
+			for _, album := range albums {
+				@AlbumCard(album)
+			}
+		</div>
+	}
+}
+
+templ AlbumCard(album *models.Album) {
+	<div class="group relative bg-zinc-900 border border-zinc-800 hover:border-white transition-colors aspect-square overflow-hidden flex flex-col cursor-move">
+		<input type="hidden" name="album_id" value={ album.ID } />
+		<img src={ album.ImageUrl } alt={ album.Name } class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" loading="lazy" />
+		<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
+			<h3 class="text-xs font-bold uppercase truncate">{ album.Name }</h3>
+			<p class="text-[10px] uppercase text-zinc-400 truncate">{ album.Artist }</p>
+			<div class="mt-2 flex justify-between items-center">
+				if album.ExternalUrl != nil {
+					<a href={ templ.SafeURL(*album.ExternalUrl) } target="_blank" class="text-[8px] uppercase tracking-widest hover:text-lime-400 underline">View</a>
+				}
+				<button hx-delete={ "/albums/" + album.ID } hx-target="closest div.group" hx-swap="outerHTML" class="text-[8px] uppercase tracking-widest text-red-500 hover:text-red-400 underline">Remove</button>
+			</div>
+		</div>
+	</div>
+}
