@@ -222,7 +222,7 @@ export function SettingsDialog() {
             <p className="text-[10px] font-mono uppercase">
               AlbumShelf v0.1.0
               <br />
-              Local-first storage
+              Online synchronized storage
             </p>
           </div>
         </div>

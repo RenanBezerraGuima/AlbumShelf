@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeHandler } from '@/components/theme-handler'
+import { SyncHandler } from '@/components/sync-handler'
 import { Toaster } from 'sonner'
 import {
   Syne,
@@ -51,6 +52,7 @@ export default function RootLayout({
       `}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ThemeHandler />
+          <SyncHandler />
           {children}
           <Toaster position="bottom-right" />
         </ThemeProvider>

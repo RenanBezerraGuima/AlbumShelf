@@ -29,3 +29,8 @@ next-env.d.ts
 # playwright
 /playwright-report/
 /test-results/
+
+# Go backend
+/server
+/albumshelf.db
+*.log

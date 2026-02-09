@@ -1,0 +1,107 @@
+package templates
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+			<title>{ title }</title>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com" />
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+			<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400..800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+			<style>
+				:root {
+					--lime: #d9ff00;
+					--shadow-offset: 4px;
+				}
+				body {
+					font-family: 'JetBrains Mono', monospace;
+					background-color: #000;
+					color: #fff;
+				}
+				.font-display {
+					font-family: 'Syne', sans-serif;
+				}
+				.brutalist-border {
+					border: 2px solid #fff;
+				}
+				.brutalist-shadow {
+					box-shadow: var(--shadow-offset) var(--shadow-offset) 0px #fff;
+				}
+				.brutalist-shadow-lime {
+					box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--lime);
+				}
+				.brutalist-input {
+					background: #000;
+					border: 2px solid #fff;
+					padding: 0.5rem;
+					outline: none;
+				}
+				.brutalist-input:focus {
+					border-color: var(--lime);
+					box-shadow: 2px 2px 0px var(--lime);
+				}
+				.brutalist-button {
+					background: #fff;
+					color: #000;
+					border: 2px solid #fff;
+					padding: 0.5rem 1rem;
+					font-weight: bold;
+					text-transform: uppercase;
+					transition: all 0.2s;
+				}
+				.brutalist-button:hover {
+					background: var(--lime);
+					border-color: var(--lime);
+					box-shadow: 4px 4px 0px #fff;
+					transform: translate(-2px, -2px);
+				}
+				::-webkit-scrollbar {
+					width: 8px;
+				}
+				::-webkit-scrollbar-track {
+					background: #000;
+				}
+				::-webkit-scrollbar-thumb {
+					background: #333;
+					border: 1px solid #fff;
+				}
+				::-webkit-scrollbar-thumb:hover {
+					background: var(--lime);
+				}
+			</style>
+		</head>
+		<body class="bg-black text-white selection:bg-lime-400 selection:text-black">
+			{ children... }
+			<script>
+				document.addEventListener('DOMContentLoaded', initSortables);
+				document.body.addEventListener('htmx:afterSettle', initSortables);
+
+				function initSortables() {
+					var sortables = document.querySelectorAll(".htmx-sortable");
+					sortables.forEach(function(el) {
+						if (el.sortable) return;
+						el.sortable = new Sortable(el, {
+							animation: 150,
+							ghostClass: 'opacity-50',
+							onEnd: function (evt) {
+								el.dispatchEvent(new Event('end'));
+							}
+						});
+					});
+				}
+			</script>
+		</body>
+	</html>
+}
+
+templ Home() {
+	@Layout("AlbumShelf") {
+		<h1 class="text-4xl font-bold">AlbumShelf Online</h1>
+		<p>Welcome to the experimental online alternative.</p>
+	}
+}

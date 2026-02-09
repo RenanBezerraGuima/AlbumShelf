@@ -60,6 +60,8 @@ interface FolderStore {
     timestamp: number | null,
   ) => void;
   setTheme: (theme: Theme) => void;
+  pullFromServer: () => Promise<void>;
+  pushToServer: () => Promise<void>;
 }
 
 export type SyncState = Pick<
@@ -592,6 +594,45 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setTheme: (theme) => set({ theme, lastUpdated: Date.now() }),
+
+      pullFromServer: async () => {
+        try {
+          const response = await fetch("/api/data");
+          if (response.ok) {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await response.json();
+              if (data && data.folders && data.folders.length > 0) {
+                // Only overwrite if the server has actual data
+                set({ folders: data.folders, lastUpdated: Date.now() });
+              } else if (get().folders.length > 0) {
+                // If server is empty but we have local data, push it to server
+                await get().pushToServer();
+              }
+            } else {
+              // If not JSON, we might have been redirected to the login page
+              window.location.href = "/login";
+            }
+          } else if (response.status === 401) {
+            window.location.href = "/login";
+          }
+        } catch (error) {
+          console.error("Failed to pull from server:", error);
+        }
+      },
+
+      pushToServer: async () => {
+        const { folders } = get();
+        try {
+          await fetch("/api/data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folders }),
+          });
+        } catch (error) {
+          console.error("Failed to push to server:", error);
+        }
+      },
     }),
     {
       name: "album-shelf-storage",

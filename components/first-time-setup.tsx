@@ -53,7 +53,7 @@ export function FirstTimeSetup() {
         <DialogHeader>
           <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Welcome to AlbumShelf</DialogTitle>
           <DialogDescription className="text-base font-mono uppercase pt-2">
-            Your local-first music album organizer. Search for albums, organize them into collections, and keep everything in your browser.
+            Your personal music album organizer. Search for albums, organize them into collections, and synchronize everything across your devices.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,7 +99,7 @@ export function FirstTimeSetup() {
 
         <DialogFooter className="sm:justify-start">
           <p className="text-[10px] font-mono uppercase text-muted-foreground">
-            No account required. All data stays on your device.
+            All data is synchronized to your private cloud storage.
           </p>
         </DialogFooter>
       </DialogContent>
