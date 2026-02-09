@@ -16,6 +16,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SettingsDialog } from "@/components/settings-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -49,6 +57,7 @@ const FolderItem = React.memo(function FolderItem({
   const [editName, setEditName] = useState(folder.name);
   const [isCreatingSubfolder, setIsCreatingSubfolder] = useState(false);
   const [newSubfolderName, setNewSubfolderName] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropPosition, setDropPosition] = useState<
     "before" | "inside" | "after" | null
@@ -330,7 +339,7 @@ const FolderItem = React.memo(function FolderItem({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete();
+                        setIsDeleteDialogOpen(true);
                       }}
                       className="text-destructive focus:text-destructive"
                     >
@@ -369,7 +378,7 @@ const FolderItem = React.memo(function FolderItem({
           <ContextMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              handleDelete();
+              setIsDeleteDialogOpen(true);
             }}
             className="text-destructive focus:text-destructive"
           >
@@ -378,6 +387,38 @@ const FolderItem = React.memo(function FolderItem({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Collection</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{folder.name}"? This action cannot
+              be undone and will remove all albums and sub-collections within
+              it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="rounded-none border-2 border-transparent hover:border-border"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                handleDelete();
+                setIsDeleteDialogOpen(false);
+              }}
+              className="rounded-none brutalist-shadow-sm"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {folder.isExpanded && (hasSubfolders || isCreatingSubfolder) && (
         <div>
