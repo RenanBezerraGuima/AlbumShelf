@@ -18,6 +18,68 @@ interface AlbumSearchProps {
   onMenuClick?: () => void;
 }
 
+const SearchResultItem = React.memo(function SearchResultItem({
+  album,
+  index,
+  isActive,
+  isAdded,
+  disabled,
+  onSelect
+}: {
+  album: Album;
+  index: number;
+  isActive: boolean;
+  isAdded: boolean;
+  disabled: boolean;
+  onSelect: (album: Album) => void;
+}) {
+  return (
+    <div
+      id={`option-${index}`}
+      onClick={() => onSelect(album)}
+      role="option"
+      aria-selected={isActive}
+      className={cn(
+        "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
+        !disabled
+          ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
+          : "opacity-60 cursor-not-allowed",
+        isAdded && "bg-accent/20 border-accent",
+        isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
+      )}
+      style={{ borderRadius: 'var(--radius)' }}
+    >
+      <img
+        src={album.imageUrl || "/placeholder.svg"}
+        alt={album.name}
+        decoding="async"
+        className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
+        style={{ borderRadius: 'calc(var(--radius) / 2)' }}
+      />
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <p
+          className="text-sm font-bold truncate uppercase tracking-tighter"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          {album.name}
+        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs opacity-80 truncate uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+            {album.artist}
+            {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
+          </p>
+          <span className="text-[10px] px-1 bg-muted border border-border font-mono font-bold shrink-0">
+            {album.id.split('-')[0].toUpperCase()}
+          </span>
+        </div>
+      </div>
+      {isAdded && (
+        <Check className="h-4 w-4 shrink-0" />
+      )}
+    </div>
+  );
+});
+
 export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Album[]>([]);
@@ -43,24 +105,27 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     return now > spotifyTokenTimestamp + (spotifyTokenExpiry * 1000);
   }, [spotifyToken, spotifyTokenExpiry, spotifyTokenTimestamp]);
 
-  const selectedFolder = useFolderStore(useCallback(state =>
-    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId) : null
+  // Use a granular selector to only subscribe to the albums of the selected folder.
+  // This prevents the component from re-rendering when subfolders are added or modified,
+  // as the albums array reference is preserved by structural sharing in the store.
+  const selectedFolderAlbums = useFolderStore(useCallback(state =>
+    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId)?.albums : undefined
   , []));
   
   // Get albums in selected folder
-  // Memoized based on the specific selectedFolder object reference, leveraging structural sharing
+  // Memoized based on the specific albums array reference, leveraging structural sharing
   const albumsInSelectedFolder = useMemo(() => {
-    if (!selectedFolder) return new Map<string, string[]>();
+    if (!selectedFolderAlbums) return new Map<string, string[]>();
     
     const albumMap = new Map<string, string[]>();
-    selectedFolder.albums.forEach(album => {
+    selectedFolderAlbums.forEach(album => {
       const key = `${album.name}-${album.artist}`.toLowerCase();
       const existing = albumMap.get(key) || [];
       albumMap.set(key, [...existing, album.id]);
     });
 
     return albumMap;
-  }, [selectedFolder]);
+  }, [selectedFolderAlbums]);
 
   // Reset active index when results change
   useEffect(() => {
@@ -182,7 +247,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     }
   };
 
-  const handleAddAlbum = (album: Album) => {
+  const handleAddAlbum = useCallback((album: Album) => {
     if (!selectedFolderId) {
       setError('Please select a folder first');
       return;
@@ -199,7 +264,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
       addAlbumToFolder(selectedFolderId, album);
       toast.success(`ADDED: ${album.name.toUpperCase()}`);
     }
-  };
+  }, [selectedFolderId, albumsInSelectedFolder, removeAlbumFromFolder, addAlbumToFolder]);
 
   return (
     <div
@@ -295,57 +360,17 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 </div>
               )}
 
-              {results.map((album, index) => {
-                const isAdded = albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase());
-                const isActive = index === activeIndex;
-
-                return (
-                  <div
-                    key={album.id}
-                    id={`option-${index}`}
-                    onClick={() => handleAddAlbum(album)}
-                    role="option"
-                    aria-selected={isActive}
-                    className={cn(
-                      "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
-                      selectedFolderId
-                        ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
-                        : "opacity-60 cursor-not-allowed",
-                      isAdded && "bg-accent/20 border-accent",
-                      isActive && "bg-primary text-primary-foreground brutalist-shadow-sm border-border z-10"
-                    )}
-                    style={{ borderRadius: 'var(--radius)' }}
-                  >
-                    <img
-                      src={album.imageUrl || "/placeholder.svg"}
-                      alt={album.name}
-                      decoding="async"
-                      className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
-                      style={{ borderRadius: 'calc(var(--radius) / 2)' }}
-                    />
-                    <div className="flex-1 min-w-0 overflow-hidden">
-                      <p
-                        className="text-sm font-bold truncate uppercase tracking-tighter"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        {album.name}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs opacity-80 truncate uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {album.artist}
-                          {album.releaseDate && ` • ${album.releaseDate.slice(0, 4)}`}
-                        </p>
-                        <span className="text-[10px] px-1 bg-muted border border-border font-mono font-bold shrink-0">
-                          {album.id.split('-')[0].toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    {isAdded && (
-                      <Check className="h-4 w-4 shrink-0" />
-                    )}
-                  </div>
-                );
-              })}
+              {results.map((album, index) => (
+                <SearchResultItem
+                  key={album.id}
+                  album={album}
+                  index={index}
+                  isActive={index === activeIndex}
+                  isAdded={albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase())}
+                  disabled={!selectedFolderId}
+                  onSelect={handleAddAlbum}
+                />
+              ))}
             </div>
           </ScrollArea>
           </div>
