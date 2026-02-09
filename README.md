@@ -43,10 +43,20 @@ AlbumShelf Online is the high-performance, server-side sibling of the original l
 
 ## DEPLOYMENT
 
-This version is optimized for containerized deployment (e.g., Render, Railway, Fly.io).
+This version is optimized for containerized deployment.
 
-1. Set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (optional).
-2. The `Dockerfile` handles template generation and building.
+### DEPLOYING TO RENDER
+1. **CREATE POSTGRES DATABASE**: In the Render dashboard, click **New +** and select **Postgres**. Note the **Internal Database URL**.
+2. **CREATE WEB SERVICE**: Click **New +** and select **Web Service**.
+3. **CONNECT REPOSITORY**: Connect your GitHub repository.
+4. **CONFIGURE**:
+   - **Runtime**: Select **Docker**.
+   - **Environment Variables**: Add the following:
+     - `DATABASE_URL`: Use the **Internal Database URL** from your Render Postgres instance.
+     - `SESSION_SECRET`: A long random string.
+     - `SPOTIFY_CLIENT_ID`: (Optional) Your Spotify Client ID.
+     - `SPOTIFY_CLIENT_SECRET`: (Optional) Your Spotify Client Secret.
+5. **DEPLOY**: Render will build the Docker image and deploy your service.
 
 ## LICENSE
 

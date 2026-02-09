@@ -22,7 +22,7 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
 		theme TEXT DEFAULT 'industrial',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE folders (

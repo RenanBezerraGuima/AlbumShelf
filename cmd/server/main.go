@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/user/album-shelf/internal/handlers"
@@ -17,7 +18,18 @@ import (
 )
 
 func main() {
-	db, err := sqlx.Open("sqlite3", "albumshelf.db")
+	var db *sqlx.DB
+	var err error
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL != "" {
+		db, err = sqlx.Connect("postgres", dbURL)
+		fmt.Println("Connected to PostgreSQL")
+	} else {
+		db, err = sqlx.Open("sqlite3", "albumshelf.db")
+		fmt.Println("Using local SQLite database")
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,7 +41,7 @@ func main() {
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
 		theme TEXT DEFAULT 'industrial',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS folders (
