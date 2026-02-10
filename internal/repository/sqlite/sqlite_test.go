@@ -17,6 +17,12 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 	}
 
 	schema := `
+	CREATE TABLE users (
+		id TEXT PRIMARY KEY
+	);
+
+	INSERT INTO users (id) VALUES ('dev');
+
 	CREATE TABLE folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -54,14 +60,14 @@ func TestFolders(t *testing.T) {
 
 	folder := &models.Folder{
 		ID:     "folder-1",
-		UserID: "user-1",
+		UserID: "dev",
 		Name:   "Favorites",
 	}
 
 	err := repo.CreateFolder(ctx, folder)
 	assert.NoError(t, err)
 
-	folders, err := repo.GetFoldersByUserID(ctx, "user-1")
+	folders, err := repo.GetFoldersByUserID(ctx, "dev")
 	assert.NoError(t, err)
 	assert.Len(t, folders, 1)
 	assert.Equal(t, "Favorites", folders[0].Name)
@@ -71,13 +77,13 @@ func TestAlbums(t *testing.T) {
 	_, repo := setupTestDB(t)
 	ctx := context.Background()
 
-	folder := &models.Folder{ID: "folder-1", UserID: "user-1", Name: "Favorites"}
+	folder := &models.Folder{ID: "folder-1", UserID: "dev", Name: "Favorites"}
 	repo.CreateFolder(ctx, folder)
 
 	album := &models.Album{
 		ID:       "album-1",
 		FolderID: "folder-1",
-		UserID:   "user-1",
+		UserID:   "dev",
 		Name:     "Discovery",
 		Artist:   "Daft Punk",
 		ImageUrl: "http://example.com/cover.jpg",
@@ -101,23 +107,23 @@ func TestDeleteUserFolders(t *testing.T) {
 	_, repo := setupTestDB(t)
 	ctx := context.Background()
 
-	folder := &models.Folder{ID: "folder-1", UserID: "user-1", Name: "Favorites"}
+	folder := &models.Folder{ID: "folder-1", UserID: "dev", Name: "Favorites"}
 	repo.CreateFolder(ctx, folder)
 
 	album := &models.Album{
 		ID:       "album-1",
 		FolderID: "folder-1",
-		UserID:   "user-1",
+		UserID:   "dev",
 		Name:     "Discovery",
 		Artist:   "Daft Punk",
 		ImageUrl: "http://example.com/cover.jpg",
 	}
 	repo.AddAlbum(ctx, album)
 
-	err := repo.DeleteUserFolders(ctx, "user-1")
+	err := repo.DeleteUserFolders(ctx, "dev")
 	assert.NoError(t, err)
 
-	folders, _ := repo.GetFoldersByUserID(ctx, "user-1")
+	folders, _ := repo.GetFoldersByUserID(ctx, "dev")
 	assert.Len(t, folders, 0)
 
 	albums, _ := repo.GetAlbumsByFolderID(ctx, "folder-1")

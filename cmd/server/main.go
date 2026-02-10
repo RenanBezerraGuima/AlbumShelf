@@ -42,6 +42,12 @@ func main() {
 
 	// Initialize schema
 	schema := `
+	CREATE TABLE IF NOT EXISTS users (
+		id TEXT PRIMARY KEY
+	);
+
+	INSERT INTO users (id) VALUES ('dev') ON CONFLICT (id) DO NOTHING;
+
 	CREATE TABLE IF NOT EXISTS folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -68,6 +74,19 @@ func main() {
 		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 	);`
 	db.MustExec(schema)
+
+	// Ensure spotify_url exists for existing databases
+	if dbURL != "" {
+		// PostgreSQL
+		db.Exec("ALTER TABLE albums ADD COLUMN IF NOT EXISTS spotify_url TEXT")
+	} else {
+		// SQLite doesn't support ADD COLUMN IF NOT EXISTS, so we check if it exists first
+		var count int
+		db.Get(&count, "SELECT count(*) FROM pragma_table_info('albums') WHERE name='spotify_url'")
+		if count == 0 {
+			db.Exec("ALTER TABLE albums ADD COLUMN spotify_url TEXT")
+		}
+	}
 
 	repo := sqlite.NewSQLiteRepository(db)
 	folderService := service.NewFolderService(repo)
