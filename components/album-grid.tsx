@@ -49,7 +49,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
+    // Optimization: Only update state if the drop target has actually changed.
+    // This prevents redundant re-renders during high-frequency dragOver events.
+    if (draggedAlbumIndex !== null && draggedAlbumIndex !== index && dropIndex !== index) {
       setDropIndex(index);
     }
   };

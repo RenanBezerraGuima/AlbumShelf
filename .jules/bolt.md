@@ -17,3 +17,7 @@
 ## 2025-05-25 - [Tree Traversal Caching and Subscription Pruning]
 **Learning:** Recursive O(N) tree traversals (like `findFolder` and `getBreadcrumb`) in Zustand selectors run on every state change and component re-render. Using a `WeakMap` cache keyed by the immutable `folders` array reference turns these into O(1) lookups for stable state versions. Additionally, subscribing to store actions in components like `FolderTree` is unnecessary; accessing them via `getState()` in handlers eliminates redundant listeners.
 **Action:** Use `WeakMap` to cache expensive computations on immutable state trees. Prefer `getState()` for store actions used exclusively in event handlers.
+
+## 2026-02-10 - [Redundant State Updates in High-Frequency Events]
+**Learning:** React's `onDragOver` event fires continuously during a drag operation. Triggering `setState` on every firing causes excessive re-renders even if the resulting state value is identical. While React bails out of identical updates at a certain level, checking the value manually before calling the setter avoids the overhead of the reconciliation trigger entirely.
+**Action:** Always wrap state updates in high-frequency event handlers (drag, scroll, mousemove) with a check to ensure the value has actually changed.

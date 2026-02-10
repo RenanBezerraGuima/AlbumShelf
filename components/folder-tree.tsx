@@ -124,16 +124,23 @@ const FolderItem = React.memo(function FolderItem({
       const y = e.clientY - rect.top;
       const height = rect.height;
 
+      let newPosition: "before" | "inside" | "after" | null = null;
       if (y < height * 0.25) {
-        setDropPosition("before");
+        newPosition = "before";
       } else if (y > height * 0.75) {
-        setDropPosition("after");
+        newPosition = "after";
       } else {
-        setDropPosition("inside");
+        newPosition = "inside";
       }
-      setIsDragOver(true);
+
+      // Optimization: Only update state if the drop position or drag status has actually changed.
+      // This prevents thousands of redundant re-renders during high-frequency dragOver events.
+      if (newPosition !== dropPosition) {
+        setDropPosition(newPosition);
+      }
+      if (!isDragOver) setIsDragOver(true);
     } else if (draggedAlbum) {
-      setIsDragOver(true);
+      if (!isDragOver) setIsDragOver(true);
     }
   };
 
