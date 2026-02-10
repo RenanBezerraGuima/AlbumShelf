@@ -21,8 +21,6 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 		id TEXT PRIMARY KEY
 	);
 
-	INSERT INTO users (id) VALUES ('dev');
-
 	CREATE TABLE folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -50,6 +48,7 @@ func setupTestDB(t *testing.T) (*sqlx.DB, *SQLiteRepository) {
 	);`
 
 	db.MustExec(schema)
+	db.MustExec("INSERT INTO users (id) VALUES ('dev')")
 	repo := NewSQLiteRepository(db)
 	return db, repo
 }

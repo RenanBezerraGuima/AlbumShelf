@@ -46,8 +46,6 @@ func main() {
 		id TEXT PRIMARY KEY
 	);
 
-	INSERT INTO users (id) VALUES ('dev') ON CONFLICT (id) DO NOTHING;
-
 	CREATE TABLE IF NOT EXISTS folders (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
@@ -74,6 +72,19 @@ func main() {
 		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 	);`
 	db.MustExec(schema)
+
+	// Seed 'dev' user robustly
+	_, err = db.Exec("INSERT INTO users (id) VALUES ('dev') ON CONFLICT (id) DO NOTHING")
+	if err != nil {
+		fmt.Printf("Initial seed failed: %v, attempting fallback...\n", err)
+		// Try fallback with common columns if the previous one failed (e.g. NOT NULL constraints)
+		_, errFallback := db.Exec("INSERT INTO users (id, email) VALUES ('dev', 'dev@example.com') ON CONFLICT (id) DO NOTHING")
+		if errFallback != nil {
+			fmt.Printf("Fallback seed also failed: %v. Database might be in an inconsistent state.\n", errFallback)
+		} else {
+			fmt.Println("Fallback seed successful.")
+		}
+	}
 
 	// Ensure spotify_url exists for existing databases
 	if dbURL != "" {
