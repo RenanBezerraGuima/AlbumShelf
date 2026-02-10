@@ -598,9 +598,20 @@ export function FolderTree() {
           )}
 
           {folders.length === 0 && !isCreating && (
-            <p className="text-sm text-muted-foreground text-center py-8 px-4 font-mono uppercase">
-              No collections found.
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <p className="text-sm text-muted-foreground font-mono uppercase mb-4">
+                No collections found.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreating(true)}
+                className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all uppercase tracking-tighter font-bold h-auto py-3 px-4"
+              >
+                <FolderPlus className="h-4 w-4" />
+                Create your first collection
+              </Button>
+            </div>
           )}
 
           {folders.map((folder) => (
