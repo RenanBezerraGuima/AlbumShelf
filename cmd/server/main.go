@@ -24,10 +24,16 @@ func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
 		db, err = sqlx.Connect("postgres", dbURL)
-		fmt.Println("Connected to PostgreSQL")
+		if err == nil {
+			fmt.Println("Connected to PostgreSQL")
+		}
 	} else {
-		db, err = sqlx.Open("sqlite3", "albumshelf.db")
-		fmt.Println("Using local SQLite database")
+		db, err = sqlx.Connect("sqlite3", "albumshelf.db")
+		if err == nil {
+			fmt.Println("Using local SQLite database")
+			// Enable foreign keys for SQLite
+			db.MustExec("PRAGMA foreign_keys = ON")
+		}
 	}
 
 	if err != nil {
@@ -42,7 +48,7 @@ func main() {
 		parent_id TEXT,
 		name TEXT NOT NULL,
 		is_expanded BOOLEAN DEFAULT TRUE,
-		position INTEGER DEFAULT 0,
+		"position" INTEGER DEFAULT 0,
 		FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
 	);
 
@@ -51,13 +57,14 @@ func main() {
 		folder_id TEXT NOT NULL,
 		user_id TEXT NOT NULL,
 		spotify_id TEXT,
+		spotify_url TEXT,
 		name TEXT NOT NULL,
 		artist TEXT NOT NULL,
 		image_url TEXT NOT NULL,
 		release_date TEXT,
 		total_tracks INTEGER,
 		external_url TEXT,
-		position INTEGER DEFAULT 0,
+		"position" INTEGER DEFAULT 0,
 		FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 	);`
 	db.MustExec(schema)

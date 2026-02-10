@@ -23,49 +23,49 @@ func (s *FolderService) GetAlbums(ctx context.Context, folderID string) ([]*mode
 }
 
 func (s *FolderService) OverwriteUserTree(ctx context.Context, userID string, tree []*models.FolderTree) error {
-	// Simple implementation: delete all and recreate
-	// Ideally this should be in a transaction
-	folders, _ := s.repo.GetFoldersByUserID(ctx, userID)
-	for _, f := range folders {
-		s.repo.DeleteFolder(ctx, f.ID)
-	}
-
-	var saveNode func(node *models.FolderTree, parentID *string, pos int) error
-	saveNode = func(node *models.FolderTree, parentID *string, pos int) error {
-		f := &models.Folder{
-			ID:         node.ID,
-			UserID:     userID,
-			ParentID:   parentID,
-			Name:       node.Name,
-			IsExpanded: node.IsExpanded,
-			Position:   pos,
-		}
-		if err := s.repo.CreateFolder(ctx, f); err != nil {
+	return s.repo.InTransaction(ctx, func(txRepo repository.Repository) error {
+		// Delete all existing folders and albums for this user in one go
+		if err := txRepo.DeleteUserFolders(ctx, userID); err != nil {
 			return err
 		}
 
-		for i, album := range node.Albums {
-			album.UserID = userID
-			album.FolderID = node.ID
-			album.Position = i
-			if err := s.repo.AddAlbum(ctx, album); err != nil {
+		var saveNode func(repo repository.Repository, node *models.FolderTree, parentID *string, pos int) error
+		saveNode = func(repo repository.Repository, node *models.FolderTree, parentID *string, pos int) error {
+			f := &models.Folder{
+				ID:         node.ID,
+				UserID:     userID,
+				ParentID:   parentID,
+				Name:       node.Name,
+				IsExpanded: node.IsExpanded,
+				Position:   pos,
+			}
+			if err := repo.CreateFolder(ctx, f); err != nil {
+				return err
+			}
+
+			for i, album := range node.Albums {
+				album.UserID = userID
+				album.FolderID = node.ID
+				album.Position = i
+				if err := repo.AddAlbum(ctx, album); err != nil {
+					return err
+				}
+			}
+
+			for i, sub := range node.Subfolders {
+				if err := saveNode(repo, sub, &node.ID, i); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		for i, node := range tree {
+			if err := saveNode(txRepo, node, nil, i); err != nil {
 				return err
 			}
 		}
 
-		for i, sub := range node.Subfolders {
-			if err := saveNode(sub, &node.ID, i); err != nil {
-				return err
-			}
-		}
 		return nil
-	}
-
-	for i, node := range tree {
-		if err := saveNode(node, nil, i); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	})
 }

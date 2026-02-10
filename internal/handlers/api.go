@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"github.com/user/album-shelf/internal/service"
 	"github.com/user/album-shelf/internal/models"
@@ -23,7 +24,12 @@ func (h *APIHandler) GetData(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r)
 
 	// Get all folders and albums and reconstruct the tree
-	folders, _ := h.folderService.GetUserTree(r.Context(), userID)
+	folders, err := h.folderService.GetUserTree(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error getting user tree for %s: %v", userID, err)
+		http.Error(w, "Failed to fetch folders", http.StatusInternalServerError)
+		return
+	}
 
 	// Create a map for easy lookup
 	folderMap := make(map[string]*models.FolderTree)
@@ -41,7 +47,11 @@ func (h *APIHandler) GetData(w http.ResponseWriter, r *http.Request) {
 		folderMap[f.ID] = ft
 
 		// Fetch albums for this folder
-		albums, _ := h.folderService.GetAlbums(r.Context(), f.ID)
+		albums, err := h.folderService.GetAlbums(r.Context(), f.ID)
+		if err != nil {
+			log.Printf("Error getting albums for folder %s: %v", f.ID, err)
+			// Continue with empty albums for this folder to avoid complete failure
+		}
 		if albums == nil {
 			albums = []*models.Album{}
 		}
@@ -75,12 +85,15 @@ func (h *APIHandler) SaveData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// We'll use a transaction to clear and save
-	// For now, let's just implement a simple clear-and-save in the service
+	log.Printf("Saving data for user %s: %d root folders", userID, len(data.Folders))
 	err := h.folderService.OverwriteUserTree(r.Context(), userID, data.Folders)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("CRITICAL: Failed to save user tree for %s: %v", userID, err)
+		// Return the full error to the client to help debugging
+		http.Error(w, "Failed to save data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("Successfully saved data for user %s", userID)
 
 	w.WriteHeader(http.StatusOK)
 }

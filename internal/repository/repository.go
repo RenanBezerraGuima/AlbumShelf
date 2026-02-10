@@ -12,10 +12,14 @@ type Repository interface {
 	GetFoldersByUserID(ctx context.Context, userID string) ([]*models.Folder, error)
 	UpdateFolder(ctx context.Context, folder *models.Folder) error
 	DeleteFolder(ctx context.Context, id string) error
+	DeleteUserFolders(ctx context.Context, userID string) error
 
 	// Albums
 	AddAlbum(ctx context.Context, album *models.Album) error
 	GetAlbumsByFolderID(ctx context.Context, folderID string) ([]*models.Album, error)
 	RemoveAlbum(ctx context.Context, albumID string) error
 	UpdateAlbumPosition(ctx context.Context, albumID string, folderID string, position int) error
+
+	// Transactions
+	InTransaction(ctx context.Context, fn func(repo Repository) error) error
 }

@@ -14,6 +14,7 @@ type Album struct {
 	FolderID    string    `db:"folder_id" json:"folderId"`
 	UserID      string    `db:"user_id" json:"userId"`
 	SpotifyID   *string   `db:"spotify_id" json:"spotifyId"`
+	SpotifyUrl  *string   `db:"spotify_url" json:"spotifyUrl"`
 	Name        string    `db:"name" json:"name"`
 	Artist      string    `db:"artist" json:"artist"`
 	ImageUrl    string    `db:"image_url" json:"imageUrl"`
