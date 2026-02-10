@@ -7,7 +7,7 @@ describe('useFolderStore', () => {
     // Since it's a singleton, we need a way to reset it or just clear folders
     const { folders, deleteFolder } = useFolderStore.getState();
     folders.forEach(f => deleteFolder(f.id));
-    useFolderStore.setState({ folders: [], selectedFolderId: null });
+    useFolderStore.setState({ folders: [], selectedFolderId: null, albumViewMode: 'grid' });
   });
 
   it('should add an album to a folder', () => {
@@ -29,6 +29,35 @@ describe('useFolderStore', () => {
     const updatedFolder = useFolderStore.getState().folders[0];
     expect(updatedFolder.albums).toHaveLength(1);
     expect(updatedFolder.albums[0].name).toBe('Album 1');
+    expect(updatedFolder.albums[0].position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('Given canvas mode preference, when toggled, then the view mode is persisted in the store', () => {
+    const { setAlbumViewMode } = useFolderStore.getState();
+
+    setAlbumViewMode('canvas');
+
+    expect(useFolderStore.getState().albumViewMode).toBe('canvas');
+  });
+
+  it('Given an album in a folder, when setting position, then its spatial coordinates are updated', () => {
+    const { createFolder, addAlbumToFolder, setAlbumPosition } = useFolderStore.getState();
+
+    createFolder('Spatial Folder', null);
+    const folderId = useFolderStore.getState().folders[0].id;
+
+    addAlbumToFolder(folderId, {
+      id: 'album-spatial-1',
+      name: 'Spatial Album',
+      artist: 'Spatial Artist',
+      imageUrl: 'url',
+      totalTracks: 8,
+    });
+
+    setAlbumPosition(folderId, 'album-spatial-1', 920, 460);
+
+    const updatedAlbum = useFolderStore.getState().folders[0].albums[0];
+    expect(updatedAlbum.position).toEqual({ x: 920, y: 460 });
   });
 
   it('should NOT allow adding two different iTunes albums to the same folder if they have undefined spotifyId (the bug)', () => {
