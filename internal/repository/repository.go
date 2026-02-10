@@ -18,4 +18,7 @@ type Repository interface {
 	GetAlbumsByFolderID(ctx context.Context, folderID string) ([]*models.Album, error)
 	RemoveAlbum(ctx context.Context, albumID string) error
 	UpdateAlbumPosition(ctx context.Context, albumID string, folderID string, position int) error
+
+	// Transactions
+	InTransaction(ctx context.Context, fn func(repo Repository) error) error
 }

@@ -24,10 +24,16 @@ func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
 		db, err = sqlx.Connect("postgres", dbURL)
-		fmt.Println("Connected to PostgreSQL")
+		if err == nil {
+			fmt.Println("Connected to PostgreSQL")
+		}
 	} else {
-		db, err = sqlx.Open("sqlite3", "albumshelf.db")
-		fmt.Println("Using local SQLite database")
+		db, err = sqlx.Connect("sqlite3", "albumshelf.db")
+		if err == nil {
+			fmt.Println("Using local SQLite database")
+			// Enable foreign keys for SQLite
+			db.MustExec("PRAGMA foreign_keys = ON")
+		}
 	}
 
 	if err != nil {
