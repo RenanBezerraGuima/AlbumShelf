@@ -2,8 +2,10 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Folder, Album, Theme } from "./types";
 import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from "./security";
+import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
 export type StreamingProvider = "deezer" | "apple" | "spotify";
+export type AlbumViewMode = "grid" | "canvas";
 
 interface FolderStore {
   folders: Folder[];
@@ -19,6 +21,7 @@ interface FolderStore {
   spotifyTokenExpiry: number | null;
   spotifyTokenTimestamp: number | null;
   theme: Theme;
+  albumViewMode: AlbumViewMode;
   lastUpdated: number;
 
   // Folder actions
@@ -42,6 +45,12 @@ interface FolderStore {
     albumId: string,
   ) => void;
   reorderAlbum: (folderId: string, fromIndex: number, toIndex: number) => void;
+  setAlbumPosition: (
+    folderId: string,
+    albumId: string,
+    x: number,
+    y: number,
+  ) => void;
 
   // Drag and drop
   setDraggedAlbum: (
@@ -60,6 +69,7 @@ interface FolderStore {
     timestamp: number | null,
   ) => void;
   setTheme: (theme: Theme) => void;
+  setAlbumViewMode: (mode: AlbumViewMode) => void;
 }
 
 export type SyncState = Pick<
@@ -72,6 +82,7 @@ export type SyncState = Pick<
   | "spotifyTokenExpiry"
   | "spotifyTokenTimestamp"
   | "theme"
+  | "albumViewMode"
   | "lastUpdated"
 >;
 
@@ -86,6 +97,7 @@ export const selectSyncState = (state: FolderStore): SyncState => ({
   spotifyTokenExpiry: state.spotifyTokenExpiry,
   spotifyTokenTimestamp: state.spotifyTokenTimestamp,
   theme: state.theme,
+  albumViewMode: state.albumViewMode,
   lastUpdated: state.lastUpdated,
 });
 
@@ -325,6 +337,7 @@ export const useFolderStore = create<FolderStore>()(
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
       theme: "industrial",
+      albumViewMode: "grid",
       lastUpdated: 0,
 
       createFolder: (name, parentId) => {
@@ -422,7 +435,10 @@ export const useFolderStore = create<FolderStore>()(
             }
 
             // Sanitize album before adding to store
-            const sanitizedAlbum = sanitizeAlbum(album);
+            const sanitizedAlbum = normalizeAlbumPosition(
+              sanitizeAlbum(album),
+              folder.albums.length,
+            );
 
             return {
               ...folder,
@@ -457,6 +473,8 @@ export const useFolderStore = create<FolderStore>()(
           return;
         }
 
+        const positionedAlbum = normalizeAlbumPosition(album, toFolder.albums.length);
+
         let newFolders = updateFolderInTree(
           state.folders,
           fromFolderId,
@@ -468,7 +486,7 @@ export const useFolderStore = create<FolderStore>()(
 
         newFolders = updateFolderInTree(newFolders, toFolderId, (folder) => ({
           ...folder,
-          albums: [...folder.albums, album],
+          albums: [...folder.albums, positionedAlbum],
         }));
 
         set({ folders: newFolders, lastUpdated: Date.now() });
@@ -485,6 +503,23 @@ export const useFolderStore = create<FolderStore>()(
               albums: newAlbums,
             };
           }),
+          lastUpdated: Date.now(),
+        }));
+      },
+
+      setAlbumPosition: (folderId, albumId, x, y) => {
+        set((state) => ({
+          folders: updateFolderInTree(state.folders, folderId, (folder) => ({
+            ...folder,
+            albums: folder.albums.map((album, index) =>
+              album.id === albumId
+                ? {
+                    ...normalizeAlbumPosition(album, index),
+                    position: { x, y },
+                  }
+                : album,
+            ),
+          })),
           lastUpdated: Date.now(),
         }));
       },
@@ -517,11 +552,14 @@ export const useFolderStore = create<FolderStore>()(
 
             // Sanitize albums
             const sanitizedAlbums: Album[] = (folder.albums || []).map(
-              (album: any) =>
-                sanitizeAlbum({
-                  ...album,
-                  id: album.id || generateId(),
-                }),
+              (album: any, index: number) =>
+                normalizeAlbumPosition(
+                  sanitizeAlbum({
+                    ...album,
+                    id: album.id || generateId(),
+                  }),
+                  index,
+                ),
             );
 
             return {
@@ -592,6 +630,8 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setTheme: (theme) => set({ theme, lastUpdated: Date.now() }),
+      setAlbumViewMode: (mode) =>
+        set({ albumViewMode: mode, lastUpdated: Date.now() }),
     }),
     {
       name: "album-shelf-storage",

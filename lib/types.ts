@@ -1,5 +1,10 @@
 export type Theme = 'industrial' | 'editorial' | 'glitch' | 'organic' | 'refined';
 
+export interface AlbumPosition {
+  x: number;
+  y: number;
+}
+
 export interface Album {
   id: string;
   spotifyId?: string;
@@ -10,6 +15,7 @@ export interface Album {
   totalTracks: number;
   spotifyUrl?: string;
   externalUrl?: string;
+  position?: AlbumPosition;
 }
 
 export interface Folder {
