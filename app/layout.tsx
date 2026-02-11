@@ -2,7 +2,6 @@ import React from "react"
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeHandler } from '@/components/theme-handler'
-import { Toaster } from 'sonner'
 import {
   Syne,
   Fraunces,
@@ -52,7 +51,6 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ThemeHandler />
           {children}
-          <Toaster position="top-center" />
         </ThemeProvider>
       </body>
     </html>

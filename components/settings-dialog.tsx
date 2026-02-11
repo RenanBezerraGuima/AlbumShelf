@@ -3,7 +3,6 @@
 import React, { useRef } from 'react';
 import { Download, Upload, Settings, Music, Radio, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
 import {
   Dialog,
@@ -46,9 +45,7 @@ export function SettingsDialog() {
       link.download = `backup-${date}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success('Backup exported successfully');
     } catch (error) {
-      toast.error('Failed to export backup');
       console.error(error);
     }
   };
@@ -68,14 +65,12 @@ export function SettingsDialog() {
         }
 
         importFolders(json);
-        toast.success('Data merged successfully (OLD/NEW naming applied where needed)');
 
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
       } catch (error) {
-        toast.error('Failed to import backup: ' + (error instanceof Error ? error.message : 'Invalid JSON'));
         console.error(error);
       }
     };

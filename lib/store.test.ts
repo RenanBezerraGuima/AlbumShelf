@@ -7,7 +7,7 @@ describe('useFolderStore', () => {
     // Since it's a singleton, we need a way to reset it or just clear folders
     const { folders, deleteFolder } = useFolderStore.getState();
     folders.forEach(f => deleteFolder(f.id));
-    useFolderStore.setState({ folders: [], selectedFolderId: null, albumViewMode: 'grid' });
+    useFolderStore.setState({ folders: [], selectedFolderId: null });
   });
 
   it('should add an album to a folder', () => {
@@ -32,12 +32,14 @@ describe('useFolderStore', () => {
     expect(updatedFolder.albums[0].position).toEqual({ x: 0, y: 0 });
   });
 
-  it('Given canvas mode preference, when toggled, then the view mode is persisted in the store', () => {
-    const { setAlbumViewMode } = useFolderStore.getState();
+  it('Given a folder, when toggling view mode, then the folder view mode is updated', () => {
+    const { createFolder, setFolderViewMode } = useFolderStore.getState();
+    createFolder('Test Folder', null);
+    const folderId = useFolderStore.getState().folders[0].id;
 
-    setAlbumViewMode('canvas');
+    setFolderViewMode(folderId, 'canvas');
 
-    expect(useFolderStore.getState().albumViewMode).toBe('canvas');
+    expect(useFolderStore.getState().folders[0].viewMode).toBe('canvas');
   });
 
   it('Given an album in a folder, when setting position, then its spatial coordinates are updated', () => {

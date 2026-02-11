@@ -22,9 +22,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   );
 
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
-  const albumViewMode = useFolderStore(state => state.albumViewMode);
-  const setAlbumViewMode = useFolderStore(state => state.setAlbumViewMode);
+  const setFolderViewMode = useFolderStore(state => state.setFolderViewMode);
 
+  const albumViewMode = selectedFolder?.viewMode || 'grid';
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!selectedFolderId) {
@@ -101,7 +101,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setAlbumViewMode('grid')}
+              onClick={() => setFolderViewMode(selectedFolderId, 'grid')}
               className={cn('border border-border px-2 py-0.5', albumViewMode === 'grid' && 'bg-primary text-primary-foreground')}
               aria-label="Switch to grid view"
               title="Grid view"
@@ -110,7 +110,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             </button>
             <button
               type="button"
-              onClick={() => setAlbumViewMode('canvas')}
+              onClick={() => setFolderViewMode(selectedFolderId, 'canvas')}
               className={cn('border border-border px-2 py-0.5', albumViewMode === 'canvas' && 'bg-primary text-primary-foreground')}
               aria-label="Switch to canvas view"
               title="Canvas view"

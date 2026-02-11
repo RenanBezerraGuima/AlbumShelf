@@ -1,4 +1,5 @@
 export type Theme = 'industrial' | 'editorial' | 'glitch' | 'organic' | 'refined';
+export type AlbumViewMode = 'grid' | 'canvas';
 
 export interface AlbumPosition {
   x: number;
@@ -25,6 +26,7 @@ export interface Folder {
   albums: Album[];
   subfolders: Folder[];
   isExpanded: boolean;
+  viewMode?: AlbumViewMode;
 }
 
 export interface SpotifyAlbum {

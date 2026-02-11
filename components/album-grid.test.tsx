@@ -10,7 +10,6 @@ describe('AlbumGrid spatial mode toggle', () => {
 
     useFolderStore.setState({
       selectedFolderId: folderId,
-      albumViewMode: 'grid',
       folders: [
         {
           id: folderId,
@@ -18,6 +17,7 @@ describe('AlbumGrid spatial mode toggle', () => {
           parentId: null,
           isExpanded: true,
           subfolders: [],
+          viewMode: 'grid',
           albums: [
             {
               id: 'album-1',
@@ -37,15 +37,15 @@ describe('AlbumGrid spatial mode toggle', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Switch to canvas view' }));
 
     expect(screen.getByTestId('album-canvas')).toBeInTheDocument();
-    expect(useFolderStore.getState().albumViewMode).toBe('canvas');
+    const folder = useFolderStore.getState().folders.find(f => f.id === folderId);
+    expect(folder?.viewMode).toBe('canvas');
   });
 
-  it('Given canvas mode is already persisted, when the grid renders, then the infinite canvas is shown by default', () => {
+  it('Given canvas mode is already persisted for a folder, when the grid renders, then the infinite canvas is shown by default', () => {
     const folderId = 'folder-1';
 
     useFolderStore.setState({
       selectedFolderId: folderId,
-      albumViewMode: 'canvas',
       folders: [
         {
           id: folderId,
@@ -53,6 +53,7 @@ describe('AlbumGrid spatial mode toggle', () => {
           parentId: null,
           isExpanded: true,
           subfolders: [],
+          viewMode: 'canvas',
           albums: [
             {
               id: 'album-1',
