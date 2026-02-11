@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useFolderStore } from '@/lib/store';
 import { parseSpotifyHash, exchangeCodeForToken } from '@/lib/spotify-auth';
-import { toast } from 'sonner';
 
 export function SpotifyCallbackHandler() {
   const setSpotifyToken = useFolderStore((state) => state.setSpotifyToken);
@@ -23,13 +22,11 @@ export function SpotifyCallbackHandler() {
 
           if (!authData.state || authData.state !== storedState) {
             console.error('Spotify Auth State Mismatch');
-            toast.error('SPOTIFY AUTH SECURITY ERROR');
             window.history.replaceState(null, document.title, window.location.pathname);
             return;
           }
 
           setSpotifyToken(authData.accessToken, authData.expiresIn, authData.timestamp);
-          toast.success('CONNECTED TO SPOTIFY');
 
           // Clean up the URL hash
           window.history.replaceState(
@@ -50,7 +47,6 @@ export function SpotifyCallbackHandler() {
       if (error) {
         localStorage.removeItem('spotify_auth_state');
         console.error('Spotify Auth Error:', error);
-        toast.error(`SPOTIFY AUTH FAILED: ${error.toUpperCase()}`);
 
         // Clean up URL
         window.history.replaceState(
@@ -67,7 +63,6 @@ export function SpotifyCallbackHandler() {
 
         if (!state || state !== storedState) {
           console.error('Spotify Auth State Mismatch');
-          toast.error('SPOTIFY AUTH SECURITY ERROR');
           window.history.replaceState(null, document.title, window.location.pathname);
           return;
         }
@@ -76,7 +71,6 @@ export function SpotifyCallbackHandler() {
           const data = await exchangeCodeForToken(code);
           if (data.access_token) {
             setSpotifyToken(data.access_token, data.expires_in, Date.now());
-            toast.success('CONNECTED TO SPOTIFY (PKCE)');
 
             // Clean up the URL
             window.history.replaceState(
@@ -87,7 +81,6 @@ export function SpotifyCallbackHandler() {
           }
         } catch (err) {
           console.error('Failed to exchange code:', err);
-          toast.error('FAILED TO CONNECT TO SPOTIFY');
         } finally {
           // Clean up sensitive temporary data
           localStorage.removeItem('spotify_code_verifier');

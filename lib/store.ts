@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Folder, Album, Theme } from "./types";
+import type { Folder, Album, Theme, AlbumViewMode } from "./types";
 import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum } from "./security";
 import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
 export type StreamingProvider = "deezer" | "apple" | "spotify";
-export type AlbumViewMode = "grid" | "canvas";
 
 interface FolderStore {
   folders: Folder[];
@@ -21,7 +20,6 @@ interface FolderStore {
   spotifyTokenExpiry: number | null;
   spotifyTokenTimestamp: number | null;
   theme: Theme;
-  albumViewMode: AlbumViewMode;
   lastUpdated: number;
 
   // Folder actions
@@ -69,7 +67,7 @@ interface FolderStore {
     timestamp: number | null,
   ) => void;
   setTheme: (theme: Theme) => void;
-  setAlbumViewMode: (mode: AlbumViewMode) => void;
+  setFolderViewMode: (id: string, mode: AlbumViewMode) => void;
 }
 
 export type SyncState = Pick<
@@ -82,7 +80,6 @@ export type SyncState = Pick<
   | "spotifyTokenExpiry"
   | "spotifyTokenTimestamp"
   | "theme"
-  | "albumViewMode"
   | "lastUpdated"
 >;
 
@@ -97,7 +94,6 @@ export const selectSyncState = (state: FolderStore): SyncState => ({
   spotifyTokenExpiry: state.spotifyTokenExpiry,
   spotifyTokenTimestamp: state.spotifyTokenTimestamp,
   theme: state.theme,
-  albumViewMode: state.albumViewMode,
   lastUpdated: state.lastUpdated,
 });
 
@@ -337,7 +333,6 @@ export const useFolderStore = create<FolderStore>()(
       spotifyTokenExpiry: null,
       spotifyTokenTimestamp: null,
       theme: "industrial",
-      albumViewMode: "grid",
       lastUpdated: 0,
 
       createFolder: (name, parentId) => {
@@ -348,6 +343,7 @@ export const useFolderStore = create<FolderStore>()(
           albums: [],
           subfolders: [],
           isExpanded: true,
+          viewMode: "grid",
         };
         set((state) => ({
           folders: addFolderToTree(state.folders, parentId, newFolder),
@@ -569,6 +565,7 @@ export const useFolderStore = create<FolderStore>()(
               albums: sanitizedAlbums,
               subfolders: sanitizeAndRegenerate(folder.subfolders || [], newId),
               isExpanded: Boolean(folder.isExpanded),
+              viewMode: (folder.viewMode as AlbumViewMode) || "grid",
             };
           });
         };
@@ -630,8 +627,15 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setTheme: (theme) => set({ theme, lastUpdated: Date.now() }),
-      setAlbumViewMode: (mode) =>
-        set({ albumViewMode: mode, lastUpdated: Date.now() }),
+      setFolderViewMode: (id, mode) => {
+        set((state) => ({
+          folders: updateFolderInTree(state.folders, id, (folder) => ({
+            ...folder,
+            viewMode: mode,
+          })),
+          lastUpdated: Date.now(),
+        }));
+      },
     }),
     {
       name: "album-shelf-storage",

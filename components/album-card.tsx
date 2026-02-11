@@ -3,7 +3,6 @@
 import React from "react";
 import { useState } from 'react';
 import { Play, GripVertical, Trash2, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,7 +26,6 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
 
   const handleRemove = () => {
     useFolderStore.getState().removeAlbumFromFolder(folderId, album.id);
-    toast.success(`REMOVED: ${album.name.toUpperCase()}`);
     setIsDeleteDialogOpen(false);
   };
 

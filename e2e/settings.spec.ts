@@ -72,8 +72,6 @@ test.describe('Settings - Export/Import', () => {
     });
 
     // 4. Verify results
-    await expect(page.getByText('Data merged successfully')).toBeVisible();
-
     // Close dialog by clicking X or pressing Escape
     await page.keyboard.press('Escape');
 

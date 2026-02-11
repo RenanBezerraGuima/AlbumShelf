@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, Loader2, Check, X, Menu } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -259,10 +258,8 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     if (existingIds && existingIds.length > 0) {
       // Remove all matching albums
       existingIds.forEach(id => removeAlbumFromFolder(selectedFolderId, id));
-      toast.success(`REMOVED: ${album.name.toUpperCase()}`);
     } else {
       addAlbumToFolder(selectedFolderId, album);
-      toast.success(`ADDED: ${album.name.toUpperCase()}`);
     }
   }, [selectedFolderId, albumsInSelectedFolder, removeAlbumFromFolder, addAlbumToFolder]);
 
