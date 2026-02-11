@@ -6,9 +6,9 @@ import { AlbumCard } from './album-card';
 import {
   clampZoom,
   DEFAULT_CARD_SIZE,
-  isAlbumVisible,
+  getViewportWorldBoundaries,
+  isAlbumVisibleInWorld,
   screenToWorld,
-  worldToScreen,
   type CameraState,
 } from '@/lib/spatial';
 import { useFolderStore } from '@/lib/store';
@@ -32,9 +32,13 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
       height: container?.clientHeight ?? window.innerHeight,
     };
 
+    // Pre-calculate world viewport boundaries once per render to avoid
+    // redundant calculations in the O(N) filter loop.
+    const bounds = getViewportWorldBoundaries(camera, viewport);
+
     return albums.filter((album) => {
-      const position = album.position ?? { x: 0, y: 0 };
-      return isAlbumVisible(position, camera, viewport, DEFAULT_CARD_SIZE);
+      const pos = album.position ?? { x: 0, y: 0 };
+      return isAlbumVisibleInWorld(pos, bounds, DEFAULT_CARD_SIZE);
     });
   }, [albums, camera]);
 
@@ -117,28 +121,32 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
       onWheel={zoomCanvas}
       data-testid="album-canvas"
     >
-      {visibleAlbums.map((album) => {
-        const position = album.position ?? { x: 0, y: 0 };
-        const screen = worldToScreen(position, camera);
-
-        return (
-          <div
-            key={album.id}
-            data-album-card
-            className="absolute"
-            style={{
-              left: screen.x,
-              top: screen.y,
-              width: DEFAULT_CARD_SIZE.width,
-              transform: `scale(${camera.zoom})`,
-              transformOrigin: 'top left',
-            }}
-            onPointerDown={(event) => startAlbumDrag(event, album)}
-          >
-            <AlbumCard album={album} folderId={folderId} />
-          </div>
-        );
-      })}
+      <div
+        style={{
+          transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
+          transformOrigin: '0 0',
+        }}
+        className="absolute inset-0 pointer-events-none"
+      >
+        {visibleAlbums.map((album) => {
+          const position = album.position ?? { x: 0, y: 0 };
+          return (
+            <div
+              key={album.id}
+              data-album-card
+              className="absolute pointer-events-auto"
+              style={{
+                left: position.x,
+                top: position.y,
+                width: DEFAULT_CARD_SIZE.width,
+              }}
+              onPointerDown={(event) => startAlbumDrag(event, album)}
+            >
+              <AlbumCard album={album} folderId={folderId} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

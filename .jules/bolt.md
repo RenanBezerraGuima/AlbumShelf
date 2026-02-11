@@ -21,3 +21,7 @@
 ## 2026-02-10 - [Redundant State Updates in High-Frequency Events]
 **Learning:** React's `onDragOver` event fires continuously during a drag operation. Triggering `setState` on every firing causes excessive re-renders even if the resulting state value is identical. While React bails out of identical updates at a certain level, checking the value manually before calling the setter avoids the overhead of the reconciliation trigger entirely.
 **Action:** Always wrap state updates in high-frequency event handlers (drag, scroll, mousemove) with a check to ensure the value has actually changed.
+
+## 2026-03-10 - [Canvas Rendering and Spatial Visibility]
+**Learning:** In a zoomable/pannable canvas, updating the screen-space position (left/top) and transform of every visible item on every frame causes significant React reconciliation and DOM overhead. Applying the camera transform once to a parent "stage" div allows the browser to handle panning/zooming efficiently while keeping children positions stable in world space. Additionally, performing visibility checks in world space by pre-calculating viewport boundaries once per frame avoids redundant O(N) coordinate transformations.
+**Action:** Always use a single parent transform for camera movement in canvas views. Perform intersection tests in world space to minimize operations per item.

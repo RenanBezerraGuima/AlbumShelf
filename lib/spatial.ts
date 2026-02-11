@@ -16,6 +16,13 @@ export interface AlbumCardSize {
   height: number;
 }
 
+export interface WorldBoundaries {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 export const DEFAULT_CARD_SIZE: AlbumCardSize = {
   width: 220,
   height: 320,
@@ -75,6 +82,41 @@ export const normalizeAlbumPosition = (
   };
 };
 
+/**
+ * Calculates the viewport boundaries in world space, including an optional margin.
+ * Pre-calculating these boundaries allows for efficient O(1) visibility checks
+ * in large collections.
+ */
+export const getViewportWorldBoundaries = (
+  camera: CameraState,
+  viewport: CanvasViewport,
+  margin = 200,
+): WorldBoundaries => {
+  const invZoom = 1 / camera.zoom;
+  return {
+    left: (-camera.x - margin) * invZoom,
+    top: (-camera.y - margin) * invZoom,
+    right: (viewport.width - camera.x + margin) * invZoom,
+    bottom: (viewport.height - camera.y + margin) * invZoom,
+  };
+};
+
+/**
+ * Checks if an album is visible within the given world-space boundaries.
+ */
+export const isAlbumVisibleInWorld = (
+  position: AlbumPosition,
+  bounds: WorldBoundaries,
+  card = DEFAULT_CARD_SIZE,
+): boolean => {
+  return (
+    position.x + card.width >= bounds.left &&
+    position.y + card.height >= bounds.top &&
+    position.x <= bounds.right &&
+    position.y <= bounds.bottom
+  );
+};
+
 export const isAlbumVisible = (
   position: AlbumPosition,
   camera: CameraState,
@@ -82,14 +124,6 @@ export const isAlbumVisible = (
   card = DEFAULT_CARD_SIZE,
   margin = 200,
 ): boolean => {
-  const topLeft = worldToScreen(position, camera);
-  const width = card.width * camera.zoom;
-  const height = card.height * camera.zoom;
-
-  return (
-    topLeft.x + width >= -margin &&
-    topLeft.y + height >= -margin &&
-    topLeft.x <= viewport.width + margin &&
-    topLeft.y <= viewport.height + margin
-  );
+  const bounds = getViewportWorldBoundaries(camera, viewport, margin);
+  return isAlbumVisibleInWorld(position, bounds, card);
 };
