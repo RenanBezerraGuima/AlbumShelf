@@ -24,8 +24,11 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
       return trimmedUrl;
     }
   } catch (e) {
-    // If it's not a valid absolute URL, check if it's a safe relative path
-    if (trimmedUrl.startsWith('/') || trimmedUrl.startsWith('./') || trimmedUrl.startsWith('../')) {
+    // If it's not a valid absolute URL, check if it's a safe relative path.
+    // We explicitly exclude protocol-relative URLs (starting with //) for security.
+    if ((trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//')) ||
+        trimmedUrl.startsWith('./') ||
+        trimmedUrl.startsWith('../')) {
       return trimmedUrl;
     }
   }
@@ -43,9 +46,20 @@ export function sanitizeImageUrl(url: string | undefined): string | undefined {
   const lowerUrl = trimmedUrl.toLowerCase();
 
   if (lowerUrl.startsWith('data:')) {
+    const commaIndex = lowerUrl.indexOf(',');
+    if (commaIndex === -1) return undefined;
+
+    const mimePart = lowerUrl.slice(0, commaIndex);
+    let decodedMimePart;
+    try {
+      // Decode to handle percent-encoding bypasses (e.g. svg%2Bxml)
+      decodedMimePart = decodeURIComponent(mimePart);
+    } catch (e) {
+      return undefined;
+    }
+
     // Only allow safe data:image/ protocols (excluding SVG to prevent potential XSS)
-    // Using toLowerCase() to prevent case-sensitivity bypasses (e.g. data:image/SVG+XML)
-    if (lowerUrl.startsWith('data:image/') && !lowerUrl.startsWith('data:image/svg+xml')) {
+    if (decodedMimePart.startsWith('data:image/') && !decodedMimePart.includes('svg+xml')) {
       // Data URLs can be long, but let's still apply a reasonable limit for data images
       // usually 1MB is more than enough for small album covers if they are base64
       if (trimmedUrl.length > 1024 * 1024) return undefined;
