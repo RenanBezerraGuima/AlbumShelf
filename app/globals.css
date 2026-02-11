@@ -285,3 +285,10 @@
     @apply text-foreground font-black uppercase tracking-tighter;
   }
 }
+
+/* Hide Next.js Dev Overlay/Notifications blocking the search view */
+[data-nextjs-toast-wrapper], 
+#nextjs-dev-overlay, 
+[data-nextjs-dialog-overlay] {
+  display: none !important;
+}

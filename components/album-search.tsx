@@ -90,7 +90,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = "album-search-results";
-  
+
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const addAlbumToFolder = useFolderStore(state => state.addAlbumToFolder);
   const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
@@ -110,13 +110,13 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   // as the albums array reference is preserved by structural sharing in the store.
   const selectedFolderAlbums = useFolderStore(useCallback(state =>
     state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId)?.albums : undefined
-  , []));
-  
+    , []));
+
   // Get albums in selected folder
   // Memoized based on the specific albums array reference, leveraging structural sharing
   const albumsInSelectedFolder = useMemo(() => {
     if (!selectedFolderAlbums) return new Map<string, string[]>();
-    
+
     const albumMap = new Map<string, string[]>();
     selectedFolderAlbums.forEach(album => {
       const key = `${album.name}-${album.artist}`.toLowerCase();
@@ -269,26 +269,14 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   return (
     <div
       className={cn(
-        "w-full flex flex-col items-center border-b-2 border-border bg-background z-50",
-        isMobile ? "px-2 py-4" : "px-4 py-6"
+        "w-full flex flex-col items-center bg-background z-50",
+        isMobile ? "px-2 py-4 border-t-2 border-border pb-safe" : "px-4 py-6 border-b-2 border-border"
       )}
     >
       <div
         className="w-full max-w-2xl flex flex-nowrap items-center gap-3 relative"
         ref={containerRef}
       >
-        {isMobile && onMenuClick && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMenuClick}
-            className="shrink-0 h-12 w-12"
-            aria-label="Open menu"
-            title="Open menu"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        )}
         <div className="relative group flex-1 min-w-0" data-testid="search-input-wrapper">
           <Search
             data-testid="search-icon"
@@ -331,48 +319,51 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
         </div>
         {isOpen && (results.length > 0 || error || (query.trim() && !isLoading)) && (
           <div
-            className="absolute left-0 right-0 top-full mt-2 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+            className={cn(
+              "absolute left-0 right-0 z-50 glass border-2 border-border brutalist-shadow overflow-hidden animate-in fade-in duration-200",
+              isMobile ? "bottom-full mb-4 slide-in-from-bottom-2" : "top-full mt-2 slide-in-from-top-2"
+            )}
             style={{ borderRadius: 'var(--radius)' }}
           >
-          <ScrollArea className="h-[400px]">
-            <div className="p-2 space-y-1" role="listbox" id={listboxId}>
-              {error && (
-                <div className="py-6 px-4 text-center space-y-4">
-                  <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
-                    {error}
-                  </p>
-                  {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
-                    <button
-                      onClick={() => redirectToSpotifyAuth()}
-                      className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all cursor-pointer"
-                    >
-                      Connect Spotify
-                    </button>
-                  )}
-                </div>
-              )}
+            <ScrollArea className="h-[400px]">
+              <div className="p-2 space-y-1" role="listbox" id={listboxId}>
+                {error && (
+                  <div className="py-6 px-4 text-center space-y-4">
+                    <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+                      {error}
+                    </p>
+                    {streamingProvider === 'spotify' && isSpotifyTokenExpired && (
+                      <button
+                        onClick={() => redirectToSpotifyAuth()}
+                        className="inline-block bg-[#1DB954] text-white px-6 py-2 font-black uppercase tracking-tighter hover:brutalist-shadow transition-all cursor-pointer"
+                      >
+                        Connect Spotify
+                      </button>
+                    )}
+                  </div>
+                )}
 
-              {results.length === 0 && !error && query.trim() && !isLoading && (
-                <div className="py-8 px-4 text-center">
-                  <p className="text-sm text-muted-foreground uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
-                    No albums found for "{query}"
-                  </p>
-                </div>
-              )}
+                {results.length === 0 && !error && query.trim() && !isLoading && (
+                  <div className="py-8 px-4 text-center">
+                    <p className="text-sm text-muted-foreground uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
+                      No albums found for "{query}"
+                    </p>
+                  </div>
+                )}
 
-              {results.map((album, index) => (
-                <SearchResultItem
-                  key={album.id}
-                  album={album}
-                  index={index}
-                  isActive={index === activeIndex}
-                  isAdded={albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase())}
-                  disabled={!selectedFolderId}
-                  onSelect={handleAddAlbum}
-                />
-              ))}
-            </div>
-          </ScrollArea>
+                {results.map((album, index) => (
+                  <SearchResultItem
+                    key={album.id}
+                    album={album}
+                    index={index}
+                    isActive={index === activeIndex}
+                    isAdded={albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase())}
+                    disabled={!selectedFolderId}
+                    onSelect={handleAddAlbum}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         )}
       </div>

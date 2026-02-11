@@ -52,7 +52,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ThemeHandler />
           {children}
-          <Toaster position="bottom-right" />
+          <Toaster position="top-center" />
         </ThemeProvider>
       </body>
     </html>

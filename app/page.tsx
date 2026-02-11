@@ -6,6 +6,7 @@ import { AlbumGrid } from '@/components/album-grid';
 import { AlbumSearch } from '@/components/album-search';
 import { FirstTimeSetup } from '@/components/first-time-setup';
 import { SpotifyCallbackHandler } from '@/components/spotify-callback-handler';
+import { MobileHeader } from '@/components/mobile-header';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -19,17 +20,25 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <main className="h-screen flex flex-col bg-background relative overflow-hidden">
+    <main className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <FirstTimeSetup />
       <SpotifyCallbackHandler />
-      <AlbumSearch isMobile={isMobile} onMenuClick={() => setIsMenuOpen(true)} />
 
-      <div className="flex-1 min-h-0 z-10">
+      {isMobile ? (
+        <MobileHeader onMenuClick={() => setIsMenuOpen(true)} />
+      ) : (
+        <AlbumSearch isMobile={isMobile} onMenuClick={() => setIsMenuOpen(true)} />
+      )}
+
+      <div className="flex-1 min-h-0 z-10 relative flex flex-col">
         {isMobile ? (
           <>
-            <AlbumGrid isMobile={true} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AlbumGrid isMobile={true} />
+            </div>
+
             <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <DialogContent className="p-0 sm:max-w-[300px] h-[100dvh] left-0 translate-x-0 top-0 translate-y-0 border-r-2 border-l-0 border-y-0 rounded-none shadow-none [&>button[aria-label='Close']]:hidden">
+              <DialogContent className="p-0 sm:max-w-[300px] h-[100dvh] left-0 translate-x-0 top-0 translate-y-0 border-r-2 border-l-0 border-y-0 rounded-none shadow-none [&>button[aria-label='Close']]:hidden z-[100]">
                 <DialogHeader className="sr-only">
                   <DialogTitle>Collections Menu</DialogTitle>
                   <DialogDescription>Browse your music collections</DialogDescription>
@@ -47,6 +56,7 @@ export default function Home() {
                 </div>
               </DialogContent>
             </Dialog>
+            <AlbumSearch isMobile={true} />
           </>
         ) : (
           <ResizablePanelGroup direction="horizontal" className="h-full">
