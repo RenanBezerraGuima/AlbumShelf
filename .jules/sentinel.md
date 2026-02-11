@@ -34,3 +34,8 @@
 **Vulnerability:** Case-sensitive string checks for `data:` protocol and `image/svg+xml` MIME type allowed bypasses via uppercase letters (e.g., `data:image/SVG+XML`).
 **Learning:** Security filters based on URL schemes or MIME types must be case-insensitive, as per RFC 2397 and standard browser behavior. Relying on `startsWith()` with a lowercase string is insufficient for security validation of untrusted input.
 **Prevention:** Always normalize untrusted URLs or MIME types to lowercase before performing prefix or inclusion checks, while ensuring the original payload is preserved if it is case-sensitive (like base64 data).
+
+## 2026-02-25 - [Percent-Encoding Bypass in Data URLs]
+**Vulnerability:** Sanitization logic for `data:` URLs could be bypassed using percent-encoding in the MIME type (e.g., `data:image/svg%2Bxml`).
+**Learning:** Browsers may decode percent-encoded MIME types in `data:` URLs. Security checks that rely on simple string matching or `startsWith` against the raw URL can be bypassed if they don't account for this decoding.
+**Prevention:** Always decode the MIME/metadata part of a `data:` URL using `decodeURIComponent` before performing security checks like blocking `svg+xml`. Similarly, be cautious of protocol-relative URLs (`//`) which can sometimes bypass relative-path filters if not explicitly handled.

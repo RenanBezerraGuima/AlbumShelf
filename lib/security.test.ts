@@ -109,6 +109,10 @@ describe('Security Utilities', () => {
       expect(sanitizeUrl('vbscript:msgbox("XSS")')).toBeUndefined();
     });
 
+    it('should reject protocol-relative URLs for security', () => {
+      expect(sanitizeUrl('//evil.com')).toBeUndefined();
+    });
+
     it('should handle undefined or empty input', () => {
       expect(sanitizeUrl(undefined)).toBeUndefined();
       expect(sanitizeUrl('')).toBeUndefined();
@@ -141,6 +145,11 @@ describe('Security Utilities', () => {
 
     it('should reject case-insensitive SVG data URLs', () => {
       const svgDataUrl = 'data:image/SVG+XML;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4=';
+      expect(sanitizeImageUrl(svgDataUrl)).toBeUndefined();
+    });
+
+    it('should reject encoded SVG data URLs', () => {
+      const svgDataUrl = 'data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4=';
       expect(sanitizeImageUrl(svgDataUrl)).toBeUndefined();
     });
 
