@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useState } from 'react';
-import { Play, GripVertical, Trash2, Loader2 } from 'lucide-react';
+import { Play, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,7 +29,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     setIsDeleteDialogOpen(false);
   };
 
-  const handlePlay = () => {
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (album.externalUrl) {
       window.open(album.externalUrl, '_blank');
     } else {
@@ -49,19 +50,17 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
       )}
       style={{ borderRadius: 'var(--radius)' }}
     >
-      <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10">
-        <div className="bg-background border border-border p-1" style={{ borderRadius: 'calc(var(--radius) / 2)' }}>
-          <GripVertical className="h-4 w-4 text-foreground" />
-        </div>
-      </div>
-
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <Button
           size="icon"
           variant="destructive"
           className="h-7 w-7 border-2 border-border brutalist-shadow-sm"
           style={{ borderRadius: 'var(--radius)' }}
-          onClick={() => setIsDeleteDialogOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDeleteDialogOpen(true);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Remove album"
           title="Remove album"
         >
@@ -105,16 +104,17 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         
-        <button
+        <Button
+          size="icon-sm"
+          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
+          style={{ borderRadius: 'var(--radius)' }}
           onClick={handlePlay}
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Play album"
           title="Play album"
-          className="absolute inset-0 flex items-center justify-center bg-primary/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
         >
-          <div className="bg-primary text-primary-foreground border-2 border-border p-4 brutalist-shadow hover:scale-110 transition-transform duration-200">
-            <Play className="h-8 w-8 fill-current" />
-          </div>
-        </button>
+          <Play className="h-3.5 w-3.5 fill-current" />
+        </Button>
       </div>
 
       <div className="p-3 bg-card uppercase tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
