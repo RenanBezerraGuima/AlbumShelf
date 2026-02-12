@@ -25,3 +25,7 @@
 ## 2026-03-10 - [Canvas Rendering and Spatial Visibility]
 **Learning:** In a zoomable/pannable canvas, updating the screen-space position (left/top) and transform of every visible item on every frame causes significant React reconciliation and DOM overhead. Applying the camera transform once to a parent "stage" div allows the browser to handle panning/zooming efficiently while keeping children positions stable in world space. Additionally, performing visibility checks in world space by pre-calculating viewport boundaries once per frame avoids redundant O(N) coordinate transformations.
 **Action:** Always use a single parent transform for camera movement in canvas views. Perform intersection tests in world space to minimize operations per item.
+
+## 2026-03-20 - [Deferring Global Store Updates for Canvas Dragging]
+**Learning:** High-frequency updates to a persisted global store (like album positions on a canvas during drag) trigger expensive side effects: structural sharing recalculations across the tree, serialization for persistence (localStorage), and re-renders in distant, unrelated components. Using local component state for the transient drag position and only committing to the global store on drag end eliminates this overhead while preserving data consistency.
+**Action:** Use local state or refs for high-frequency transient UI state (dragging, resizing, etc.) and only sync with the global store on interaction completion. Ensure visibility logic (like viewport culling) accounts for this temporary state.

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { Album } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { AlbumCard } from './album-card';
 import {
   clampZoom,
@@ -24,6 +25,11 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
 
   const [camera, setCamera] = useState<CameraState>({ x: 48, y: 24, zoom: 1 });
   const [isPanning, setIsPanning] = useState(false);
+  const [draggedAlbum, setDraggedAlbum] = useState<{
+    id: string;
+    initialPos: { x: number; y: number };
+    currentPos: { x: number; y: number };
+  } | null>(null);
 
   const visibleAlbums = useMemo(() => {
     const container = containerRef.current;
@@ -37,10 +43,13 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
     const bounds = getViewportWorldBoundaries(camera, viewport);
 
     return albums.filter((album) => {
+      // Always include the dragged album so it doesn't pop out of existence
+      // if moved out of its initial world-space bounds while dragging.
+      if (album.id === draggedAlbum?.id) return true;
       const pos = album.position ?? { x: 0, y: 0 };
       return isAlbumVisibleInWorld(pos, bounds, DEFAULT_CARD_SIZE);
     });
-  }, [albums, camera]);
+  }, [albums, camera, draggedAlbum?.id]);
 
   const startPan = (event: React.PointerEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('[data-album-card]')) {
@@ -97,13 +106,20 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
     const startY = event.clientY;
     const initial = album.position ?? { x: 0, y: 0 };
 
+    setDraggedAlbum({ id: album.id, initialPos: initial, currentPos: initial });
+
     const move = (moveEvent: PointerEvent) => {
       const deltaX = (moveEvent.clientX - startX) / camera.zoom;
       const deltaY = (moveEvent.clientY - startY) / camera.zoom;
-      setAlbumPosition(folderId, album.id, initial.x + deltaX, initial.y + deltaY);
+      const newPos = { x: initial.x + deltaX, y: initial.y + deltaY };
+      setDraggedAlbum((prev) => (prev ? { ...prev, currentPos: newPos } : null));
     };
 
-    const up = () => {
+    const up = (upEvent: PointerEvent) => {
+      const deltaX = (upEvent.clientX - startX) / camera.zoom;
+      const deltaY = (upEvent.clientY - startY) / camera.zoom;
+      setAlbumPosition(folderId, album.id, initial.x + deltaX, initial.y + deltaY);
+      setDraggedAlbum(null);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
@@ -129,12 +145,16 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
         className="absolute inset-0 pointer-events-none"
       >
         {visibleAlbums.map((album) => {
-          const position = album.position ?? { x: 0, y: 0 };
+          const isDragging = draggedAlbum?.id === album.id;
+          const position = isDragging
+            ? draggedAlbum.currentPos
+            : (album.position ?? { x: 0, y: 0 });
+
           return (
             <div
               key={album.id}
               data-album-card
-              className="absolute pointer-events-auto"
+              className={cn('absolute pointer-events-auto', isDragging && 'z-50')}
               style={{
                 left: position.x,
                 top: position.y,
