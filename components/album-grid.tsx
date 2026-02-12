@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Music, Grid2X2, Orbit } from 'lucide-react';
+import { Music, Grid2X2, Orbit, Search } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
 import { AlbumCard } from './album-card';
@@ -124,41 +125,48 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         </p>
       </div>
 
-      {albumViewMode === 'canvas' ? (
+      {selectedFolder.albums.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground uppercase tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
+          <Music className="h-12 w-12 mb-3 opacity-20" />
+          <p className="text-sm font-bold" style={{ fontFamily: 'var(--font-display)' }}>COLLECTION EMPTY</p>
+          <p className="text-[10px] mt-1 mb-4" style={{ fontFamily: 'var(--font-mono)' }}>Add albums via search interface</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:focus-search'))}
+            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all uppercase tracking-tighter font-bold h-auto py-3 px-4"
+          >
+            <Search className="h-4 w-4" />
+            Find your first album
+          </Button>
+        </div>
+      ) : albumViewMode === 'canvas' ? (
         <AlbumCanvas albums={selectedFolder.albums} folderId={selectedFolderId} />
       ) : (
         <ScrollArea className="flex-1 min-h-0">
-          {selectedFolder.albums.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground uppercase tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
-              <Music className="h-12 w-12 mb-3 opacity-20" />
-              <p className="text-sm font-bold" style={{ fontFamily: 'var(--font-display)' }}>COLLECTION EMPTY</p>
-              <p className="text-[10px] mt-1" style={{ fontFamily: 'var(--font-mono)' }}>Add albums via search interface</p>
-            </div>
-          ) : (
-            <div className={cn(
-              'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
-              isMobile ? 'gap-2 p-2' : 'gap-4 p-4'
-            )}>
-              {selectedFolder.albums.map((album, index) => (
-                <div
-                  key={album.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, album, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={() => handleDrop(index)}
-                  onDragEnd={handleDragEnd}
-                  className={cn(
-                    'transition-all',
-                    draggedAlbumIndex === index && 'opacity-50',
-                    dropIndex === index && 'ring-2 ring-primary ring-offset-2 rounded-none'
-                  )}
-                >
-                  <AlbumCard album={album} folderId={selectedFolderId} />
-                </div>
-              ))}
-            </div>
-          )}
+          <div className={cn(
+            'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
+            isMobile ? 'gap-2 p-2' : 'gap-4 p-4'
+          )}>
+            {selectedFolder.albums.map((album, index) => (
+              <div
+                key={album.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, album, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  'transition-all',
+                  draggedAlbumIndex === index && 'opacity-50',
+                  dropIndex === index && 'ring-2 ring-primary ring-offset-2 rounded-none'
+                )}
+              >
+                <AlbumCard album={album} folderId={selectedFolderId} />
+              </div>
+            ))}
+          </div>
         </ScrollArea>
       )}
     </div>

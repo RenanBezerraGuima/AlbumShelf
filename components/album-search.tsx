@@ -153,7 +153,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Global shortcut for search (/)
+  // Global shortcut and custom events for search (/)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
@@ -164,8 +164,17 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
       }
     };
 
+    const handleFocusSearch = () => {
+      inputRef.current?.focus();
+    };
+
     window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('albumshelf:focus-search', handleFocusSearch);
+
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      window.removeEventListener('albumshelf:focus-search', handleFocusSearch);
+    };
   }, []);
 
   const searchAlbums = useCallback(async (searchQuery: string) => {

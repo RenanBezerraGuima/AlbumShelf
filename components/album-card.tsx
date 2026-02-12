@@ -50,7 +50,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
       )}
       style={{ borderRadius: 'var(--radius)' }}
     >
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
         <Button
           size="icon"
           variant="destructive"
@@ -106,7 +106,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         
         <Button
           size="icon-sm"
-          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
+          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
           style={{ borderRadius: 'var(--radius)' }}
           onClick={handlePlay}
           onPointerDown={(e) => e.stopPropagation()}

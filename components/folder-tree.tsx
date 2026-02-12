@@ -301,7 +301,7 @@ const FolderItem = React.memo(function FolderItem({
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                       onClick={(e) => e.stopPropagation()}
                       aria-label="Collection actions"
                       title="Collection actions"
