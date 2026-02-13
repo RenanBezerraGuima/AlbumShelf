@@ -115,6 +115,21 @@ describe('Security Utilities', () => {
 
     it('should reject backslash protocol-relative URL bypasses', () => {
       expect(sanitizeUrl('/\\evil.com')).toBeUndefined();
+      expect(sanitizeUrl('\\/evil.com')).toBeUndefined();
+    });
+
+    it('should reject encoded protocol-relative bypasses', () => {
+      expect(sanitizeUrl('/%5cevil.com')).toBeUndefined();
+      expect(sanitizeUrl('/%2fevil.com')).toBeUndefined();
+      expect(sanitizeUrl('/%5Cevil.com')).toBeUndefined();
+      expect(sanitizeUrl('/%2Fevil.com')).toBeUndefined();
+    });
+
+    it('should reject URLs with control characters or internal whitespace', () => {
+      expect(sanitizeUrl('https://example.com/path\nwith-newline')).toBeUndefined();
+      expect(sanitizeUrl('https://example.com/path\twith-tab')).toBeUndefined();
+      expect(sanitizeUrl('https://example.com/path\0with-null')).toBeUndefined();
+      expect(sanitizeUrl('/path with space')).toBeUndefined();
     });
 
     it('should handle undefined or empty input', () => {
@@ -137,9 +152,14 @@ describe('Security Utilities', () => {
       expect(sanitizeImageUrl('data:text/html,<html>')).toBeUndefined();
     });
 
-    it('should reject excessively long data URLs', () => {
-      const longDataUrl = 'data:image/png;base64,' + 'A'.repeat(1024 * 1024 + 1);
+    it('should reject excessively long data URLs (>256KB)', () => {
+      const longDataUrl = 'data:image/png;base64,' + 'A'.repeat(256 * 1024 + 1);
       expect(sanitizeImageUrl(longDataUrl)).toBeUndefined();
+    });
+
+    it('should allow reasonably sized data URLs (<=256KB)', () => {
+      const safeDataUrl = 'data:image/png;base64,' + 'A'.repeat(100);
+      expect(sanitizeImageUrl(safeDataUrl)).toBe(safeDataUrl);
     });
 
     it('should reject SVG data URLs to prevent potential XSS', () => {

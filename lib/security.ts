@@ -14,7 +14,8 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
 
   const trimmedUrl = url.trim();
 
-  if (trimmedUrl.length > MAX_URL_LENGTH) {
+  // Enforce maximum length and block control characters/internal whitespace
+  if (trimmedUrl.length > MAX_URL_LENGTH || /[\x00-\x1F\x7F\s]/.test(trimmedUrl)) {
     return undefined;
   }
 
@@ -25,8 +26,15 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
     }
   } catch (e) {
     // If it's not a valid absolute URL, check if it's a safe relative path.
-    // We explicitly exclude protocol-relative URLs (starting with // or /\) for security.
-    if ((trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//') && !trimmedUrl.startsWith('/\\')) ||
+    // We explicitly exclude protocol-relative URLs (starting with //, /\, or encoded variants) for security.
+    const isProtocolRelative =
+      trimmedUrl.startsWith('//') ||
+      trimmedUrl.startsWith('/\\') ||
+      trimmedUrl.startsWith('\\/') ||
+      trimmedUrl.toLowerCase().startsWith('/%5c') ||
+      trimmedUrl.toLowerCase().startsWith('/%2f');
+
+    if ((trimmedUrl.startsWith('/') && !isProtocolRelative) ||
         trimmedUrl.startsWith('./') ||
         trimmedUrl.startsWith('../')) {
       return trimmedUrl;
@@ -60,9 +68,9 @@ export function sanitizeImageUrl(url: string | undefined): string | undefined {
 
     // Only allow safe data:image/ protocols (excluding SVG to prevent potential XSS)
     if (decodedMimePart.startsWith('data:image/') && !decodedMimePart.includes('svg+xml')) {
-      // Data URLs can be long, but let's still apply a reasonable limit for data images
-      // usually 1MB is more than enough for small album covers if they are base64
-      if (trimmedUrl.length > 1024 * 1024) return undefined;
+      // Data URLs can be long, but we apply a strict limit to prevent localStorage exhaustion.
+      // 256KB is sufficient for high-quality album covers while protecting storage quota.
+      if (trimmedUrl.length > 256 * 1024) return undefined;
       return trimmedUrl;
     }
     return undefined;

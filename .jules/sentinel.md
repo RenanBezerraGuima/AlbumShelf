@@ -39,3 +39,8 @@
 **Vulnerability:** Sanitization logic for `data:` URLs could be bypassed using percent-encoding in the MIME type (e.g., `data:image/svg%2Bxml`).
 **Learning:** Browsers may decode percent-encoded MIME types in `data:` URLs. Security checks that rely on simple string matching or `startsWith` against the raw URL can be bypassed if they don't account for this decoding.
 **Prevention:** Always decode the MIME/metadata part of a `data:` URL using `decodeURIComponent` before performing security checks like blocking `svg+xml`. Similarly, be cautious of protocol-relative URLs (`//`) which can sometimes bypass relative-path filters if not explicitly handled.
+
+## 2026-03-01 - [URL-based Open Redirect & DoS hardening]
+**Vulnerability:** `sanitizeUrl` was vulnerable to protocol-relative bypasses via percent-encoded characters or internal whitespace. `sanitizeImageUrl` allowed 1MB data URLs, posing a storage exhaustion risk.
+**Learning:** Defense-in-depth requires sanitization to be resilient against browser normalization quirks. Stripping internal whitespace and blocking encoded variants of slashes/backslashes at the start of relative paths prevents common open redirect bypasses.
+**Prevention:** Always strip/reject control characters and internal whitespace from URLs before validation. Implement strict size limits on data URLs when stored in `localStorage` to prevent storage DoS.
