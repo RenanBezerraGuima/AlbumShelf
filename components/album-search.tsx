@@ -32,14 +32,20 @@ const SearchResultItem = React.memo(function SearchResultItem({
   disabled: boolean;
   onSelect: (album: Album) => void;
 }) {
+  const label = isAdded
+    ? `Remove "${album.name}" from collection`
+    : `Add "${album.name}" to collection`;
+
   return (
     <div
       id={`option-${index}`}
       onClick={() => onSelect(album)}
       role="option"
       aria-selected={isActive}
+      aria-label={label}
+      title={label}
       className={cn(
-        "flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
+        "group flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
         !disabled
           ? "cursor-pointer hover:bg-primary hover:text-primary-foreground hover:border-border"
           : "opacity-60 cursor-not-allowed",
@@ -73,7 +79,10 @@ const SearchResultItem = React.memo(function SearchResultItem({
         </div>
       </div>
       {isAdded && (
-        <Check className="h-4 w-4 shrink-0" />
+        <div className="relative h-4 w-4 shrink-0">
+          <Check className="h-4 w-4 absolute inset-0 transition-opacity group-hover:opacity-0" />
+          <X className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" />
+        </div>
       )}
     </div>
   );
@@ -296,7 +305,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             className={cn(
-              "pl-12 pr-10 h-12 w-full bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all uppercase tracking-tighter",
+              "pl-12 pr-26 h-12 w-full bg-background border-2 border-border focus:ring-0 focus:border-primary focus:brutalist-shadow transition-all uppercase tracking-tighter",
               isMobile ? "text-base" : "text-lg"
             )}
             style={{ borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)' }}
@@ -308,6 +317,11 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
             role="combobox"
           />
+          {query.length > 0 && (
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 text-[9px] font-mono text-muted-foreground opacity-50 uppercase tracking-widest animate-in fade-in duration-300 select-none pointer-events-none">
+              {query.length}/{200}
+            </div>
+          )}
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -333,6 +347,13 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
           >
             <ScrollArea className="h-[400px]">
               <div className="p-2 space-y-1" role="listbox" id={listboxId}>
+                {results.length > 0 && (
+                  <div className="px-3 py-1.5 mb-1 border-b border-border/50">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70" style={{ fontFamily: 'var(--font-mono)' }}>
+                      {results.length} RESULTS FOUND
+                    </p>
+                  </div>
+                )}
                 {error && (
                   <div className="py-6 px-4 text-center space-y-4">
                     <p className="text-sm text-destructive uppercase" style={{ fontFamily: 'var(--font-mono)' }}>
