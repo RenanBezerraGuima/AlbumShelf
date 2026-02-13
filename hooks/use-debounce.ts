@@ -7,6 +7,10 @@ export function useDebounce<T extends (...args: Parameters<T>) => void>(
   delay: number
 ): (...args: Parameters<T>) => void {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+
+  // Update the ref to the latest callback on every render
+  callbackRef.current = callback;
 
   return useCallback(
     (...args: Parameters<T>) => {
@@ -14,9 +18,9 @@ export function useDebounce<T extends (...args: Parameters<T>) => void>(
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
-        callback(...args);
+        callbackRef.current(...args);
       }, delay);
     },
-    [callback, delay]
+    [delay]
   );
 }
