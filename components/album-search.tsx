@@ -5,6 +5,7 @@ import { Search, Loader2, Check, X, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useShallow } from 'zustand/react/shallow';
 import { useFolderStore, findFolder } from '@/lib/store';
 import type { Album } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -51,6 +52,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       <img
         src={album.imageUrl || "/placeholder.svg"}
         alt={`${album.name} by ${album.artist}`}
+        loading="lazy"
         decoding="async"
         className="w-12 h-12 border border-border object-cover shrink-0 bg-muted"
         style={{ borderRadius: 'calc(var(--radius) / 2)' }}
@@ -90,13 +92,19 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = "album-search-results";
 
-  const selectedFolderId = useFolderStore(state => state.selectedFolderId);
-  const addAlbumToFolder = useFolderStore(state => state.addAlbumToFolder);
-  const removeAlbumFromFolder = useFolderStore(state => state.removeAlbumFromFolder);
-  const streamingProvider = useFolderStore(state => state.streamingProvider);
-  const spotifyToken = useFolderStore(state => state.spotifyToken);
-  const spotifyTokenExpiry = useFolderStore(state => state.spotifyTokenExpiry);
-  const spotifyTokenTimestamp = useFolderStore(state => state.spotifyTokenTimestamp);
+  const {
+    selectedFolderId,
+    streamingProvider,
+    spotifyToken,
+    spotifyTokenExpiry,
+    spotifyTokenTimestamp
+  } = useFolderStore(useShallow(state => ({
+    selectedFolderId: state.selectedFolderId,
+    streamingProvider: state.streamingProvider,
+    spotifyToken: state.spotifyToken,
+    spotifyTokenExpiry: state.spotifyTokenExpiry,
+    spotifyTokenTimestamp: state.spotifyTokenTimestamp,
+  })));
 
   const isSpotifyTokenExpired = useMemo(() => {
     if (!spotifyToken || !spotifyTokenExpiry || !spotifyTokenTimestamp) return true;
@@ -107,9 +115,11 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   // Use a granular selector to only subscribe to the albums of the selected folder.
   // This prevents the component from re-rendering when subfolders are added or modified,
   // as the albums array reference is preserved by structural sharing in the store.
-  const selectedFolderAlbums = useFolderStore(useCallback(state =>
-    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId)?.albums : undefined
-    , []));
+  // Performance: Return undefined when the search is closed to avoid unnecessary re-renders.
+  const selectedFolderAlbums = useFolderStore(useCallback(state => {
+    if (!isOpen) return undefined;
+    return state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId)?.albums : undefined;
+  }, [isOpen]));
 
   // Get albums in selected folder
   // Memoized based on the specific albums array reference, leveraging structural sharing
@@ -256,21 +266,28 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   };
 
   const handleAddAlbum = useCallback((album: Album) => {
+    const { selectedFolderId, folders, addAlbumToFolder, removeAlbumFromFolder } = useFolderStore.getState();
+
     if (!selectedFolderId) {
       setError('Please select a folder first');
       return;
     }
 
-    const key = `${album.name}-${album.artist}`.toLowerCase();
-    const existingIds = albumsInSelectedFolder.get(key);
+    const folder = findFolder(folders, selectedFolderId);
+    if (!folder) return;
 
-    if (existingIds && existingIds.length > 0) {
+    const key = `${album.name}-${album.artist}`.toLowerCase();
+    const existingAlbums = folder.albums.filter(a =>
+      `${a.name}-${a.artist}`.toLowerCase() === key
+    );
+
+    if (existingAlbums.length > 0) {
       // Remove all matching albums
-      existingIds.forEach(id => removeAlbumFromFolder(selectedFolderId, id));
+      existingAlbums.forEach(a => removeAlbumFromFolder(selectedFolderId, a.id));
     } else {
       addAlbumToFolder(selectedFolderId, album);
     }
-  }, [selectedFolderId, albumsInSelectedFolder, removeAlbumFromFolder, addAlbumToFolder]);
+  }, []); // Stable handler reference
 
   return (
     <div

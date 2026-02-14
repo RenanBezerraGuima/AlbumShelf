@@ -29,3 +29,7 @@
 ## 2026-03-20 - [Deferring Global Store Updates for Canvas Dragging]
 **Learning:** High-frequency updates to a persisted global store (like album positions on a canvas during drag) trigger expensive side effects: structural sharing recalculations across the tree, serialization for persistence (localStorage), and re-renders in distant, unrelated components. Using local component state for the transient drag position and only committing to the global store on drag end eliminates this overhead while preserving data consistency.
 **Action:** Use local state or refs for high-frequency transient UI state (dragging, resizing, etc.) and only sync with the global store on interaction completion. Ensure visibility logic (like viewport culling) accounts for this temporary state.
+
+## 2026-03-25 - [Conditional Store Subscriptions and Handler Stability]
+**Learning:** Components that are always mounted but conditionally visible (like a global search bar) still trigger expensive re-renders on every store update if they subscribe to large data structures. Returning `undefined` from the Zustand selector when the component is closed (`!isOpen`) prevents these re-renders. Additionally, making event handlers truly stable by using `getState()` inside them allows `React.memo` child components to skip re-renders entirely when the parent's state changes.
+**Action:** Use local visibility state (`isOpen`) within Zustand selectors to prune subscriptions when hidden. Always prefer stable handler references (`[]` dependency array) by using `getState()` for interaction-only data.
