@@ -29,3 +29,7 @@
 ## 2026-03-20 - [Deferring Global Store Updates for Canvas Dragging]
 **Learning:** High-frequency updates to a persisted global store (like album positions on a canvas during drag) trigger expensive side effects: structural sharing recalculations across the tree, serialization for persistence (localStorage), and re-renders in distant, unrelated components. Using local component state for the transient drag position and only committing to the global store on drag end eliminates this overhead while preserving data consistency.
 **Action:** Use local state or refs for high-frequency transient UI state (dragging, resizing, etc.) and only sync with the global store on interaction completion. Ensure visibility logic (like viewport culling) accounts for this temporary state.
+
+## 2026-03-25 - [Callback Stability in Search Lists]
+**Learning:** In a search interface with many results, stable callbacks for item actions (e.g., 'Add Album') are critical. If the callback depends on the folder's album list, every add/remove operation triggers a re-render of ALL search results because their action prop changes, even if they are wrapped in React.memo. Using getState() inside the callback eliminates the dependency and preserves memoization.
+**Action:** Use getState() in event handlers to maintain stable references for callbacks passed to large lists of memoized components.

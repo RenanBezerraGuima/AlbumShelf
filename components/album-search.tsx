@@ -114,16 +114,16 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   // Get albums in selected folder
   // Memoized based on the specific albums array reference, leveraging structural sharing
   const albumsInSelectedFolder = useMemo(() => {
-    if (!selectedFolderAlbums) return new Map<string, string[]>();
+    if (!selectedFolderAlbums) return new Set<string>();
 
-    const albumMap = new Map<string, string[]>();
+    // Using a Set for O(1) membership checks of albums already in the collection.
+    // This reduces memory overhead compared to a Map of arrays.
+    const albumSet = new Set<string>();
     selectedFolderAlbums.forEach(album => {
-      const key = `${album.name}-${album.artist}`.toLowerCase();
-      const existing = albumMap.get(key) || [];
-      albumMap.set(key, [...existing, album.id]);
+      albumSet.add(`${album.name}-${album.artist}`.toLowerCase());
     });
 
-    return albumMap;
+    return albumSet;
   }, [selectedFolderAlbums]);
 
   // Reset active index when results change
@@ -256,21 +256,32 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   };
 
   const handleAddAlbum = useCallback((album: Album) => {
+    // Access latest store state and actions via getState() to avoid dependencies.
+    // This makes the callback stable, preventing unnecessary re-renders of memoized SearchResultItems.
+    const { selectedFolderId, folders, removeAlbumFromFolder, addAlbumToFolder } = useFolderStore.getState();
+
     if (!selectedFolderId) {
       setError('Please select a folder first');
       return;
     }
 
-    const key = `${album.name}-${album.artist}`.toLowerCase();
-    const existingIds = albumsInSelectedFolder.get(key);
+    const folder = findFolder(folders, selectedFolderId);
+    if (!folder) return;
 
-    if (existingIds && existingIds.length > 0) {
-      // Remove all matching albums
-      existingIds.forEach(id => removeAlbumFromFolder(selectedFolderId, id));
+    const key = `${album.name}-${album.artist}`.toLowerCase();
+
+    // Identify existing albums with matching name/artist in this folder.
+    const existing = folder.albums.filter(a =>
+      `${a.name}-${a.artist}`.toLowerCase() === key
+    );
+
+    if (existing.length > 0) {
+      // Remove all matching albums to toggle state
+      existing.forEach(a => removeAlbumFromFolder(selectedFolderId, a.id));
     } else {
       addAlbumToFolder(selectedFolderId, album);
     }
-  }, [selectedFolderId, albumsInSelectedFolder, removeAlbumFromFolder, addAlbumToFolder]);
+  }, [setError]);
 
   return (
     <div
