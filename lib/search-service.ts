@@ -6,6 +6,8 @@ const searchCache = new Map<string, { data: Album[], timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 50;
 
+const TRUSTED_JSONP_DOMAINS = ['api.deezer.com', 'itunes.apple.com'];
+
 /**
  * Wraps a search function with a simple in-memory cache.
  * Improves performance for repeated searches and reduces network requests.
@@ -43,8 +45,18 @@ function withCache<T extends any[]>(
   };
 }
 
-// Helper for JSONP requests to Deezer API
+// Helper for JSONP requests to Deezer and Apple APIs
 function jsonp<T>(url: string): Promise<T> {
+  // Domain whitelist check for defense-in-depth
+  try {
+    const parsed = new URL(url);
+    if (!TRUSTED_JSONP_DOMAINS.includes(parsed.hostname)) {
+      throw new Error(`Untrusted JSONP domain: ${parsed.hostname}`);
+    }
+  } catch (e) {
+    return Promise.reject(e instanceof Error ? e : new Error('Invalid JSONP URL'));
+  }
+
   return new Promise((resolve, reject) => {
     const randomArray = new Uint32Array(1);
     crypto.getRandomValues(randomArray);

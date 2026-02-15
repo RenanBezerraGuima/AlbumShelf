@@ -44,3 +44,13 @@
 **Vulnerability:** `sanitizeUrl` was vulnerable to protocol-relative bypasses via percent-encoded characters or internal whitespace. `sanitizeImageUrl` allowed 1MB data URLs, posing a storage exhaustion risk.
 **Learning:** Defense-in-depth requires sanitization to be resilient against browser normalization quirks. Stripping internal whitespace and blocking encoded variants of slashes/backslashes at the start of relative paths prevents common open redirect bypasses.
 **Prevention:** Always strip/reject control characters and internal whitespace from URLs before validation. Implement strict size limits on data URLs when stored in `localStorage` to prevent storage DoS.
+
+## 2026-03-05 - [Relative Path Bypass in Sanitization]
+**Vulnerability:** `sanitizeUrl` was over-permissive with relative paths (starting with `./` or `../`), allowing dangerous content like `javascript:` or backslash bypasses.
+**Learning:** Checking for the *start* of a string is insufficient for security validation if the remainder of the string is not constrained. A relative path should not contain characters like `:` (which indicates a protocol) or `\` (which browsers often normalize to `/` and can lead to protocol-relative bypasses).
+**Prevention:** When allowing relative paths, explicitly reject any input containing colons or backslashes. This ensures that a relative path remains a simple path and cannot be coerced into an absolute or protocol-relative URL.
+
+## 2026-03-05 - [JSONP Domain Whitelisting]
+**Vulnerability:** The `jsonp` utility allowed loading scripts from any URL provided, posing a massive XSS risk if the URL was ever influenced by external data.
+**Learning:** JSONP is an inherently dangerous pattern as it executes remote code. Even if currently used with hardcoded URLs, utilities like this should have "defense-in-depth" protections such as a domain whitelist to prevent future misuse or exploitation.
+**Prevention:** Implement a strict whitelist of trusted hostnames for all JSONP requests. Validate the hostname using the `URL` constructor before creating or appending any `<script>` tags to the document.

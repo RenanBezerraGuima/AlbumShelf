@@ -26,13 +26,14 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
     }
   } catch (e) {
     // If it's not a valid absolute URL, check if it's a safe relative path.
-    // We explicitly exclude protocol-relative URLs (starting with //, /\, or encoded variants) for security.
-    const isProtocolRelative =
-      trimmedUrl.startsWith('//') ||
-      trimmedUrl.startsWith('/\\') ||
-      trimmedUrl.startsWith('\\/') ||
-      trimmedUrl.toLowerCase().startsWith('/%5c') ||
-      trimmedUrl.toLowerCase().startsWith('/%2f');
+    // We explicitly exclude URLs with colons (to prevent protocol bypasses)
+    // and backslashes (to prevent path normalization bypasses).
+    if (trimmedUrl.includes(':') || trimmedUrl.includes('\\') || trimmedUrl.toLowerCase().includes('%5c')) {
+      return undefined;
+    }
+
+    // We explicitly exclude protocol-relative URLs (starting with // or encoded variants) for security.
+    const isProtocolRelative = trimmedUrl.startsWith('//') || trimmedUrl.toLowerCase().startsWith('/%2f');
 
     if ((trimmedUrl.startsWith('/') && !isProtocolRelative) ||
         trimmedUrl.startsWith('./') ||
