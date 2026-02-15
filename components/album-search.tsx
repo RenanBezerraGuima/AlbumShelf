@@ -94,6 +94,41 @@ const SearchResultItem = React.memo(function SearchResultItem({
   );
 });
 
+/**
+ * Performance: Memoized results list prevents re-rendering the entire list of results
+ * during keystrokes if the results haven't changed. This is especially impactful
+ * when the result set is large.
+ */
+const SearchResultsList = React.memo(function SearchResultsList({
+  results,
+  activeIndex,
+  albumsInSelectedFolder,
+  selectedFolderId,
+  onSelect
+}: {
+  results: { album: Album; matchKey: string }[];
+  activeIndex: number;
+  albumsInSelectedFolder: Set<string>;
+  selectedFolderId: string | null;
+  onSelect: (album: Album) => void;
+}) {
+  return (
+    <>
+      {results.map(({ album, matchKey }, index) => (
+        <SearchResultItem
+          key={album.id}
+          album={album}
+          index={index}
+          isActive={index === activeIndex}
+          isAdded={albumsInSelectedFolder.has(matchKey)}
+          disabled={!selectedFolderId}
+          onSelect={onSelect}
+        />
+      ))}
+    </>
+  );
+});
+
 export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Album[]>([]);
@@ -135,19 +170,28 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   }, [isOpen]));
 
   // Get albums in selected folder
-  // Memoized based on the specific albums array reference, leveraging structural sharing
+  // Memoized based on the specific albums array reference, leveraging structural sharing.
+  // Performance: Using a Set for O(1) existence checks instead of a Map,
+  // as we only need to know if an album (by name/artist) exists in the collection.
   const albumsInSelectedFolder = useMemo(() => {
-    if (!selectedFolderAlbums) return new Map<string, string[]>();
+    if (!selectedFolderAlbums) return new Set<string>();
 
-    const albumMap = new Map<string, string[]>();
+    const albumSet = new Set<string>();
     selectedFolderAlbums.forEach(album => {
-      const key = `${album.name}-${album.artist}`.toLowerCase();
-      const existing = albumMap.get(key) || [];
-      albumMap.set(key, [...existing, album.id]);
+      albumSet.add(`${album.name}-${album.artist}`.toLowerCase());
     });
 
-    return albumMap;
+    return albumSet;
   }, [selectedFolderAlbums]);
+
+  // Performance: Pre-calculate match keys for search results to avoid expensive
+  // string concatenation and lowercase operations during every render (keystroke).
+  const resultsWithKeys = useMemo(() => {
+    return results.map(album => ({
+      album,
+      matchKey: `${album.name}-${album.artist}`.toLowerCase()
+    }));
+  }, [results]);
 
   // Reset active index when results change
   useEffect(() => {
@@ -399,17 +443,13 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                   </div>
                 )}
 
-                {results.map((album, index) => (
-                  <SearchResultItem
-                    key={album.id}
-                    album={album}
-                    index={index}
-                    isActive={index === activeIndex}
-                    isAdded={albumsInSelectedFolder.has(`${album.name}-${album.artist}`.toLowerCase())}
-                    disabled={!selectedFolderId}
-                    onSelect={handleAddAlbum}
-                  />
-                ))}
+                <SearchResultsList
+                  results={resultsWithKeys}
+                  activeIndex={activeIndex}
+                  albumsInSelectedFolder={albumsInSelectedFolder}
+                  selectedFolderId={selectedFolderId}
+                  onSelect={handleAddAlbum}
+                />
               </div>
             </ScrollArea>
           </div>
