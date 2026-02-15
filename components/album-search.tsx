@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Search, Loader2, Check, X, Menu } from 'lucide-react';
+import { Search, Loader2, Check, X, Menu, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,12 +80,16 @@ const SearchResultItem = React.memo(function SearchResultItem({
           </span>
         </div>
       </div>
-      {isAdded && (
-        <div className="relative h-4 w-4 shrink-0">
-          <Check className="h-4 w-4 absolute inset-0 transition-opacity group-hover:opacity-0" />
-          <X className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" />
-        </div>
-      )}
+      <div className="relative h-4 w-4 shrink-0">
+        {isAdded ? (
+          <>
+            <Check className="h-4 w-4 absolute inset-0 transition-opacity group-hover:opacity-0" aria-hidden="true" />
+            <X className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" aria-hidden="true" />
+          </>
+        ) : (
+          <Plus className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" aria-hidden="true" />
+        )}
+      </div>
     </div>
   );
 });
