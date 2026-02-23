@@ -69,6 +69,6 @@ describe('AlbumSearch top panel layout', () => {
     // Check that the Plus icon is rendered (it's a Lucide icon which renders as an svg)
     const plusIcon = resultItem.querySelector('svg.lucide-plus');
     expect(plusIcon).toBeInTheDocument();
-    expect(plusIcon).toHaveClass('opacity-0', 'group-hover:opacity-100');
+    expect(plusIcon).toHaveClass('opacity-40', 'group-hover:opacity-100');
   });
 });
