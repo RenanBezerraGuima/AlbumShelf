@@ -61,3 +61,7 @@
 ## 2026-06-15 - [Breadcrumb Segment Stability and useShallow Effectiveness]
 **Learning:** Even with structural sharing and result-level caching, recursive path constructions (like breadcrumbs) can return new object references for segments on every call. This causes `useShallow` to fail shallow equality checks on the resulting array. Using a `WeakMap` to cache the individual segment objects `{ id, name }` keyed by the stable `Folder` object ensures stable references within the array, allowing `useShallow` to correctly skip redundant re-renders.
 **Action:** When returning arrays of objects from recursive lookups on immutable trees, cache the individual segment objects using `WeakMap` to preserve reference stability for `useShallow` and `React.memo`.
+
+## 2026-07-20 - [Comprehensive Store Bail-outs and Reference Stability]
+**Learning:** Redundant state updates and frequent re-renders occur when store actions (setters and tree mutations) trigger a `set()` call even when the underlying data is unchanged. Implementing strict equality checks (`===`) within all actions and ensuring that recursive tree mutation helpers return the original array reference when no changes occur preserves structural sharing and prevents unnecessary re-renders across the entire application.
+**Action:** Always implement 'bail-out' logic in store actions. For scalar values, compare before calling `set()`. For tree mutations, ensure helpers return the original reference if the updater produces no changes, and check this reference before calling `set()`.

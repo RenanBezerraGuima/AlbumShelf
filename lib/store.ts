@@ -200,8 +200,12 @@ const updateFolderInTree = (
   for (let i = 0; i < folders.length; i++) {
     const folder = folders[i];
     if (folder.id === id) {
+      const updated = updater(folder);
+      // Performance: If the updater returns the same folder reference, bail early
+      // to preserve array reference stability for structural sharing.
+      if (updated === folder) return folders;
       const result = [...folders];
-      result[i] = updater(folder);
+      result[i] = updated;
       return result;
     }
     const newSubfolders = updateFolderInTree(folder.subfolders, id, updater);
@@ -362,43 +366,62 @@ export const useFolderStore = create<FolderStore>()(
           isExpanded: true,
           viewMode: "grid",
         };
-        set((state) => ({
-          folders: addFolderToTree(state.folders, parentId, newFolder),
-          lastUpdated: Date.now(),
-        }));
+        set((state) => {
+          const newFolders = addFolderToTree(state.folders, parentId, newFolder);
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       renameFolder: (id, name) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, id, (folder) => ({
-            ...folder,
-            name: name.slice(0, 100),
-          })),
-          lastUpdated: Date.now(),
-        }));
+        const slicedName = name.slice(0, 100);
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, id, (folder) => {
+            if (folder.name === slicedName) return folder;
+            return { ...folder, name: slicedName };
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       deleteFolder: (id) => {
-        set((state) => ({
-          folders: deleteFolderFromTree(state.folders, id),
-          selectedFolderId:
-            state.selectedFolderId === id ? null : state.selectedFolderId,
-          lastUpdated: Date.now(),
-        }));
+        set((state) => {
+          const newFolders = deleteFolderFromTree(state.folders, id);
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            selectedFolderId:
+              state.selectedFolderId === id ? null : state.selectedFolderId,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       toggleFolderExpanded: (id) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, id, (folder) => ({
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, id, (folder) => ({
             ...folder,
             isExpanded: !folder.isExpanded,
-          })),
-          lastUpdated: Date.now(),
-        }));
+          }));
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       setSelectedFolder: (id) => {
-        set({ selectedFolderId: id ? String(id).slice(0, 100) : null, lastUpdated: Date.now() });
+        const newId = id ? String(id).slice(0, 100) : null;
+        if (get().selectedFolderId === newId) return;
+        set({ selectedFolderId: newId, lastUpdated: Date.now() });
       },
 
       moveFolder: (folderId, newParentId, targetFolderId) => {
@@ -429,8 +452,8 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       addAlbumToFolder: (folderId, album) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, folderId, (folder) => {
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
             // Check by id or spotifyId to prevent duplicates
             const isDuplicate = folder.albums.some((a) => {
               if (a.id === album.id) return true;
@@ -457,23 +480,34 @@ export const useFolderStore = create<FolderStore>()(
               ...folder,
               albums: [...folder.albums, sanitizedAlbum],
             };
-          }),
-          lastUpdated: Date.now(),
-        }));
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       removeAlbumFromFolder: (folderId, albumId) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, folderId, (folder) => ({
-            ...folder,
-            albums: folder.albums.filter((a) => a.id !== albumId),
-          })),
-          lastUpdated: Date.now(),
-        }));
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+            const newAlbums = folder.albums.filter((a) => a.id !== albumId);
+            if (newAlbums.length === folder.albums.length) return folder;
+            return { ...folder, albums: newAlbums };
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       moveAlbum: (fromFolderId, toFolderId, albumId) => {
         const state = get();
+        if (fromFolderId === toFolderId) return;
+
         const fromFolder = findFolder(state.folders, fromFolderId);
         const toFolder = findFolder(state.folders, toFolderId);
         if (!fromFolder || !toFolder) return;
@@ -513,12 +547,15 @@ export const useFolderStore = create<FolderStore>()(
           albums: [...folder.albums, positionedAlbum],
         }));
 
+        if (newFolders === state.folders) return;
         set({ folders: newFolders, lastUpdated: Date.now() });
       },
 
       reorderAlbum: (folderId, fromIndex, toIndex) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, folderId, (folder) => {
+        if (fromIndex === toIndex) return;
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+            if (fromIndex < 0 || fromIndex >= folder.albums.length || toIndex < 0 || toIndex >= folder.albums.length) return folder;
             const newAlbums = [...folder.albums];
             const [movedAlbum] = newAlbums.splice(fromIndex, 1);
             newAlbums.splice(toIndex, 0, movedAlbum);
@@ -526,26 +563,40 @@ export const useFolderStore = create<FolderStore>()(
               ...folder,
               albums: newAlbums,
             };
-          }),
-          lastUpdated: Date.now(),
-        }));
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       setAlbumPosition: (folderId, albumId, x, y) => {
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, folderId, (folder) => ({
-            ...folder,
-            albums: folder.albums.map((album, index) =>
-              album.id === albumId
-                ? {
-                    ...normalizeAlbumPosition(album, index),
-                    position: { x, y },
-                  }
-                : album,
-            ),
-          })),
-          lastUpdated: Date.now(),
-        }));
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+            let changed = false;
+            const newAlbums = folder.albums.map((album, index) => {
+              if (album.id === albumId) {
+                const normalized = normalizeAlbumPosition(album, index);
+                if (normalized.position?.x === x && normalized.position?.y === y) return album;
+                changed = true;
+                return {
+                  ...normalized,
+                  position: { x, y },
+                };
+              }
+              return album;
+            });
+            if (!changed) return folder;
+            return { ...folder, albums: newAlbums };
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       setDraggedAlbum: (album, folderId, index) => {
@@ -610,11 +661,12 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setStreamingProvider: (provider) => {
-        if (!isValidStreamingProvider(provider)) return;
+        if (!isValidStreamingProvider(provider) || get().streamingProvider === provider) return;
         set({ streamingProvider: provider, lastUpdated: Date.now() });
       },
 
       setHasSetPreference: (hasSet) => {
+        if (get().hasSetPreference === hasSet) return;
         set({ hasSetPreference: hasSet, lastUpdated: Date.now() });
       },
 
@@ -628,27 +680,33 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setTheme: (theme) => {
-        if (!isValidTheme(theme)) return;
+        if (!isValidTheme(theme) || get().theme === theme) return;
         set({ theme, lastUpdated: Date.now() });
       },
 
       setGeistFont: (font) => {
+        if (get().geistFont === "mono") return;
         set({ geistFont: "mono", lastUpdated: Date.now() });
       },
 
       setSettingsOpen: (open) => {
+        if (get().isSettingsOpen === open) return;
         set({ isSettingsOpen: open });
       },
 
       setFolderViewMode: (id, mode) => {
         if (!isValidViewMode(mode)) return;
-        set((state) => ({
-          folders: updateFolderInTree(state.folders, id, (folder) => ({
-            ...folder,
-            viewMode: mode,
-          })),
-          lastUpdated: Date.now(),
-        }));
+        set((state) => {
+          const newFolders = updateFolderInTree(state.folders, id, (folder) => {
+            if (folder.viewMode === mode) return folder;
+            return { ...folder, viewMode: mode };
+          });
+          if (newFolders === state.folders) return state;
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
       },
     }),
     {
