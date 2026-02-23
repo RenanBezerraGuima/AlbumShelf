@@ -44,7 +44,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
       role="option"
       aria-selected={isActive}
       aria-label={label}
-      title={label}
+      title={`${label} [Enter]`}
       className={cn(
         "group flex items-center gap-4 p-3 transition-all duration-100 mx-1 border border-transparent",
         !disabled
@@ -88,7 +88,7 @@ const SearchResultItem = React.memo(function SearchResultItem({
             <X className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" aria-hidden="true" />
           </>
         ) : (
-          <Plus className="h-4 w-4 absolute inset-0 transition-opacity opacity-0 group-hover:opacity-100" aria-hidden="true" />
+          <Plus className="h-4 w-4 absolute inset-0 transition-opacity opacity-40 group-hover:opacity-100" aria-hidden="true" />
         )}
       </div>
     </div>
@@ -446,7 +446,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 {results.length === 0 && !error && query.trim() && !isLoading && (
                   <div className="py-8 px-4 text-center">
                     <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
-                      No albums found for "{query}"
+                      No albums found for "{query}" on {streamingProvider.toUpperCase()}
                     </p>
                   </div>
                 )}

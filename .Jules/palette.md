@@ -33,3 +33,7 @@
 ## 2026-02-22 - [Keyboard Shortcuts for View Modes]
 **Learning:** For application with distinct view modes (like Grid vs. Canvas), providing global keyboard shortcuts significantly improves navigation efficiency for power users. Including these shortcuts in tooltips and ARIA labels makes them discoverable without cluttering the primary UI.
 **Action:** Always implement discoverable keyboard shortcuts for primary view toggles and include the shortcut hint (e.g., [G]) in the element's title and aria-label.
+
+## 2026-05-15 - [Non-Intrusive Shortcut Hints]
+**Learning:** While keyboard shortcut hints (e.g., [Enter]) are valuable for power users, including them in `aria-label` attributes for list items creates significant verbal noise for screen reader users. Placing these hints in the `title` attribute (which is visually exposed as a tooltip) provides the necessary discoverability for sighted users while keeping the primary accessibility label clean.
+**Action:** Use the `title` attribute exclusively for keyboard shortcut hints on repetitive interactive elements to balance discoverability with screen reader comfort.
