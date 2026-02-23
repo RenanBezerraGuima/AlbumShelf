@@ -258,6 +258,18 @@ describe('Security Utilities', () => {
       expect(sanitized.position).toEqual({ x: 100, y: 200 });
       expect(sanitized.position).not.toHaveProperty('malicious');
     });
+
+    it('should reject non-finite position coordinates', () => {
+      const album = {
+        id: '1',
+        name: 'Test',
+        artist: 'Test',
+        position: { x: Infinity, y: NaN }
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.position).toBeUndefined();
+    });
   });
 
   describe('sanitizeFolder', () => {
@@ -335,6 +347,44 @@ describe('Security Utilities', () => {
       const sanitized = sanitizeFolder(folder);
       expect(sanitized).not.toHaveProperty('malicious');
       expect(sanitized.name).toBe('Test');
+    });
+
+    it('should enforce recursion depth limits to prevent DoS', () => {
+      // Create a deeply nested folder structure
+      const createDeepFolder = (depth: number): any => {
+        if (depth === 0) return { id: 'leaf', name: 'Leaf', subfolders: [] };
+        return {
+          id: `f-${depth}`,
+          name: `Folder ${depth}`,
+          subfolders: [createDeepFolder(depth - 1)]
+        };
+      };
+
+      const deepFolder = createDeepFolder(60); // Above the limit of 50
+      const sanitized = sanitizeFolder(deepFolder);
+
+      // Verify the tree is truncated
+      let current = sanitized;
+      let actualDepth = 0;
+      while (current.subfolders && current.subfolders.length > 0) {
+        current = current.subfolders[0];
+        actualDepth++;
+      }
+
+      expect(actualDepth).toBe(50);
+    });
+
+    it('should enforce limits on albums and subfolders per folder', () => {
+      const largeFolder = {
+        id: 'large',
+        name: 'Large',
+        albums: Array(6000).fill({ id: 'a', name: 'A', artist: 'A' }),
+        subfolders: Array(200).fill({ id: 's', name: 'S' })
+      };
+
+      const sanitized = sanitizeFolder(largeFolder);
+      expect(sanitized.albums.length).toBe(5000);
+      expect(sanitized.subfolders.length).toBe(100);
     });
   });
 });

@@ -5,6 +5,11 @@ const ALLOWED_PROTOCOLS = ['https:'];
 const MAX_URL_LENGTH = 2048;
 export const MAX_TEXT_LENGTH = 200;
 
+// Security limits to prevent DoS via deep recursion or massive data structures
+export const MAX_FOLDER_DEPTH = 50;
+export const MAX_ALBUMS_PER_FOLDER = 5000;
+export const MAX_SUBFOLDERS_PER_FOLDER = 100;
+
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
  * Allows only http:, https: and relative paths by default.
@@ -122,7 +127,10 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
     externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
   };
 
-  if (album.position && typeof album.position.x === 'number' && typeof album.position.y === 'number') {
+  // Defense-in-depth: Ensure coordinates are finite numbers to prevent rendering-based DoS or crashes
+  if (album.position &&
+      typeof album.position.x === 'number' && Number.isFinite(album.position.x) &&
+      typeof album.position.y === 'number' && Number.isFinite(album.position.y)) {
     sanitized.position = { x: Number(album.position.x), y: Number(album.position.y) };
   }
 
@@ -137,7 +145,8 @@ export function sanitizeFolder(
   folder: any,
   regenerateIds = false,
   parentId: string | null = folder.parentId ? String(folder.parentId).slice(0, 100) : null,
-  albumMapper: (album: Album, index: number) => Album = (a) => a
+  albumMapper: (album: Album, index: number) => Album = (a) => a,
+  depth = 0
 ): Folder {
   const id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, 100);
 
@@ -146,10 +155,14 @@ export function sanitizeFolder(
     name: String(folder.name || 'Untitled').slice(0, 100),
     parentId,
     albums: Array.isArray(folder.albums)
-      ? folder.albums.map((a: any, index: number) => albumMapper(sanitizeAlbum(a, regenerateIds), index))
+      ? folder.albums
+          .slice(0, MAX_ALBUMS_PER_FOLDER)
+          .map((a: any, index: number) => albumMapper(sanitizeAlbum(a, regenerateIds), index))
       : [],
-    subfolders: Array.isArray(folder.subfolders)
-      ? folder.subfolders.map((sf: any) => sanitizeFolder(sf, regenerateIds, id, albumMapper))
+    subfolders: Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH
+      ? folder.subfolders
+          .slice(0, MAX_SUBFOLDERS_PER_FOLDER)
+          .map((sf: any) => sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1))
       : [],
     isExpanded: Boolean(folder.isExpanded),
     viewMode: isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid',
