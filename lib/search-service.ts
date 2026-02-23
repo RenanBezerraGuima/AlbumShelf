@@ -17,8 +17,8 @@ function withCache<T extends any[]>(
   fn: (query: string, ...args: T) => Promise<Album[]>
 ) {
   return async (query: string, ...args: T): Promise<Album[]> => {
-    // Defense-in-depth: truncate query to prevent potential DoS or cache bloat
-    const trimmedQuery = query.trim().toLowerCase().slice(0, MAX_TEXT_LENGTH);
+    // Defense-in-depth: truncate query BEFORE expensive trim/lower operations to prevent DoS
+    const trimmedQuery = String(query || '').slice(0, MAX_TEXT_LENGTH).trim().toLowerCase();
     if (!trimmedQuery) return [];
 
     // Note: token is intentionally omitted from the cache key as search results

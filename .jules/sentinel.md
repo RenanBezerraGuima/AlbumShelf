@@ -89,3 +89,8 @@
 **Vulnerability:** Core application state (selected IDs, token metadata) was validated in setters but skipped during hydration from localStorage.
 **Learning:** Hardening setters provides runtime safety but leaves the application vulnerable to "time-of-check to time-of-use" style attacks where malicious state is injected directly into storage. Validation must be symmetric across the entire lifecycle: from initial set, to persistence, to rehydration.
 **Prevention:** Implement strict type and length validation in the store's hydration hook (`onRehydrateStorage`) for ALL persisted fields, not just the complex ones like folder trees. Use explicit `typeof` and `Number.isFinite` checks to prevent coercion-based logic bypasses.
+
+## 2026-04-05 - [Recursive State DoS and Truncation Order]
+**Vulnerability:** Recursive tree structures (folders) and large search queries could be used for Client-side DoS.
+**Learning:** Defense-in-depth requires explicit depth limits for recursive data structures entering the state (rehydration or import). For input validation, the order of operations matters: always slice/truncate BEFORE performing expensive operations like `trim()` or `toLowerCase()` on untrusted strings to minimize processing time for malicious payloads.
+**Prevention:** Implement `MAX_FOLDER_DEPTH` and item limits in recursive sanitization helpers. In search/input wrappers, enforce length limits as the very first step of processing.
