@@ -218,6 +218,48 @@ describe('useFolderStore', () => {
     expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(currentLastUpdated);
   });
 
+  it('should NOT update lastUpdated when setting identical values (bail out)', async () => {
+    const { setTheme, setSelectedFolder, setStreamingProvider } = useFolderStore.getState();
+
+    // Initial set
+    setTheme('mint');
+    setSelectedFolder('f1');
+    setStreamingProvider('apple');
+    const initialLastUpdated = useFolderStore.getState().lastUpdated;
+
+    // Set identical values
+    await new Promise(r => setTimeout(r, 2));
+    setTheme('mint');
+    setSelectedFolder('f1');
+    setStreamingProvider('apple');
+
+    expect(useFolderStore.getState().lastUpdated).toBe(initialLastUpdated);
+
+    // Set different value
+    await new Promise(r => setTimeout(r, 2));
+    setTheme('industrial');
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(initialLastUpdated);
+  });
+
+  it('should NOT update lastUpdated or folders reference when renaming to same name', async () => {
+    const { createFolder, renameFolder } = useFolderStore.getState();
+    createFolder('Root', null);
+    const folderId = useFolderStore.getState().folders[0].id;
+    const initialFolders = useFolderStore.getState().folders;
+    const initialLastUpdated = useFolderStore.getState().lastUpdated;
+
+    await new Promise(r => setTimeout(r, 2));
+    renameFolder(folderId, 'Root');
+
+    expect(useFolderStore.getState().folders).toBe(initialFolders);
+    expect(useFolderStore.getState().lastUpdated).toBe(initialLastUpdated);
+
+    await new Promise(r => setTimeout(r, 2));
+    renameFolder(folderId, 'New Name');
+    expect(useFolderStore.getState().folders).not.toBe(initialFolders);
+    expect(useFolderStore.getState().lastUpdated).toBeGreaterThan(initialLastUpdated);
+  });
+
   it('should truncate spotifyToken to 1024 characters', () => {
     const { setSpotifyToken } = useFolderStore.getState();
     const longToken = 'A'.repeat(2000);
