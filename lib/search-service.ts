@@ -3,14 +3,18 @@ import { sanitizeAlbum, MAX_TEXT_LENGTH } from './security';
 
 // Simple in-memory cache for search results
 const searchCache = new Map<string, { data: Album[], timestamp: number }>();
+// Performance: Track in-flight requests to avoid redundant simultaneous network calls for the same query.
+const pendingRequests = new Map<string, Promise<Album[]>>();
+
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 50;
 
 const TRUSTED_JSONP_DOMAINS = ['api.deezer.com', 'itunes.apple.com'];
 
 /**
- * Wraps a search function with a simple in-memory cache.
- * Improves performance for repeated searches and reduces network requests.
+ * Wraps a search function with a simple in-memory cache and request deduplication.
+ * Improves performance for repeated searches and reduces network requests during
+ * rapid interactions or provider switching.
  */
 function withCache<T extends any[]>(
   provider: string,
@@ -24,25 +28,43 @@ function withCache<T extends any[]>(
     // Note: token is intentionally omitted from the cache key as search results
     // for the same query are expected to be identical across valid tokens.
     const cacheKey = `${provider}:${trimmedQuery}`;
+
+    // 1. Check if we have a valid completed cache entry
     const cached = searchCache.get(cacheKey);
     const now = Date.now();
-
     if (cached && now - cached.timestamp < CACHE_TTL) {
       return cached.data;
     }
 
-    const data = await fn(trimmedQuery, ...args);
-
-    // Maintain cache size
-    if (searchCache.size >= MAX_CACHE_SIZE) {
-      const oldestKey = searchCache.keys().next().value;
-      if (oldestKey !== undefined) {
-        searchCache.delete(oldestKey);
-      }
+    // 2. Check if there is already a request in flight for this exact provider and query
+    const pending = pendingRequests.get(cacheKey);
+    if (pending) {
+      return pending;
     }
 
-    searchCache.set(cacheKey, { data, timestamp: now });
-    return data;
+    // 3. Start a new request and track its promise
+    const requestPromise = (async () => {
+      try {
+        const data = await fn(trimmedQuery, ...args);
+
+        // Update the completed cache
+        if (searchCache.size >= MAX_CACHE_SIZE) {
+          const oldestKey = searchCache.keys().next().value;
+          if (oldestKey !== undefined) {
+            searchCache.delete(oldestKey);
+          }
+        }
+
+        searchCache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      } finally {
+        // Always remove from pending regardless of success or failure
+        pendingRequests.delete(cacheKey);
+      }
+    })();
+
+    pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   };
 }
 
