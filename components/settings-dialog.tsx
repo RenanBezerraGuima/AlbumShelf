@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, memo } from 'react';
-import { Download, Upload, Settings, Music, Radio, CheckCircle2 } from 'lucide-react';
+import React, { useRef, memo, useState } from 'react';
+import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useShallow } from 'zustand/react/shallow';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
+import { generateShareUrl } from '@/lib/share-service';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
   })));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
 
   const isSpotifyConnected = React.useMemo(() => {
     if (!spotifyToken || !spotifyTokenExpiry || !spotifyTokenTimestamp) return false;
@@ -83,6 +85,18 @@ export const SettingsDialog = memo(function SettingsDialog() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const { folders } = useFolderStore.getState();
+      const shareUrl = generateShareUrl(folders);
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy share URL:', error);
     }
   };
 
@@ -202,19 +216,33 @@ export const SettingsDialog = memo(function SettingsDialog() {
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <p className="text-xs font-mono text-muted-foreground">
+                    Create a shareable link for your current shelf.
+                  </p>
+                  <Button
+                    onClick={handleShare}
+                    className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-none brutalist-shadow-sm"
+                    variant="default"
+                  >
+                    {isCopied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
+                    {isCopied ? 'Link Copied!' : 'Share Shelf Link'}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-mono text-muted-foreground">
                     Export your collections and albums to a JSON file for backup.
                   </p>
                   <Button
                     onClick={handleExport}
                     className="w-full justify-start gap-2"
-                    variant="default"
+                    variant="outline"
                   >
                     <Download className="h-4 w-4" />
                     Export Data
                   </Button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 opacity-80">
                   <p className="text-xs font-mono text-muted-foreground">
                     Import data from a backup file. Existing collections with the same name will be kept and renamed.
                   </p>

@@ -14,6 +14,7 @@ import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
 interface FolderStore {
   folders: Folder[];
+  sharedFolders: Folder[] | null;
   selectedFolderId: string | null;
   draggedAlbum: Album | null;
   draggedFolderId: string | null;
@@ -36,6 +37,7 @@ interface FolderStore {
   deleteFolder: (id: string) => void;
   toggleFolderExpanded: (id: string) => void;
   setSelectedFolder: (id: string | null) => void;
+  setSharedFolders: (folders: Folder[] | null) => void;
   moveFolder: (
     folderId: string,
     newParentId: string | null,
@@ -340,6 +342,7 @@ export const useFolderStore = create<FolderStore>()(
   persist(
     (set, get) => ({
       folders: [],
+      sharedFolders: null,
       selectedFolderId: null,
       draggedAlbum: null,
       draggedFolderId: null,
@@ -367,8 +370,12 @@ export const useFolderStore = create<FolderStore>()(
           viewMode: "grid",
         };
         set((state) => {
-          const newFolders = addFolderToTree(state.folders, parentId, newFolder);
-          if (newFolders === state.folders) return state;
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = addFolderToTree(currentFolders, parentId, newFolder);
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -379,11 +386,15 @@ export const useFolderStore = create<FolderStore>()(
       renameFolder: (id, name) => {
         const slicedName = name.slice(0, 100);
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, id, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, id, (folder) => {
             if (folder.name === slicedName) return folder;
             return { ...folder, name: slicedName };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -393,24 +404,36 @@ export const useFolderStore = create<FolderStore>()(
 
       deleteFolder: (id) => {
         set((state) => {
-          const newFolders = deleteFolderFromTree(state.folders, id);
-          if (newFolders === state.folders) return state;
-          return {
-            folders: newFolders,
-            selectedFolderId:
-              state.selectedFolderId === id ? null : state.selectedFolderId,
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = deleteFolderFromTree(currentFolders, id);
+          if (newFolders === currentFolders) return state;
+
+          const newState: any = {
             lastUpdated: Date.now(),
+            selectedFolderId: state.selectedFolderId === id ? null : state.selectedFolderId,
           };
+
+          if (state.sharedFolders) {
+            newState.sharedFolders = newFolders;
+          } else {
+            newState.folders = newFolders;
+          }
+
+          return newState;
         });
       },
 
       toggleFolderExpanded: (id) => {
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, id, (folder) => ({
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, id, (folder) => ({
             ...folder,
             isExpanded: !folder.isExpanded,
           }));
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -424,20 +447,25 @@ export const useFolderStore = create<FolderStore>()(
         set({ selectedFolderId: newId, lastUpdated: Date.now() });
       },
 
+      setSharedFolders: (folders) => {
+        set({ sharedFolders: folders, lastUpdated: Date.now() });
+      },
+
       moveFolder: (folderId, newParentId, targetFolderId) => {
         const state = get();
+        const currentFolders = state.sharedFolders ?? state.folders;
 
         // Prevent moving a folder into itself or its descendants
-        if (newParentId && isDescendant(state.folders, folderId, newParentId)) {
+        if (newParentId && isDescendant(currentFolders, folderId, newParentId)) {
           return;
         }
         if (folderId === newParentId) return;
 
-        const folder = findFolder(state.folders, folderId);
+        const folder = findFolder(currentFolders, folderId);
         if (!folder) return;
 
         // Remove folder from its current position
-        let newFolders = deleteFolderFromTree(state.folders, folderId);
+        let newFolders = deleteFolderFromTree(currentFolders, folderId);
 
         // Add folder to new position
         const movedFolder = { ...folder, parentId: newParentId };
@@ -448,12 +476,17 @@ export const useFolderStore = create<FolderStore>()(
           targetFolderId,
         );
 
-        set({ folders: newFolders, lastUpdated: Date.now() });
+        if (state.sharedFolders) {
+          set({ sharedFolders: newFolders, lastUpdated: Date.now() });
+        } else {
+          set({ folders: newFolders, lastUpdated: Date.now() });
+        }
       },
 
       addAlbumToFolder: (folderId, album) => {
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
             // Check by id or spotifyId to prevent duplicates
             const isDuplicate = folder.albums.some((a) => {
               if (a.id === album.id) return true;
@@ -481,7 +514,10 @@ export const useFolderStore = create<FolderStore>()(
               albums: [...folder.albums, sanitizedAlbum],
             };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -491,12 +527,16 @@ export const useFolderStore = create<FolderStore>()(
 
       removeAlbumFromFolder: (folderId, albumId) => {
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
             const newAlbums = folder.albums.filter((a) => a.id !== albumId);
             if (newAlbums.length === folder.albums.length) return folder;
             return { ...folder, albums: newAlbums };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -507,9 +547,10 @@ export const useFolderStore = create<FolderStore>()(
       moveAlbum: (fromFolderId, toFolderId, albumId) => {
         const state = get();
         if (fromFolderId === toFolderId) return;
+        const currentFolders = state.sharedFolders ?? state.folders;
 
-        const fromFolder = findFolder(state.folders, fromFolderId);
-        const toFolder = findFolder(state.folders, toFolderId);
+        const fromFolder = findFolder(currentFolders, fromFolderId);
+        const toFolder = findFolder(currentFolders, toFolderId);
         if (!fromFolder || !toFolder) return;
 
         const album = fromFolder.albums.find((a) => a.id === albumId);
@@ -534,7 +575,7 @@ export const useFolderStore = create<FolderStore>()(
         const positionedAlbum = normalizeAlbumPosition(album, toFolder.albums.length);
 
         let newFolders = updateFolderInTree(
-          state.folders,
+          currentFolders,
           fromFolderId,
           (folder) => ({
             ...folder,
@@ -547,14 +588,19 @@ export const useFolderStore = create<FolderStore>()(
           albums: [...folder.albums, positionedAlbum],
         }));
 
-        if (newFolders === state.folders) return;
-        set({ folders: newFolders, lastUpdated: Date.now() });
+        if (newFolders === currentFolders) return;
+        if (state.sharedFolders) {
+          set({ sharedFolders: newFolders, lastUpdated: Date.now() });
+        } else {
+          set({ folders: newFolders, lastUpdated: Date.now() });
+        }
       },
 
       reorderAlbum: (folderId, fromIndex, toIndex) => {
         if (fromIndex === toIndex) return;
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
             if (fromIndex < 0 || fromIndex >= folder.albums.length || toIndex < 0 || toIndex >= folder.albums.length) return folder;
             const newAlbums = [...folder.albums];
             const [movedAlbum] = newAlbums.splice(fromIndex, 1);
@@ -564,7 +610,10 @@ export const useFolderStore = create<FolderStore>()(
               albums: newAlbums,
             };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -574,7 +623,8 @@ export const useFolderStore = create<FolderStore>()(
 
       setAlbumPosition: (folderId, albumId, x, y) => {
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, folderId, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
             let changed = false;
             const newAlbums = folder.albums.map((album, index) => {
               if (album.id === albumId) {
@@ -591,7 +641,10 @@ export const useFolderStore = create<FolderStore>()(
             if (!changed) return folder;
             return { ...folder, albums: newAlbums };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -697,11 +750,15 @@ export const useFolderStore = create<FolderStore>()(
       setFolderViewMode: (id, mode) => {
         if (!isValidViewMode(mode)) return;
         set((state) => {
-          const newFolders = updateFolderInTree(state.folders, id, (folder) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, id, (folder) => {
             if (folder.viewMode === mode) return folder;
             return { ...folder, viewMode: mode };
           });
-          if (newFolders === state.folders) return state;
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
           return {
             folders: newFolders,
             lastUpdated: Date.now(),
@@ -736,10 +793,11 @@ export const useFolderStore = create<FolderStore>()(
           ) {
             state.lastUpdated = Date.now();
           }
+          // Always reset sharedFolders on rehydration
+          state.sharedFolders = null;
         }
       },
-      // Exclude drag-and-drop state from persistence to avoid unnecessary
-      // localStorage writes and expensive serialization during drag operations.
+      // Exclude drag-and-drop state and shared state from persistence
       partialize: (state) => {
         const {
           draggedAlbum,
@@ -748,6 +806,7 @@ export const useFolderStore = create<FolderStore>()(
           draggedFolder,
           draggedFolderParentId,
           isSettingsOpen,
+          sharedFolders,
           ...persistedState
         } = state;
         return persistedState;

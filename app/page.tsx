@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FolderTree } from '@/components/folder-tree';
 import { AlbumGrid } from '@/components/album-grid';
 import { AlbumSearch } from '@/components/album-search';
@@ -8,6 +8,7 @@ import { FirstTimeSetup } from '@/components/first-time-setup';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { SpotifyCallbackHandler } from '@/components/spotify-callback-handler';
 import { MobileHeader } from '@/components/mobile-header';
+import { ShareBanner } from '@/components/share-banner';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -15,16 +16,37 @@ import {
 } from '@/components/ui/resizable';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { useFolderStore } from '@/lib/store';
+import { decompressData } from '@/lib/share-service';
 
 export default function Home() {
   const isMobile = useIsMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const sharedFolders = useFolderStore(state => state.sharedFolders);
+
+  useEffect(() => {
+    // Check for share parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareData = urlParams.get('share');
+
+    if (shareData) {
+      const folders = decompressData(shareData);
+      if (folders) {
+        useFolderStore.getState().setSharedFolders(folders);
+        // Select the first folder if none selected
+        if (folders.length > 0) {
+          useFolderStore.getState().setSelectedFolder(folders[0].id);
+        }
+      }
+    }
+  }, []);
 
   return (
     <main className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <FirstTimeSetup />
       <SettingsDialog />
       <SpotifyCallbackHandler />
+      <ShareBanner />
 
       {isMobile ? (
         <MobileHeader onMenuClick={() => setIsMenuOpen(true)} />

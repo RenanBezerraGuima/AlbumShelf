@@ -167,7 +167,8 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   // Performance: Return undefined when the search is closed to avoid unnecessary re-renders.
   const selectedFolderAlbums = useFolderStore(useCallback(state => {
     if (!isOpen) return undefined;
-    return state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId)?.albums : undefined;
+    const folders = state.sharedFolders ?? state.folders;
+    return state.selectedFolderId ? findFolder(folders, state.selectedFolderId)?.albums : undefined;
   }, [isOpen]));
 
   // Get albums in selected folder
@@ -328,14 +329,15 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   };
 
   const handleAddAlbum = useCallback((album: Album) => {
-    const { selectedFolderId, folders, addAlbumToFolder, removeAlbumFromFolder } = useFolderStore.getState();
+    const { selectedFolderId, folders, sharedFolders, addAlbumToFolder, removeAlbumFromFolder } = useFolderStore.getState();
 
     if (!selectedFolderId) {
       setError('Please select a folder first');
       return;
     }
 
-    const folder = findFolder(folders, selectedFolderId);
+    const currentFolders = sharedFolders ?? folders;
+    const folder = findFolder(currentFolders, selectedFolderId);
     if (!folder) return;
 
     const key = `${album.name}-${album.artist}`.toLowerCase();

@@ -1,0 +1,39 @@
+
+> album-shelf@0.1.0 dev /app
+> next dev
+
+▲ Next.js 16.1.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 698ms
+○ Compiling / ...
+ GET / 200 in 7.2s (compile: 6.5s, render: 670ms)
+ GET /?share=N4IgpgTglghgLgAgBYCcCmBDA9gO3XALmBAA8AnAZwAsA7AJwEtiAnZHAXyA 200 in 75ms (compile: 5ms, render: 70ms)
+ GET / 200 in 83ms (compile: 5ms, render: 78ms)
+ GET / 200 in 76ms (compile: 3ms, render: 73ms)
+ GET /?share=N4IgpgTglghgLgAgBYCcCmBDA9gO3XALmBAA8AnAZwAsA7AJwEt0A7HAXyA 200 in 84ms (compile: 4ms, render: 80ms)
+ GET /?share=N4IgpgTglghgLgAgBYCcCmBDA9gO3XALmBAA8AnAZwAsA7AJwEt0A7HAXyA 200 in 82ms (compile: 4ms, render: 79ms)
+ GET /?share=NobwRAlgJmBcYEYwBowDsCGBbApnMAygBYYBOOMqADmTmgC4CSMsaArgDYeoYcBGbLAGc4wALqohbPgDMA9hyg5SI2ONQQhAUQAeNNEpb1SbHKgBuEHAHcAsnKX4A5qWhgAvmKA 200 in 73ms (compile: 3ms, render: 69ms)
+ GET /?share=NobwRAlgJmBcYEYwBowDsCGBbApnMAygBYYBOOMqADmTmgC4CSMsaArgDYeoYcBGbLAGc4wALqohbPgDMA9hyg5SI2ONQQhAUQAeNNEpb1SbHKgBuEHAHcAsnKX4A5qWhgAvmKA 200 in 81ms (compile: 4ms, render: 78ms)
+ GET /?share=NobwRAlgJmBcYEYwBowDsCGBbApnMAygBYYBOOMqADmTmgC4CSMsaArgDYeoYcBGbLAGc4wALqohbPgDMA9hyg5SI2ONQQhAUQAeNNEpb1SbHKgBuEHAHcAsnKX4A5qWhgAvmKA 200 in 77ms (compile: 6ms, render: 71ms)
+ GET /?share=NobwRAlgJmBcYEYwBowDsCGBbApnMAygBYYBOOMqADmTmgC4CSMsaArgDYeoYcBGbLAGc4wALqohbPgDMA9hyg5SI2ONQQhAUQAeNNEpb1SbHKgBuEHAHcAsnKX4A5qWhgAvmKA 200 in 68ms (compile: 4ms, render: 64ms)
+ GET / 200 in 70ms (compile: 3ms, render: 67ms)
+ GET /AlbumShelf 404 in 670ms (compile: 555ms, render: 115ms)
+ GET /AlbumShelf 404 in 46ms (compile: 3ms, render: 43ms)
+ GET /AlbumShelf 404 in 47ms (compile: 6ms, render: 41ms)
+ GET /AlbumShelf 404 in 41ms (compile: 3ms, render: 37ms)
+ GET /AlbumShelf 404 in 46ms (compile: 9ms, render: 37ms)
+ GET /AlbumShelf 404 in 44ms (compile: 3ms, render: 41ms)
+ GET /AlbumShelf 404 in 50ms (compile: 4ms, render: 46ms)
+ GET /AlbumShelf 404 in 44ms (compile: 3ms, render: 41ms)
+ GET /AlbumShelf 404 in 48ms (compile: 4ms, render: 45ms)
+ GET /AlbumShelf 404 in 49ms (compile: 3ms, render: 46ms)
+ GET /AlbumShelf 404 in 44ms (compile: 4ms, render: 40ms)
+ GET /AlbumShelf 404 in 42ms (compile: 4ms, render: 39ms)

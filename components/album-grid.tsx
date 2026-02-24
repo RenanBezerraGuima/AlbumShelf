@@ -63,11 +63,11 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const selectedFolder = useFolderStore(useCallback(state =>
-    state.selectedFolderId ? findFolder(state.folders, state.selectedFolderId) : null
+    state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
   , []));
 
   const breadcrumb = useFolderStore(
-    useShallow(state => state.selectedFolderId ? getBreadcrumb(state.folders, state.selectedFolderId) : [])
+    useShallow(state => state.selectedFolderId ? getBreadcrumb(state.sharedFolders ?? state.folders, state.selectedFolderId) : [])
   );
 
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
