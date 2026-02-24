@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useFolderStore } from '@/lib/store';
 import { Theme } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export const SettingsDialog = memo(function SettingsDialog() {
   /**
@@ -254,20 +255,6 @@ export const SettingsDialog = memo(function SettingsDialog() {
                       </p>
                     </div>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs font-mono text-muted-foreground">
-                    Create a shareable link for your current shelf.
-                  </p>
-                  <Button
-                    onClick={handleShare}
-                    className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-none brutalist-shadow-sm"
-                    variant="default"
-                  >
-                    {isCopied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
-                    {isCopied ? 'Link Copied!' : 'Share Shelf Link'}
-                  </Button>
                 </div>
 
                 <div className="space-y-2">
