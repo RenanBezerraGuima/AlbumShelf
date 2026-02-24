@@ -4,24 +4,30 @@ import { THEMES, VIEW_MODES, STREAMING_PROVIDERS, GEIST_FONTS } from './types';
 const ALLOWED_PROTOCOLS = ['https:'];
 const MAX_URL_LENGTH = 2048;
 export const MAX_TEXT_LENGTH = 200;
+export const MAX_ID_LENGTH = 100;
+export const MAX_NAME_LENGTH = 100;
+export const MAX_DATE_LENGTH = 50;
 
 // Security limits to prevent DoS via deep recursion or massive data structures
 export const MAX_FOLDER_DEPTH = 50;
 export const MAX_ALBUMS_PER_FOLDER = 5000;
 export const MAX_SUBFOLDERS_PER_FOLDER = 100;
+export const MAX_TOTAL_ALBUMS = 10000;
 
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
- * Allows only http:, https: and relative paths by default.
- * Enforces a maximum length to prevent potential DoS or memory issues.
+ * Allows only https: and relative paths by default.
+ * Enforces a maximum length and blocks control characters to prevent potential DoS or XSS.
  */
 export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
   const trimmedUrl = url.trim();
 
-  // Enforce maximum length and block control characters/internal whitespace
-  if (trimmedUrl.length > MAX_URL_LENGTH || /[\x00-\x1F\x7F\s]/.test(trimmedUrl)) {
+  // Enforce maximum length and block control characters/internal whitespace (including encoded ones)
+  if (trimmedUrl.length > MAX_URL_LENGTH ||
+      /[\x00-\x1F\x7F\s]/.test(trimmedUrl) ||
+      /%(0[0-9A-F]|1[0-9A-F]|7F)/i.test(trimmedUrl)) {
     return undefined;
   }
 
@@ -34,7 +40,9 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
     // If it's not a valid absolute URL, check if it's a safe relative path.
     // We explicitly exclude URLs with colons (to prevent protocol bypasses)
     // and backslashes (to prevent path normalization bypasses).
-    if (trimmedUrl.includes(':') || trimmedUrl.includes('\\') || trimmedUrl.toLowerCase().includes('%5c')) {
+    const lowerUrl = trimmedUrl.toLowerCase();
+    if (trimmedUrl.includes(':') || lowerUrl.includes('%3a') ||
+        trimmedUrl.includes('\\') || lowerUrl.includes('%5c')) {
       return undefined;
     }
 
@@ -113,15 +121,15 @@ export function isValidStreamingProvider(provider: any): provider is StreamingPr
  * Truncates text fields and sanitizes all URLs.
  */
 export function sanitizeAlbum(album: any, regenerateId = false): Album {
-  const id = regenerateId ? crypto.randomUUID() : String(album.id || crypto.randomUUID()).slice(0, 100);
+  const id = regenerateId ? crypto.randomUUID() : String(album.id || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
 
   const sanitized: Album = {
     id,
-    spotifyId: album.spotifyId ? String(album.spotifyId).slice(0, 100) : undefined,
+    spotifyId: album.spotifyId ? String(album.spotifyId).slice(0, MAX_ID_LENGTH) : undefined,
     name: String(album.name || 'Unknown Album').slice(0, MAX_TEXT_LENGTH),
     artist: String(album.artist || 'Unknown Artist').slice(0, MAX_TEXT_LENGTH),
     imageUrl: sanitizeImageUrl(String(album.imageUrl || '')) || '/placeholder.svg',
-    releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, 50) : undefined,
+    releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, MAX_DATE_LENGTH) : undefined,
     totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
     spotifyUrl: sanitizeUrl(album.spotifyUrl ? String(album.spotifyUrl) : undefined),
     externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
@@ -144,25 +152,30 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
 export function sanitizeFolder(
   folder: any,
   regenerateIds = false,
-  parentId: string | null = folder.parentId ? String(folder.parentId).slice(0, 100) : null,
+  parentId: string | null = folder.parentId ? String(folder.parentId).slice(0, MAX_ID_LENGTH) : null,
   albumMapper: (album: Album, index: number) => Album = (a) => a,
-  depth = 0
+  depth = 0,
+  context = { totalAlbums: 0 }
 ): Folder {
-  const id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, 100);
+  const id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, MAX_ID_LENGTH);
+
+  const albums: Album[] = [];
+  if (Array.isArray(folder.albums)) {
+    for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
+      albums.push(albumMapper(sanitizeAlbum(folder.albums[i], regenerateIds), i));
+      context.totalAlbums++;
+    }
+  }
 
   return {
     id,
-    name: String(folder.name || 'Untitled').slice(0, 100),
+    name: String(folder.name || 'Untitled').slice(0, MAX_NAME_LENGTH),
     parentId,
-    albums: Array.isArray(folder.albums)
-      ? folder.albums
-          .slice(0, MAX_ALBUMS_PER_FOLDER)
-          .map((a: any, index: number) => albumMapper(sanitizeAlbum(a, regenerateIds), index))
-      : [],
+    albums,
     subfolders: Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH
       ? folder.subfolders
           .slice(0, MAX_SUBFOLDERS_PER_FOLDER)
-          .map((sf: any) => sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1))
+          .map((sf: any) => sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1, context))
       : [],
     isExpanded: Boolean(folder.isExpanded),
     viewMode: isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid',
