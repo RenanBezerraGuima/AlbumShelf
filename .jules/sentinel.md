@@ -94,3 +94,8 @@
 **Vulnerability:** Recursive tree structures (folders) and large search queries could be used for Client-side DoS.
 **Learning:** Defense-in-depth requires explicit depth limits for recursive data structures entering the state (rehydration or import). For input validation, the order of operations matters: always slice/truncate BEFORE performing expensive operations like `trim()` or `toLowerCase()` on untrusted strings to minimize processing time for malicious payloads.
 **Prevention:** Implement `MAX_FOLDER_DEPTH` and item limits in recursive sanitization helpers. In search/input wrappers, enforce length limits as the very first step of processing.
+
+## 2026-04-10 - [URL-encoded Bypass & Global State DoS]
+**Vulnerability:** `sanitizeUrl` could be bypassed via URL-encoded control characters or colons in relative paths. Recursive sanitization lacked a global item limit, allowing large imports to crash the application.
+**Learning:** Browsers may interpret URL-encoded control characters (like `%0A`) in ways that bypass simple regex checks for literal characters. Similarly, enforcing per-folder limits is insufficient if the total number of items across all folders remains unbounded.
+**Prevention:** Explicitly block encoded control characters (`%(0[0-9A-F]|1[0-9A-F]|7F)`) and encoded dangerous delimiters like `%3A` in sanitization logic. Implement a shared context object in recursive sanitization helpers to enforce a `MAX_TOTAL_ALBUMS` limit across the entire tree.
