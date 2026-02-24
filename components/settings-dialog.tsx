@@ -46,8 +46,8 @@ export const SettingsDialog = memo(function SettingsDialog() {
 
   const shareUrlInfo = useMemo(() => {
     try {
-      const { folders } = useFolderStore.getState();
-      const url = generateShareUrl(folders);
+      const { folders, streamingProvider } = useFolderStore.getState();
+      const url = generateShareUrl(folders, streamingProvider);
       return { url, length: url.length };
     } catch (e) {
       return { url: '', length: 0 };
