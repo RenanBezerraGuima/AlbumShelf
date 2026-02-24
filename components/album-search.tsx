@@ -381,6 +381,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             style={{ borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)' }}
             maxLength={200}
             aria-label="Search albums"
+            aria-keyshortcuts="/"
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-haspopup="listbox"
@@ -403,6 +404,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 onClick={clearSearch}
                 className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
                 aria-label="Clear search"
+                aria-keyshortcuts="Escape"
                 title="Clear search"
               >
                 <X className="h-4 w-4" />
@@ -421,7 +423,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             <ScrollArea className="h-[400px]">
               <div className="p-2 space-y-1" role="listbox" id={listboxId}>
                 {results.length > 0 && (
-                  <div className="px-3 py-1.5 mb-1 border-b border-border/50">
+                  <div className="px-3 py-1.5 mb-1 border-b border-border/50" aria-live="polite">
                     <p className="text-[10px] font-medium tracking-widest text-muted-foreground/70" style={{ fontFamily: 'var(--font-mono)' }}>
                       {results.length} results found
                     </p>

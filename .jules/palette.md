@@ -25,3 +25,7 @@
 ## 2026-02-19 - [Keyboard Shortcuts for Primary Actions]
 **Learning:** Adding global keyboard shortcuts for primary actions (like 'N' for new collection) significantly improves power-user efficiency. Ensuring these shortcuts don't fire when focus is on INPUT, TEXTAREA, or SELECT elements is critical for a frustration-free experience.
 **Action:** Always accompany primary action buttons with keyboard shortcuts, visual bracketed hints, and robust input-focus guards.
+
+## 2026-05-22 - [Refining Search Accessibility with Live Regions]
+**Learning:** For dynamic search interfaces, adding `aria-keyshortcuts` to inputs improves discoverability of existing global listeners. However, informing the user of the result count is best handled via `aria-live="polite"` on the results message rather than linking hidden counters. Redundant shortcuts (like 'Enter' on listbox options) should be avoided to stay clean and follow standard ARIA expectations.
+**Action:** Use `aria-live="polite"` for dynamic status messages and ensure `aria-keyshortcuts` attributes accurately reflect active global listeners while avoiding redundancy with role-default behaviors.
