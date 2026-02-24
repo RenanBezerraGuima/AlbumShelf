@@ -7,6 +7,7 @@ import { useFolderStore } from '@/lib/store';
 
 export function ShareBanner() {
   const sharedFolders = useFolderStore((state) => state.sharedFolders);
+  const hydrationProgress = useFolderStore((state) => state.hydrationProgress);
   const setSharedFolders = useFolderStore((state) => state.setSharedFolders);
   const importFolders = useFolderStore((state) => state.importFolders);
 
@@ -41,7 +42,10 @@ export function ShareBanner() {
             <Info className="h-3 w-3 opacity-60" />
           </p>
           <p className="text-[10px] font-mono opacity-80 truncate">
-            Temporary view • {sharedFolders.length} collection{sharedFolders.length !== 1 ? 's' : ''}
+            {hydrationProgress
+              ? `Hydrating metadata: ${hydrationProgress.current}/${hydrationProgress.total}...`
+              : `Temporary view • ${sharedFolders.length} collection${sharedFolders.length !== 1 ? 's' : ''}`
+            }
           </p>
         </div>
       </div>

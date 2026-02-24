@@ -29,6 +29,7 @@ interface FolderStore {
   theme: Theme;
   geistFont: GeistFont;
   isSettingsOpen: boolean;
+  hydrationProgress: { current: number; total: number } | null;
   lastUpdated: number;
 
   // Folder actions
@@ -38,6 +39,7 @@ interface FolderStore {
   toggleFolderExpanded: (id: string) => void;
   setSelectedFolder: (id: string | null) => void;
   setSharedFolders: (folders: Folder[] | null) => void;
+  hydrateSharedFolders: (albumMap: Map<string, Album>) => void;
   moveFolder: (
     folderId: string,
     newParentId: string | null,
@@ -79,6 +81,7 @@ interface FolderStore {
   setTheme: (theme: Theme) => void;
   setGeistFont: (font: GeistFont) => void;
   setSettingsOpen: (open: boolean) => void;
+  setHydrationProgress: (progress: { current: number; total: number } | null) => void;
   setFolderViewMode: (id: string, mode: AlbumViewMode) => void;
 }
 
@@ -357,6 +360,7 @@ export const useFolderStore = create<FolderStore>()(
       theme: "industrial",
       geistFont: "mono",
       isSettingsOpen: false,
+      hydrationProgress: null,
       lastUpdated: 0,
 
       createFolder: (name, parentId) => {
@@ -449,6 +453,36 @@ export const useFolderStore = create<FolderStore>()(
 
       setSharedFolders: (folders) => {
         set({ sharedFolders: folders, lastUpdated: Date.now() });
+      },
+
+      hydrateSharedFolders: (albumMap) => {
+        set((state) => {
+          if (!state.sharedFolders) return state;
+
+          const hydrateNode = (folders: Folder[]): Folder[] => {
+            return folders.map((f) => {
+              const updatedAlbums = f.albums.map((a) => {
+                const hydrated = albumMap.get(a.id);
+                if (hydrated) {
+                  // Merge positions and other existing fields
+                  return { ...hydrated, position: a.position };
+                }
+                return a;
+              });
+
+              return {
+                ...f,
+                albums: updatedAlbums,
+                subfolders: hydrateNode(f.subfolders),
+              };
+            });
+          };
+
+          return {
+            sharedFolders: hydrateNode(state.sharedFolders),
+            lastUpdated: Date.now(),
+          };
+        });
       },
 
       moveFolder: (folderId, newParentId, targetFolderId) => {
@@ -747,6 +781,10 @@ export const useFolderStore = create<FolderStore>()(
         set({ isSettingsOpen: open });
       },
 
+      setHydrationProgress: (progress) => {
+        set({ hydrationProgress: progress });
+      },
+
       setFolderViewMode: (id, mode) => {
         if (!isValidViewMode(mode)) return;
         set((state) => {
@@ -807,6 +845,7 @@ export const useFolderStore = create<FolderStore>()(
           draggedFolderParentId,
           isSettingsOpen,
           sharedFolders,
+          hydrationProgress,
           ...persistedState
         } = state;
         return persistedState;

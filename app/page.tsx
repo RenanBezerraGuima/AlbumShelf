@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog';
 import { useFolderStore } from '@/lib/store';
 import { decompressData } from '@/lib/share-service';
+import { hydrateAlbums } from '@/lib/hydration-service';
 
 export default function Home() {
   const isMobile = useIsMobile();
@@ -30,12 +31,44 @@ export default function Home() {
     const shareData = urlParams.get('share');
 
     if (shareData) {
-      const folders = decompressData(shareData);
-      if (folders) {
+      const data = decompressData(shareData);
+      if (data) {
+        const { folders, provider } = data;
         useFolderStore.getState().setSharedFolders(folders);
         // Select the first folder if none selected
         if (folders.length > 0) {
           useFolderStore.getState().setSelectedFolder(folders[0].id);
+        }
+
+        // Hydration logic
+        if (provider) {
+          const { spotifyToken, setHydrationProgress, hydrateSharedFolders } = useFolderStore.getState();
+
+          // Collect all IDs that need hydration
+          const idsToHydrate = new Set<string>();
+          const collectIds = (nodes: any[]) => {
+            nodes.forEach(n => {
+              n.albums?.forEach((a: any) => {
+                if (a._needsHydration) idsToHydrate.add(a.id);
+              });
+              if (n.subfolders) collectIds(n.subfolders);
+            });
+          };
+          collectIds(folders);
+
+          if (idsToHydrate.size > 0) {
+            setHydrationProgress({ current: 0, total: idsToHydrate.size });
+
+            hydrateAlbums(
+              Array.from(idsToHydrate),
+              provider,
+              spotifyToken,
+              (current, total) => setHydrationProgress({ current, total })
+            ).then(albumMap => {
+              hydrateSharedFolders(albumMap);
+              setHydrationProgress(null);
+            });
+          }
         }
       }
     }

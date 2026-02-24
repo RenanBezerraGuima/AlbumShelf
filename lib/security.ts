@@ -121,7 +121,8 @@ export function isValidStreamingProvider(provider: any): provider is StreamingPr
  * Truncates text fields and sanitizes all URLs.
  */
 export function sanitizeAlbum(album: any, regenerateId = false): Album {
-  const id = regenerateId ? crypto.randomUUID() : String(album.id || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
+  const isProviderId = album.id?.startsWith?.('spotify-') || album.id?.startsWith?.('deezer-') || album.id?.startsWith?.('apple-');
+  const id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(album.id || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
 
   const sanitized: Album = {
     id,
@@ -134,6 +135,10 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
     spotifyUrl: sanitizeUrl(album.spotifyUrl ? String(album.spotifyUrl) : undefined),
     externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
   };
+
+  if (album._needsHydration) {
+    (sanitized as any)._needsHydration = true;
+  }
 
   // Defense-in-depth: Ensure coordinates are finite numbers to prevent rendering-based DoS or crashes
   if (album.position &&
