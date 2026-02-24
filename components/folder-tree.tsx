@@ -574,7 +574,7 @@ export function FolderTree() {
 
   // Granular subscriptions for data used in render.
   // Actions are accessed via useFolderStore.getState() in handlers to avoid redundant subscriptions.
-  const folders = useFolderStore((state) => state.folders);
+  const folders = useFolderStore((state) => state.sharedFolders ?? state.folders);
   const draggedFolder = useFolderStore((state) => state.draggedFolder);
 
   const handleCreateFolder = () => {

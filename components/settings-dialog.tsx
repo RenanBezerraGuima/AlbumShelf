@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, memo } from 'react';
-import { Download, Upload, Settings, Music, Radio, CheckCircle2 } from 'lucide-react';
+import React, { useRef, memo, useState, useCallback, useMemo } from 'react';
+import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useShallow } from 'zustand/react/shallow';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
+import { generateShareUrl } from '@/lib/share-service';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,17 @@ export const SettingsDialog = memo(function SettingsDialog() {
   })));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const shareUrlInfo = useMemo(() => {
+    try {
+      const { folders } = useFolderStore.getState();
+      const url = generateShareUrl(folders);
+      return { url, length: url.length };
+    } catch (e) {
+      return { url: '', length: 0 };
+    }
+  }, [isOpen]);
 
   const isSpotifyConnected = React.useMemo(() => {
     if (!spotifyToken || !spotifyTokenExpiry || !spotifyTokenTimestamp) return false;
@@ -85,6 +97,17 @@ export const SettingsDialog = memo(function SettingsDialog() {
       console.error(error);
     }
   };
+
+  const handleShare = useCallback(async () => {
+    try {
+      if (!shareUrlInfo.url) return;
+      await navigator.clipboard.writeText(shareUrlInfo.url);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy share URL:', error);
+    }
+  }, [shareUrlInfo]);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -201,20 +224,53 @@ export const SettingsDialog = memo(function SettingsDialog() {
 
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-mono text-muted-foreground">
+                      Create a shareable link for your current shelf.
+                    </p>
+                    {shareUrlInfo.length > 0 && (
+                      <span className={cn(
+                        "text-[9px] font-mono",
+                        shareUrlInfo.length > 7000 ? "text-destructive font-bold" : "text-muted-foreground"
+                      )}>
+                        {shareUrlInfo.length} chars
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleShare}
+                    className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-none brutalist-shadow-sm"
+                    variant="default"
+                    disabled={!shareUrlInfo.url}
+                  >
+                    {isCopied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
+                    {isCopied ? 'Link Copied!' : 'Share Shelf Link'}
+                  </Button>
+                  {shareUrlInfo.length > 8000 && (
+                    <div className="flex items-start gap-2 p-2 bg-destructive/10 border border-destructive/20 mt-1">
+                      <AlertTriangle className="h-3 w-3 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-[9px] text-destructive leading-tight font-mono uppercase">
+                        Link may be too long for some browsers ({shareUrlInfo.length} chars). Consider exporting as file if it fails.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <p className="text-xs font-mono text-muted-foreground">
                     Export your collections and albums to a JSON file for backup.
                   </p>
                   <Button
                     onClick={handleExport}
                     className="w-full justify-start gap-2"
-                    variant="default"
+                    variant="outline"
                   >
                     <Download className="h-4 w-4" />
                     Export Data
                   </Button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 opacity-80">
                   <p className="text-xs font-mono text-muted-foreground">
                     Import data from a backup file. Existing collections with the same name will be kept and renamed.
                   </p>
