@@ -1,5 +1,5 @@
 ## 2025-05-14 - [Zustand Over-subscription and Structural Sharing]
-**Learning:** Subscribing to the entire `folders` tree in components like `AlbumGrid` or `AlbumSearch` causes them to re-render whenever ANY folder is modified. However, because the store uses structural sharing, only the modified branch gets a new reference. Using granular selectors that find the specific selected folder allows Zustand to skip re-renders if that folder's reference (and its path from root) hasn't changed.
+**Learning:** Subscribing to the entire `folders` tree in components like `AlbumGrid` or `AlbumSearch` causes them to re-render whenever ANY folder is modified. However, because the store uses structural sharing, only the modified branch gets a new reference. Using granular selectors that find the specific selected folder website Zustand to skip re-renders if that folder's reference (and its path from root) hasn't changed.
 **Action:** Always use granular selectors and `useShallow` for store subscriptions. Define selectors that return the specific leaf data needed by the component.
 
 ## 2025-05-20 - [Optimizing Persisted Stores]
@@ -69,3 +69,7 @@
 ## 2026-08-15 - [In-flight Search Request Deduplication]
 **Learning:** In highly interactive search interfaces, rapid user input or provider switching can trigger multiple identical network requests before the first one settles. While a debounce helps, it doesn't prevent redundant requests if the network latency is higher than the debounce interval or if the same search is triggered from multiple entry points. Caching the *promise* of the in-flight request in a Map and returning it for identical subsequent calls eliminates this redundancy and ensures only one network call is made per unique query.
 **Action:** Implement a `pendingRequests` Map in async service wrappers to deduplicate simultaneous identical operations. Ensure promises are removed in a `finally` block to prevent stale state or memory leaks.
+
+## 2026-09-10 - [Optimizing Sanitization Hot Paths]
+**Learning:** `new URL()` is a relatively expensive constructor in both Node.js and browser environments. When sanitizing thousands of items (e.g., during store rehydration), calling it repeatedly for standard `https://` URLs can block the main thread. Implementing a fast-path that validates the prefix and character safety before falling back to the full parser significantly improves startup performance.
+**Action:** Use fast-path validation (prefix and character checks) to avoid expensive object constructors or complex regexes in hot paths like sanitization.

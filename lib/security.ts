@@ -16,6 +16,11 @@ export const MAX_ALBUMS_PER_FOLDER = 5000;
 export const MAX_SUBFOLDERS_PER_FOLDER = 100;
 export const MAX_TOTAL_ALBUMS = 10000;
 
+// Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
+const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
+const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
+const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
+
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
  * Allows only https: and relative paths by default.
@@ -28,9 +33,18 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
 
   // Enforce maximum length and block control characters/internal whitespace (including encoded ones)
   if (trimmedUrl.length > MAX_URL_LENGTH ||
-      /[\x00-\x1F\x7F\s]/.test(trimmedUrl) ||
-      /%(0[0-9A-F]|1[0-9A-F]|7F)/i.test(trimmedUrl)) {
+      CONTROL_CHARS_REGEXP.test(trimmedUrl) ||
+      (trimmedUrl.includes('%') && ENCODED_CONTROL_CHARS_REGEXP.test(trimmedUrl))) {
     return undefined;
+  }
+
+  // Performance: Fast-path for common https:// URLs to avoid expensive 'new URL()' calls.
+  // If it starts with https:// and passes the character checks above, it's safe for our default protocol.
+  if (allowedProtocols === ALLOWED_PROTOCOLS && trimmedUrl.startsWith('https://')) {
+    // Ensure no additional colons (potential protocol bypasses) or backslashes
+    if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\')) {
+      return trimmedUrl;
+    }
   }
 
   try {
@@ -42,16 +56,22 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
     // If it's not a valid absolute URL, check if it's a safe relative path.
     // We explicitly exclude URLs with colons (to prevent protocol bypasses)
     // and backslashes (to prevent path normalization bypasses).
+    if (trimmedUrl.includes(':') || trimmedUrl.includes('\\')) {
+      return undefined;
+    }
+
+    // Performance: Avoid redundant toLowerCase() by checking against common encoded variants directly
     const lowerUrl = trimmedUrl.toLowerCase();
-    if (trimmedUrl.includes(':') || lowerUrl.includes('%3a') ||
-        trimmedUrl.includes('\\') || lowerUrl.includes('%5c')) {
+    if (lowerUrl.includes('%3a') || lowerUrl.includes('%5c')) {
       return undefined;
     }
 
     // We explicitly exclude protocol-relative URLs (starting with // or encoded variants) for security.
-    const isProtocolRelative = trimmedUrl.startsWith('//') || trimmedUrl.toLowerCase().startsWith('/%2f');
+    if (PROTOCOL_RELATIVE_REGEXP.test(trimmedUrl)) {
+      return undefined;
+    }
 
-    if ((trimmedUrl.startsWith('/') && !isProtocolRelative) ||
+    if (trimmedUrl.startsWith('/') ||
         trimmedUrl.startsWith('./') ||
         trimmedUrl.startsWith('../')) {
       return trimmedUrl;
@@ -68,9 +88,11 @@ export function sanitizeImageUrl(url: string | undefined): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
   const trimmedUrl = url.trim();
-  const lowerUrl = trimmedUrl.toLowerCase();
 
-  if (lowerUrl.startsWith('data:')) {
+  // Performance: Avoid toLowerCase() unless potentially a data: URL.
+  // Most URLs in the app are https:// which are handled by sanitizeUrl.
+  if (trimmedUrl.length > 5 && trimmedUrl.slice(0, 5).toLowerCase() === 'data:') {
+    const lowerUrl = trimmedUrl.toLowerCase();
     const commaIndex = lowerUrl.indexOf(',');
     if (commaIndex === -1) return undefined;
 
@@ -130,19 +152,20 @@ export function isValidGeistFont(font: any): font is GeistFont {
  * Truncates text fields and sanitizes all URLs.
  */
 export function sanitizeAlbum(album: any, regenerateId = false): Album {
-  const isProviderId = album.id?.startsWith?.('spotify-') || album.id?.startsWith?.('deezer-') || album.id?.startsWith?.('apple-');
-  const id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(album.id || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
+  const rawId = album.id;
+  const isProviderId = typeof rawId === 'string' && (rawId.startsWith('spotify-') || rawId.startsWith('deezer-') || rawId.startsWith('apple-'));
+  const id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(rawId || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
 
   const sanitized: Album = {
     id,
     spotifyId: album.spotifyId ? String(album.spotifyId).slice(0, MAX_ID_LENGTH) : undefined,
-    name: String(album.name || 'Unknown Album').slice(0, MAX_TEXT_LENGTH),
-    artist: String(album.artist || 'Unknown Artist').slice(0, MAX_TEXT_LENGTH),
-    imageUrl: sanitizeImageUrl(String(album.imageUrl || '')) || '/placeholder.svg',
+    name: (typeof album.name === 'string' && album.name ? album.name : String(album.name || 'Unknown Album')).slice(0, MAX_TEXT_LENGTH),
+    artist: (typeof album.artist === 'string' && album.artist ? album.artist : String(album.artist || 'Unknown Artist')).slice(0, MAX_TEXT_LENGTH),
+    imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
     releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, MAX_DATE_LENGTH) : undefined,
     totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
-    spotifyUrl: sanitizeUrl(album.spotifyUrl ? String(album.spotifyUrl) : undefined),
-    externalUrl: sanitizeUrl(album.externalUrl ? String(album.externalUrl) : undefined),
+    spotifyUrl: sanitizeUrl(album.spotifyUrl),
+    externalUrl: sanitizeUrl(album.externalUrl),
   };
 
   if (album._needsHydration) {
