@@ -9,6 +9,7 @@ import {
   isValidTheme,
   isValidViewMode,
   isValidStreamingProvider,
+  isValidGeistFont,
 } from "./security";
 import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
@@ -821,6 +822,7 @@ export const useFolderStore = create<FolderStore>()(
           state.spotifyTokenTimestamp = typeof state.spotifyTokenTimestamp === 'number' && Number.isFinite(state.spotifyTokenTimestamp) ? state.spotifyTokenTimestamp : null;
 
           if (!isValidTheme(state.theme)) state.theme = "industrial";
+          if (!isValidGeistFont(state.geistFont)) state.geistFont = "mono";
           if (!isValidStreamingProvider(state.streamingProvider))
             state.streamingProvider = "deezer";
           if (state.spotifyToken)

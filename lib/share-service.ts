@@ -1,6 +1,6 @@
 import LZString from 'lz-string';
 import type { Folder, Album, StreamingProvider } from './types';
-import { sanitizeFolder } from './security';
+import { sanitizeFolder, isValidStreamingProvider } from './security';
 
 interface SharePayload {
   v: number; // version
@@ -110,7 +110,7 @@ export function decompressData(compressed: string): { folders: Folder[], provide
     if (rawData.v === 2 && rawData.f) {
       return {
         folders: fromCompact(rawData.f).map((f: any) => sanitizeFolder(f, true)),
-        provider: rawData.p
+        provider: isValidStreamingProvider(rawData.p) ? rawData.p : undefined
       };
     }
 

@@ -99,3 +99,8 @@
 **Vulnerability:** `sanitizeUrl` could be bypassed via URL-encoded control characters or colons in relative paths. Recursive sanitization lacked a global item limit, allowing large imports to crash the application.
 **Learning:** Browsers may interpret URL-encoded control characters (like `%0A`) in ways that bypass simple regex checks for literal characters. Similarly, enforcing per-folder limits is insufficient if the total number of items across all folders remains unbounded.
 **Prevention:** Explicitly block encoded control characters (`%(0[0-9A-F]|1[0-9A-F]|7F)`) and encoded dangerous delimiters like `%3A` in sanitization logic. Implement a shared context object in recursive sanitization helpers to enforce a `MAX_TOTAL_ALBUMS` limit across the entire tree.
+
+## 2026-04-15 - [JSONP Security Drift & Centralization]
+**Vulnerability:** `hydration-service.ts` contained an insecure, local implementation of `jsonp` (missing domain whitelist and CSPRNG) despite the vulnerability being previously fixed in `search-service.ts`.
+**Learning:** Fragmented implementations of sensitive utilities (like JSONP or sanitizers) lead to "security drift" where fixes in one area are not propagated to others. Circular dependency concerns often drive this fragmentation but should be resolved via centralization rather than duplication.
+**Prevention:** Centralize sensitive security constants (like trusted domains) and validators in a dedicated `security.ts` layer. Ensure all services consuming untrusted data use these centralized primitives to maintain a consistent security posture across the application.

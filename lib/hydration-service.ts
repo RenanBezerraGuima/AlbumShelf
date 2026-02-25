@@ -1,5 +1,5 @@
 import type { Album, StreamingProvider } from './types';
-import { sanitizeAlbum } from './security';
+import { sanitizeAlbum, TRUSTED_JSONP_DOMAINS } from './security';
 
 /**
  * Hydrates metadata for a list of album IDs from a specific provider.
@@ -114,8 +114,20 @@ export async function hydrateAlbums(
 
 // Helpers copied/adapted from search-service.ts to avoid circular dependencies
 function jsonp<T>(url: string): Promise<T> {
+  // Domain whitelist check for defense-in-depth
+  try {
+    const parsed = new URL(url);
+    if (!TRUSTED_JSONP_DOMAINS.includes(parsed.hostname)) {
+      throw new Error(`Untrusted JSONP domain: ${parsed.hostname}`);
+    }
+  } catch (e) {
+    return Promise.reject(e instanceof Error ? e : new Error('Invalid JSONP URL'));
+  }
+
   return new Promise((resolve, reject) => {
-    const callbackName = `jsonp_callback_hydrate_${Math.round(Math.random() * 1000000)}`;
+    const randomArray = new Uint32Array(1);
+    crypto.getRandomValues(randomArray);
+    const callbackName = `jsonp_callback_hydrate_${randomArray[0]}`;
     const script = document.createElement('script');
     // @ts-ignore
     window[callbackName] = (data: T) => {
@@ -134,9 +146,9 @@ function jsonp<T>(url: string): Promise<T> {
 }
 
 async function jsonpLookupApple(ids: string): Promise<any> {
-  return jsonp(`https://itunes.apple.com/lookup?id=${ids}`);
+  return jsonp(`https://itunes.apple.com/lookup?id=${encodeURIComponent(ids)}`);
 }
 
 async function jsonpLookupDeezer(id: string): Promise<any> {
-  return jsonp(`https://api.deezer.com/album/${id}&output=jsonp`);
+  return jsonp(`https://api.deezer.com/album/${encodeURIComponent(id)}&output=jsonp`);
 }
