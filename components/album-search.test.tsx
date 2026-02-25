@@ -71,4 +71,20 @@ describe('AlbumSearch top panel layout', () => {
     expect(plusIcon).toBeInTheDocument();
     expect(plusIcon).toHaveClass('opacity-40', 'group-hover:opacity-100');
   });
+
+  it('renders pivot buttons when no results are found', async () => {
+    vi.mocked(searchAlbumsDeezer).mockResolvedValue([]);
+
+    render(<AlbumSearch />);
+
+    const input = screen.getByPlaceholderText(/SEARCH.*ON DEEZER/i);
+    fireEvent.change(input, { target: { value: 'NonExistent' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/No albums found for "NonExistent" on DEEZER/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /Try on apple/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Try on spotify/i })).toBeInTheDocument();
+  });
 });

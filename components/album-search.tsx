@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useShallow } from 'zustand/react/shallow';
 import { useFolderStore, findFolder } from '@/lib/store';
-import type { Album } from '@/lib/types';
+import { type Album, type StreamingProvider, STREAMING_PROVIDERS } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
 import { searchAlbumsDeezer, searchAlbumsApple, searchAlbumsSpotify } from '@/lib/search-service';
 import { cn } from '@/lib/utils';
@@ -246,23 +246,24 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     };
   }, []);
 
-  const searchAlbums = useCallback(async (searchQuery: string) => {
+  const searchAlbums = useCallback(async (searchQuery: string, providerOverride?: StreamingProvider) => {
     if (!searchQuery.trim()) {
       setResults([]);
       setIsOpen(false);
       return;
     }
 
+    const currentProvider = providerOverride || streamingProvider;
     setIsLoading(true);
     setError(null);
 
     try {
       let data: Album[] = [];
-      if (streamingProvider === 'apple') {
+      if (currentProvider === 'apple') {
         data = await searchAlbumsApple(searchQuery);
-      } else if (streamingProvider === 'deezer') {
+      } else if (currentProvider === 'deezer') {
         data = await searchAlbumsDeezer(searchQuery);
-      } else if (streamingProvider === 'spotify') {
+      } else if (currentProvider === 'spotify') {
         if (isSpotifyTokenExpired) {
           setError('Spotify session expired or not connected.');
           setResults([]);
@@ -448,10 +449,26 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 )}
 
                 {results.length === 0 && !error && query.trim() && !isLoading && (
-                  <div className="py-8 px-4 text-center">
+                  <div className="py-8 px-4 text-center space-y-4" aria-live="polite">
                     <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
                       No albums found for "{query}" on {streamingProvider.toUpperCase()}
                     </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {STREAMING_PROVIDERS.filter(p => p !== streamingProvider).map(p => (
+                        <Button
+                          key={p}
+                          variant="outline"
+                          size="sm"
+                          className="text-[10px] font-mono uppercase h-7 rounded-none border-dashed border-muted-foreground/50 hover:border-primary transition-all"
+                          onClick={() => {
+                            useFolderStore.getState().setStreamingProvider(p);
+                            searchAlbums(query, p);
+                          }}
+                        >
+                          Try on {p}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
