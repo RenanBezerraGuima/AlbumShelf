@@ -1,5 +1,5 @@
 import type { Album } from './types';
-import { sanitizeAlbum, MAX_TEXT_LENGTH } from './security';
+import { sanitizeAlbum, MAX_TEXT_LENGTH, TRUSTED_JSONP_DOMAINS } from './security';
 
 // Simple in-memory cache for search results
 const searchCache = new Map<string, { data: Album[], timestamp: number }>();
@@ -8,8 +8,6 @@ const pendingRequests = new Map<string, Promise<Album[]>>();
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 50;
-
-const TRUSTED_JSONP_DOMAINS = ['api.deezer.com', 'itunes.apple.com'];
 
 /**
  * Wraps a search function with a simple in-memory cache and request deduplication.

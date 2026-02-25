@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { isValidTheme, isValidViewMode, isValidStreamingProvider } from './security';
+import { isValidTheme, isValidViewMode, isValidStreamingProvider, isValidGeistFont } from './security';
 import { useFolderStore } from './store';
 
 describe('Security Validation', () => {
@@ -41,6 +41,18 @@ describe('Security Validation', () => {
     it('should return false for invalid streaming providers', () => {
       expect(isValidStreamingProvider('invalid')).toBe(false);
       expect(isValidStreamingProvider('youtube')).toBe(false);
+    });
+  });
+
+  describe('isValidGeistFont', () => {
+    it('should return true for valid fonts', () => {
+      expect(isValidGeistFont('mono')).toBe(true);
+    });
+
+    it('should return false for invalid fonts', () => {
+      expect(isValidGeistFont('serif')).toBe(false);
+      expect(isValidGeistFont('sans')).toBe(false);
+      expect(isValidGeistFont(null)).toBe(false);
     });
   });
 

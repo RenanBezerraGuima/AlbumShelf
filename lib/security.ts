@@ -8,6 +8,8 @@ export const MAX_ID_LENGTH = 100;
 export const MAX_NAME_LENGTH = 100;
 export const MAX_DATE_LENGTH = 50;
 
+export const TRUSTED_JSONP_DOMAINS = ['api.deezer.com', 'itunes.apple.com'];
+
 // Security limits to prevent DoS via deep recursion or massive data structures
 export const MAX_FOLDER_DEPTH = 50;
 export const MAX_ALBUMS_PER_FOLDER = 5000;
@@ -114,6 +116,13 @@ export function isValidViewMode(mode: any): mode is AlbumViewMode {
  */
 export function isValidStreamingProvider(provider: any): provider is StreamingProvider {
   return typeof provider === 'string' && STREAMING_PROVIDERS.includes(provider as StreamingProvider);
+}
+
+/**
+ * Validate if a string is a valid GeistFont.
+ */
+export function isValidGeistFont(font: any): font is GeistFont {
+  return typeof font === 'string' && GEIST_FONTS.includes(font as GeistFont);
 }
 
 /**
