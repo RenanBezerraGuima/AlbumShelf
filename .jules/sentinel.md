@@ -104,3 +104,8 @@
 **Vulnerability:** `hydration-service.ts` contained an insecure, local implementation of `jsonp` (missing domain whitelist and CSPRNG) despite the vulnerability being previously fixed in `search-service.ts`.
 **Learning:** Fragmented implementations of sensitive utilities (like JSONP or sanitizers) lead to "security drift" where fixes in one area are not propagated to others. Circular dependency concerns often drive this fragmentation but should be resolved via centralization rather than duplication.
 **Prevention:** Centralize sensitive security constants (like trusted domains) and validators in a dedicated `security.ts` layer. Ensure all services consuming untrusted data use these centralized primitives to maintain a consistent security posture across the application.
+
+## 2025-02-26 - [DoS via Recursive Data Structure]
+**Vulnerability:** Maliciously crafted deep or wide folder trees could bypass local limits because limits were enforced per-root-folder rather than globally across the entire structure, leading to potential browser hang or memory exhaustion.
+**Learning:** When using recursion to sanitize data that can contain multiple root nodes (like a shared shelf), a shared context object MUST be used to track cumulative counts across all branches.
+**Prevention:** Implement a standardized entry point like `sanitizeFolderTree` that initializes a shared context and enforces limits before calling recursive sanitizers on root nodes. Use loops or `filter` with stateful checks to break out of processing once global limits are reached.
