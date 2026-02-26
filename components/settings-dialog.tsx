@@ -44,6 +44,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [isExported, setIsExported] = useState(false);
 
   const shareUrlInfo = useMemo(() => {
     try {
@@ -94,6 +95,8 @@ export const SettingsDialog = memo(function SettingsDialog() {
       link.download = `backup-${date}.json`;
       link.click();
       URL.revokeObjectURL(url);
+      setIsExported(true);
+      setTimeout(() => setIsExported(false), 2000);
     } catch (error) {
       console.error(error);
     }
@@ -263,11 +266,11 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   </p>
                   <Button
                     onClick={handleExport}
-                    className="w-full justify-start gap-2"
-                    variant="outline"
+                    className="w-full justify-start gap-2 transition-all duration-300"
+                    variant={isExported ? "default" : "outline"}
                   >
-                    <Download className="h-4 w-4" />
-                    Export Data
+                    {isExported ? <Check className="h-4 w-4 text-green-400" /> : <Download className="h-4 w-4" />}
+                    {isExported ? 'Data Exported!' : 'Export Data'}
                   </Button>
                 </div>
 

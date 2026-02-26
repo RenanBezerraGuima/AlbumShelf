@@ -29,3 +29,7 @@
 ## 2026-05-22 - [Refining Search Accessibility with Live Regions]
 **Learning:** For dynamic search interfaces, adding `aria-keyshortcuts` to inputs improves discoverability of existing global listeners. However, informing the user of the result count is best handled via `aria-live="polite"` on the results message rather than linking hidden counters. Redundant shortcuts (like 'Enter' on listbox options) should be avoided to stay clean and follow standard ARIA expectations.
 **Action:** Use `aria-live="polite"` for dynamic status messages and ensure `aria-keyshortcuts` attributes accurately reflect active global listeners while avoiding redundancy with role-default behaviors.
+
+## 2025-05-23 - [Feedback for File Export Actions]
+**Learning:** Actions that trigger background browser processes (like file downloads) often lack immediate UI feedback, leaving users unsure if the action succeeded. Momentarily transforming the button into a success state (e.g., "Data Exported!") provides clear confirmation and improves the perceived reliability of the interface.
+**Action:** Always provide momentary visual and textual feedback for actions that trigger file downloads or other non-UI browser events.
