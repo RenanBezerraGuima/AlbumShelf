@@ -11,6 +11,7 @@ import {
   isAlbumVisibleInWorld,
   screenToWorld,
   type CameraState,
+  type CanvasViewport,
 } from '@/lib/spatial';
 import { useFolderStore } from '@/lib/store';
 
@@ -116,6 +117,14 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
   const setAlbumPosition = useFolderStore((state) => state.setAlbumPosition);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Performance: Use state for viewport dimensions to avoid layout thrashing.
+  // By tracking size via ResizeObserver, we avoid calling clientWidth/Height during render,
+  // which prevents synchronous reflows during panning and dragging.
+  const [viewport, setViewport] = useState<CanvasViewport>({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1000,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1000,
+  });
+
   const [camera, setCamera] = useState<CameraState>({ x: 48, y: 24, zoom: 1 });
   const cameraRef = useRef<CameraState>(camera);
 
@@ -123,6 +132,21 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
   useEffect(() => {
     cameraRef.current = camera;
   }, [camera]);
+
+  // Performance: Monitor container size without forcing layout during render.
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setViewport({ width, height });
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const [isPanning, setIsPanning] = useState(false);
   const [draggedAlbum, setDraggedAlbum] = useState<{
@@ -135,21 +159,18 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
   // We only re-filter if the camera moves more than 50px (screen space) or if zoom/albums change.
   // The 200px margin in getViewportWorldBoundaries ensures items are still visible during the throttle.
   const lastCameraRef = useRef<CameraState>(camera);
+  const lastViewportRef = useRef<CanvasViewport>(viewport);
   const lastAlbumsRef = useRef<Album[]>(albums);
   const lastVisibleAlbumsRef = useRef<Album[]>([]);
 
   const visibleAlbums = useMemo(() => {
-    const container = containerRef.current;
-    const viewport = {
-      width: container?.clientWidth ?? window.innerWidth,
-      height: container?.clientHeight ?? window.innerHeight,
-    };
-
     const panThreshold = 50; // pixels
     const movedEnough =
       Math.abs(camera.x - lastCameraRef.current.x) > panThreshold ||
       Math.abs(camera.y - lastCameraRef.current.y) > panThreshold ||
       camera.zoom !== lastCameraRef.current.zoom ||
+      viewport.width !== lastViewportRef.current.width ||
+      viewport.height !== lastViewportRef.current.height ||
       albums !== lastAlbumsRef.current ||
       lastVisibleAlbumsRef.current.length === 0;
 
@@ -170,10 +191,11 @@ export function AlbumCanvas({ albums, folderId }: AlbumCanvasProps) {
     });
 
     lastCameraRef.current = camera;
+    lastViewportRef.current = viewport;
     lastAlbumsRef.current = albums;
     lastVisibleAlbumsRef.current = result;
     return result;
-  }, [albums, camera, draggedAlbum?.album.id]);
+  }, [albums, camera, viewport, draggedAlbum?.album.id]);
 
   const startPan = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('[data-album-card]')) {

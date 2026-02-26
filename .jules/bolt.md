@@ -73,3 +73,7 @@
 ## 2026-09-10 - [Optimizing Sanitization Hot Paths]
 **Learning:** `new URL()` is a relatively expensive constructor in both Node.js and browser environments. When sanitizing thousands of items (e.g., during store rehydration), calling it repeatedly for standard `https://` URLs can block the main thread. Implementing a fast-path that validates the prefix and character safety before falling back to the full parser significantly improves startup performance.
 **Action:** Use fast-path validation (prefix and character checks) to avoid expensive object constructors or complex regexes in hot paths like sanitization.
+
+## 2024-05-22 - [Eliminating Layout Thrashing in High-Frequency Render Paths]
+**Learning:** Accessing DOM properties that trigger layout (like `clientWidth`, `clientHeight`, or `getBoundingClientRect`) inside a `useMemo` or render function causes synchronous layout thrashing when the component re-renders frequently (e.g., during panning or dragging). Moving these measurements into a `ResizeObserver` that updates a local state ensures that dimensions are available during render without forcing the browser to recalculate layout mid-cycle.
+**Action:** Use `ResizeObserver` and state to track element dimensions for spatial calculations. Avoid direct DOM measurement calls inside `useMemo` or the component body.
