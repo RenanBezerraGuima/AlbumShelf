@@ -1,6 +1,6 @@
 import LZString from 'lz-string';
 import type { Folder, Album, StreamingProvider } from './types';
-import { sanitizeFolder, isValidStreamingProvider } from './security';
+import { sanitizeFolderTree, isValidStreamingProvider } from './security';
 
 interface SharePayload {
   v: number; // version
@@ -109,7 +109,7 @@ export function decompressData(compressed: string): { folders: Folder[], provide
     // Version 2: Reference-based sharing
     if (rawData.v === 2 && rawData.f) {
       return {
-        folders: fromCompact(rawData.f).map((f: any) => sanitizeFolder(f, true)),
+        folders: sanitizeFolderTree(fromCompact(rawData.f), true),
         provider: isValidStreamingProvider(rawData.p) ? rawData.p : undefined
       };
     }
@@ -117,14 +117,14 @@ export function decompressData(compressed: string): { folders: Folder[], provide
     // Version 1: Compact format (previous optimization)
     if (Array.isArray(rawData) && rawData.length > 0 && rawData[0].i && !rawData[0].id) {
       return {
-        folders: fromCompact(rawData).map((f: any) => sanitizeFolder(f, true))
+        folders: sanitizeFolderTree(fromCompact(rawData), true)
       };
     }
 
     // Legacy Version 0: Full JSON
     if (Array.isArray(rawData)) {
       return {
-        folders: rawData.map((f: any) => sanitizeFolder(f, true))
+        folders: sanitizeFolderTree(rawData, true)
       };
     }
 

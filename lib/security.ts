@@ -15,6 +15,12 @@ export const MAX_FOLDER_DEPTH = 50;
 export const MAX_ALBUMS_PER_FOLDER = 5000;
 export const MAX_SUBFOLDERS_PER_FOLDER = 100;
 export const MAX_TOTAL_ALBUMS = 10000;
+export const MAX_TOTAL_FOLDERS = 2000;
+
+export interface SanitizationContext {
+  totalAlbums: number;
+  totalFolders: number;
+}
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
@@ -185,6 +191,7 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
 /**
  * Recursively sanitize a Folder structure.
  * Supports optional ID regeneration for imports and a custom album mapper.
+ * Enforces global limits on total albums and folders to prevent DoS.
  */
 export function sanitizeFolder(
   folder: any,
@@ -192,15 +199,28 @@ export function sanitizeFolder(
   parentId: string | null = folder.parentId ? String(folder.parentId).slice(0, MAX_ID_LENGTH) : null,
   albumMapper: (album: Album, index: number) => Album = (a) => a,
   depth = 0,
-  context = { totalAlbums: 0 }
+  context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 }
 ): Folder {
+  context.totalFolders++;
   const id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, MAX_ID_LENGTH);
 
   const albums: Album[] = [];
-  if (Array.isArray(folder.albums)) {
-    for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
-      albums.push(albumMapper(sanitizeAlbum(folder.albums[i], regenerateIds), i));
-      context.totalAlbums++;
+  // Defense-in-depth: only process albums if we haven't hit the folder limit
+  if (context.totalFolders <= MAX_TOTAL_FOLDERS) {
+    if (Array.isArray(folder.albums)) {
+      for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
+        albums.push(albumMapper(sanitizeAlbum(folder.albums[i], regenerateIds), i));
+        context.totalAlbums++;
+      }
+    }
+  }
+
+  const subfolders: Folder[] = [];
+  if (Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH) {
+    const rawSubfolders = folder.subfolders.slice(0, MAX_SUBFOLDERS_PER_FOLDER);
+    for (const sf of rawSubfolders) {
+      if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
+      subfolders.push(sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1, context));
     }
   }
 
@@ -209,12 +229,30 @@ export function sanitizeFolder(
     name: String(folder.name || 'Untitled').slice(0, MAX_NAME_LENGTH),
     parentId,
     albums,
-    subfolders: Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH
-      ? folder.subfolders
-          .slice(0, MAX_SUBFOLDERS_PER_FOLDER)
-          .map((sf: any) => sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1, context))
-      : [],
+    subfolders,
     isExpanded: Boolean(folder.isExpanded),
     viewMode: isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid',
   };
+}
+
+/**
+ * Sanitize an array of root folders, enforcing global limits across the entire tree.
+ */
+export function sanitizeFolderTree(
+  rawFolders: any[],
+  regenerateIds = false,
+  albumMapper?: (album: Album, index: number) => Album
+): Folder[] {
+  const context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 };
+  const sanitized: Folder[] = [];
+
+  if (Array.isArray(rawFolders)) {
+    const limitedRoot = rawFolders.slice(0, MAX_SUBFOLDERS_PER_FOLDER);
+    for (const f of limitedRoot) {
+      if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
+      sanitized.push(sanitizeFolder(f, regenerateIds, null, albumMapper, 0, context));
+    }
+  }
+
+  return sanitized;
 }

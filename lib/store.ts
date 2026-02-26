@@ -5,7 +5,7 @@ import {
   sanitizeUrl,
   sanitizeImageUrl,
   sanitizeAlbum,
-  sanitizeFolder,
+  sanitizeFolderTree,
   isValidTheme,
   isValidViewMode,
   isValidStreamingProvider,
@@ -707,8 +707,10 @@ export const useFolderStore = create<FolderStore>()(
         const state = get();
         if (!Array.isArray(importedFolders)) return;
 
-        const processedImported = importedFolders.map((f: any) =>
-          sanitizeFolder(f, true, null, normalizeAlbumPosition),
+        const processedImported = sanitizeFolderTree(
+          importedFolders,
+          true,
+          normalizeAlbumPosition,
         );
         const existingFolders = [...state.folders];
 
@@ -811,7 +813,7 @@ export const useFolderStore = create<FolderStore>()(
         if (state) {
           // Defense-in-depth: Validate rehydrated state from untrusted localStorage
           if (Array.isArray(state.folders)) {
-            state.folders = state.folders.map((f: any) => sanitizeFolder(f));
+            state.folders = sanitizeFolderTree(state.folders);
           } else {
             state.folders = [];
           }
