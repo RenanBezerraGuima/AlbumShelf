@@ -408,7 +408,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
                 className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
                 aria-label="Clear search"
                 aria-keyshortcuts="Escape"
-                title="Clear search"
+                title="Clear search [Esc]"
               >
                 <X className="h-4 w-4" />
               </button>
