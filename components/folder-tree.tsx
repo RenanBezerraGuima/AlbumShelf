@@ -257,7 +257,7 @@ const FolderItem = React.memo(function FolderItem({
             <span
               title="Drag to reorder"
               aria-label="Drag to reorder"
-              className="opacity-0 group-hover:opacity-100 cursor-grab shrink-0"
+              className="opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
             >
               <GripVertical className="h-3 w-3" />
             </span>
@@ -307,7 +307,7 @@ const FolderItem = React.memo(function FolderItem({
                       if (e.key === "Escape") setIsEditing(false);
                     }}
                   />
-                  <div id={`rename-counter-${folder.id}`} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase" aria-hidden="true">
+                  <div id={`rename-counter-${folder.id}`} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase">
                     {editName.length}/100
                   </div>
                 </div>
@@ -345,7 +345,7 @@ const FolderItem = React.memo(function FolderItem({
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      className="h-6 w-6 shrink-0 opacity-40 group-hover:opacity-100 focus-visible:opacity-100"
                       onClick={(e) => e.stopPropagation()}
                       aria-label="Collection actions"
                       title="Collection actions"
@@ -489,7 +489,7 @@ const FolderItem = React.memo(function FolderItem({
                     }
                   }}
                 />
-                <div id={`subfolder-counter-${folder.id}`} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase" aria-hidden="true">
+                <div id={`subfolder-counter-${folder.id}`} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase">
                   {newSubfolderName.length}/100
                 </div>
               </div>
@@ -669,7 +669,7 @@ export function FolderTree() {
                     }
                   }}
                 />
-                <div id="root-folder-counter" className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase" aria-hidden="true">
+                <div id="root-folder-counter" className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground pointer-events-none select-none uppercase">
                   {newFolderName.length}/100
                 </div>
               </div>

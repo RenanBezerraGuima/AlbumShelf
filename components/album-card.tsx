@@ -86,11 +86,11 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group relative bg-card overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'
+            'group relative bg-card overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1'
           )}
           style={{ borderRadius: 'var(--radius)' }}
         >
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+      <div className="absolute top-2 right-2 opacity-40 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
         <Button
           size="icon"
           variant="destructive"
@@ -147,7 +147,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         
         <Button
           size="icon-sm"
-          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
+          className="absolute bottom-2 right-2 opacity-40 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
           style={{ borderRadius: 'var(--radius)' }}
           onClick={handlePlay}
           onPointerDown={(e) => e.stopPropagation()}

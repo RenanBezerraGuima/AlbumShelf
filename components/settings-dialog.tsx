@@ -45,6 +45,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isExported, setIsExported] = useState(false);
+  const [isImported, setIsImported] = useState(false);
 
   const shareUrlInfo = useMemo(() => {
     try {
@@ -128,6 +129,8 @@ export const SettingsDialog = memo(function SettingsDialog() {
         }
 
         useFolderStore.getState().importFolders(json);
+        setIsImported(true);
+        setTimeout(() => setIsImported(false), 2000);
 
         // Reset file input
         if (fileInputRef.current) {
@@ -280,11 +283,11 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   </p>
                   <Button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full justify-start gap-2"
-                    variant="outline"
+                    className="w-full justify-start gap-2 transition-all duration-300"
+                    variant={isImported ? "default" : "outline"}
                   >
-                    <Upload className="h-4 w-4" />
-                    Import Data
+                    {isImported ? <Check className="h-4 w-4 text-green-400" /> : <Upload className="h-4 w-4" />}
+                    {isImported ? 'Data Imported!' : 'Import Data'}
                   </Button>
                   <input
                     type="file"
