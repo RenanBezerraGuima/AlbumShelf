@@ -10,6 +10,9 @@ import {
   isValidViewMode,
   isValidStreamingProvider,
   isValidGeistFont,
+  MAX_ID_LENGTH,
+  MAX_NAME_LENGTH,
+  MAX_TOKEN_LENGTH,
 } from "./security";
 import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
@@ -367,8 +370,8 @@ export const useFolderStore = create<FolderStore>()(
       createFolder: (name, parentId) => {
         const newFolder: Folder = {
           id: generateId(),
-          name: name.slice(0, 100),
-          parentId: parentId ? String(parentId).slice(0, 100) : null,
+          name: name.slice(0, MAX_NAME_LENGTH),
+          parentId: parentId ? String(parentId).slice(0, MAX_ID_LENGTH) : null,
           albums: [],
           subfolders: [],
           isExpanded: true,
@@ -389,7 +392,7 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       renameFolder: (id, name) => {
-        const slicedName = name.slice(0, 100);
+        const slicedName = name.slice(0, MAX_NAME_LENGTH);
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
           const newFolders = updateFolderInTree(currentFolders, id, (folder) => {
@@ -447,7 +450,7 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setSelectedFolder: (id) => {
-        const newId = id ? String(id).slice(0, 100) : null;
+        const newId = id ? String(id).slice(0, MAX_ID_LENGTH) : null;
         if (get().selectedFolderId === newId) return;
         set({ selectedFolderId: newId, lastUpdated: Date.now() });
       },
@@ -762,7 +765,7 @@ export const useFolderStore = create<FolderStore>()(
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
         set({
-          spotifyToken: token ? String(token).slice(0, 1024) : null,
+          spotifyToken: token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null,
           spotifyTokenExpiry: typeof expiresIn === 'number' && Number.isFinite(expiresIn) ? expiresIn : null,
           spotifyTokenTimestamp: typeof timestamp === 'number' && Number.isFinite(timestamp) ? timestamp : null,
           lastUpdated: Date.now(),
@@ -818,7 +821,7 @@ export const useFolderStore = create<FolderStore>()(
             state.folders = [];
           }
 
-          state.selectedFolderId = typeof state.selectedFolderId === 'string' ? state.selectedFolderId.slice(0, 100) : null;
+          state.selectedFolderId = typeof state.selectedFolderId === 'string' ? state.selectedFolderId.slice(0, MAX_ID_LENGTH) : null;
           state.hasSetPreference = Boolean(state.hasSetPreference);
           state.spotifyTokenExpiry = typeof state.spotifyTokenExpiry === 'number' && Number.isFinite(state.spotifyTokenExpiry) ? state.spotifyTokenExpiry : null;
           state.spotifyTokenTimestamp = typeof state.spotifyTokenTimestamp === 'number' && Number.isFinite(state.spotifyTokenTimestamp) ? state.spotifyTokenTimestamp : null;
@@ -828,7 +831,7 @@ export const useFolderStore = create<FolderStore>()(
           if (!isValidStreamingProvider(state.streamingProvider))
             state.streamingProvider = "deezer";
           if (state.spotifyToken)
-            state.spotifyToken = String(state.spotifyToken).slice(0, 1024);
+            state.spotifyToken = String(state.spotifyToken).slice(0, MAX_TOKEN_LENGTH);
           if (
             typeof state.lastUpdated !== "number" ||
             !Number.isFinite(state.lastUpdated)

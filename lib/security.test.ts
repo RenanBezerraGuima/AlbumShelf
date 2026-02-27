@@ -184,6 +184,29 @@ describe('Security Utilities', () => {
     });
   });
 
+  describe('jsonp', () => {
+    it('should reject non-https URLs', async () => {
+      const { jsonp } = await import('./security');
+      await expect(jsonp('http://api.deezer.com/test')).rejects.toThrow('Insecure JSONP protocol');
+    });
+
+    it('should reject untrusted domains', async () => {
+      const { jsonp } = await import('./security');
+      await expect(jsonp('https://evil.com/test')).rejects.toThrow('Untrusted JSONP domain');
+    });
+
+    it('should reject URLs with existing callback parameter', async () => {
+      const { jsonp } = await import('./security');
+      await expect(jsonp('https://api.deezer.com/test?callback=evil')).rejects.toThrow('URL already contains a callback parameter');
+    });
+
+    it('should reject excessively long URLs', async () => {
+      const { jsonp } = await import('./security');
+      const longUrl = 'https://api.deezer.com/test?q=' + 'a'.repeat(3000);
+      await expect(jsonp(longUrl)).rejects.toThrow('URL exceeds maximum length');
+    });
+  });
+
   describe('sanitizeAlbum', () => {
     it('should truncate id, name and artist to their respective limits', () => {
       const longText = 'A'.repeat(300);

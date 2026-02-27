@@ -109,3 +109,8 @@
 **Vulnerability:** Maliciously crafted deep or wide folder trees could bypass local limits because limits were enforced per-root-folder rather than globally across the entire structure, leading to potential browser hang or memory exhaustion.
 **Learning:** When using recursion to sanitize data that can contain multiple root nodes (like a shared shelf), a shared context object MUST be used to track cumulative counts across all branches.
 **Prevention:** Implement a standardized entry point like `sanitizeFolderTree` that initializes a shared context and enforces limits before calling recursive sanitizers on root nodes. Use loops or `filter` with stateful checks to break out of processing once global limits are reached.
+
+## 2026-04-20 - [Hardened Centralized JSONP Implementation]
+**Vulnerability:** Duplicated and insecure JSONP implementations in different services were vulnerable to parameter pollution and potential XSS if unvetted domains were used.
+**Learning:** Centralizing security-sensitive utilities like JSONP ensures consistent enforcement of defense-in-depth measures (HTTPS, whitelisting, CSPRNG for callbacks). Using the native `URL` object for parameter injection is more robust than string concatenation as it correctly handles existing query parameters and fragments.
+**Prevention:** Always centralize security utilities and avoid "security drift" from duplicated code. Use robust APIs like `URL.searchParams` for modifying untrusted URLs.

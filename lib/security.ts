@@ -2,11 +2,12 @@ import type { Album, Folder, Theme, AlbumViewMode, StreamingProvider, GeistFont 
 import { THEMES, VIEW_MODES, STREAMING_PROVIDERS, GEIST_FONTS } from './types';
 
 const ALLOWED_PROTOCOLS = ['https:'];
-const MAX_URL_LENGTH = 2048;
+export const MAX_URL_LENGTH = 2048;
 export const MAX_TEXT_LENGTH = 200;
 export const MAX_ID_LENGTH = 100;
 export const MAX_NAME_LENGTH = 100;
 export const MAX_DATE_LENGTH = 50;
+export const MAX_TOKEN_LENGTH = 1024;
 
 export const TRUSTED_JSONP_DOMAINS = ['api.deezer.com', 'itunes.apple.com'];
 
@@ -186,6 +187,73 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
   }
 
   return sanitized;
+}
+
+/**
+ * Hardened JSONP utility that enforces HTTPS, domain whitelisting,
+ * prevents parameter pollution, and uses CSPRNG for callback names.
+ */
+export function jsonp<T>(url: string): Promise<T> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('JSONP is only supported in browser environment'));
+  }
+
+  if (url.length > MAX_URL_LENGTH) {
+    return Promise.reject(new Error('URL exceeds maximum length'));
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    // Enforce HTTPS
+    if (parsed.protocol !== 'https:') {
+      throw new Error(`Insecure JSONP protocol: ${parsed.protocol}`);
+    }
+
+    // Domain whitelist check
+    if (!TRUSTED_JSONP_DOMAINS.includes(parsed.hostname)) {
+      throw new Error(`Untrusted JSONP domain: ${parsed.hostname}`);
+    }
+
+    // Prevent parameter pollution / callback injection
+    if (parsed.searchParams.has('callback')) {
+      throw new Error('URL already contains a callback parameter');
+    }
+  } catch (e) {
+    return Promise.reject(e instanceof Error ? e : new Error('Invalid JSONP URL'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const randomArray = new Uint32Array(1);
+    crypto.getRandomValues(randomArray);
+    const callbackName = `jsonp_cb_${randomArray[0]}_${Date.now()}`;
+
+    const script = document.createElement('script');
+
+    (window as any)[callbackName] = (data: T) => {
+      cleanup();
+      resolve(data);
+    };
+
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+
+    // Use URL searchParams for robust parameter setting
+    const finalUrl = new URL(url);
+    finalUrl.searchParams.set('callback', callbackName);
+
+    script.src = finalUrl.toString();
+    script.onerror = () => {
+      cleanup();
+      reject(new Error(`JSONP request failed for ${url}`));
+    };
+
+    document.body.appendChild(script);
+  });
 }
 
 /**
