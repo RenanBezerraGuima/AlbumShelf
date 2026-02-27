@@ -1,5 +1,5 @@
 import type { Album } from './types';
-import { sanitizeAlbum, MAX_TEXT_LENGTH, TRUSTED_JSONP_DOMAINS } from './security';
+import { sanitizeAlbum, MAX_TEXT_LENGTH, jsonp } from './security';
 
 // Simple in-memory cache for search results
 const searchCache = new Map<string, { data: Album[], timestamp: number }>();
@@ -64,41 +64,6 @@ function withCache<T extends any[]>(
     pendingRequests.set(cacheKey, requestPromise);
     return requestPromise;
   };
-}
-
-// Helper for JSONP requests to Deezer and Apple APIs
-function jsonp<T>(url: string): Promise<T> {
-  // Domain whitelist check for defense-in-depth
-  try {
-    const parsed = new URL(url);
-    if (!TRUSTED_JSONP_DOMAINS.includes(parsed.hostname)) {
-      throw new Error(`Untrusted JSONP domain: ${parsed.hostname}`);
-    }
-  } catch (e) {
-    return Promise.reject(e instanceof Error ? e : new Error('Invalid JSONP URL'));
-  }
-
-  return new Promise((resolve, reject) => {
-    const randomArray = new Uint32Array(1);
-    crypto.getRandomValues(randomArray);
-    const callbackName = `jsonp_callback_${randomArray[0]}`;
-    const script = document.createElement('script');
-
-    // @ts-ignore
-    window[callbackName] = (data: T) => {
-      delete (window as any)[callbackName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-
-    script.src = `${url}${url.indexOf('?') >= 0 ? '&' : '?'}callback=${callbackName}`;
-    script.onerror = () => {
-      delete (window as any)[callbackName];
-      document.body.removeChild(script);
-      reject(new Error(`JSONP request failed for ${url}`));
-    };
-    document.body.appendChild(script);
-  });
 }
 
 async function searchAlbumsDeezerInternal(query: string): Promise<Album[]> {

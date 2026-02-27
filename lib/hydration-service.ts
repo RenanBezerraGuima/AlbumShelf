@@ -1,5 +1,5 @@
 import type { Album, StreamingProvider } from './types';
-import { sanitizeAlbum, TRUSTED_JSONP_DOMAINS } from './security';
+import { sanitizeAlbum, jsonp } from './security';
 
 /**
  * Hydrates metadata for a list of album IDs from a specific provider.
@@ -110,39 +110,6 @@ export async function hydrateAlbums(
   }
 
   return results;
-}
-
-// Helpers copied/adapted from search-service.ts to avoid circular dependencies
-function jsonp<T>(url: string): Promise<T> {
-  // Domain whitelist check for defense-in-depth
-  try {
-    const parsed = new URL(url);
-    if (!TRUSTED_JSONP_DOMAINS.includes(parsed.hostname)) {
-      throw new Error(`Untrusted JSONP domain: ${parsed.hostname}`);
-    }
-  } catch (e) {
-    return Promise.reject(e instanceof Error ? e : new Error('Invalid JSONP URL'));
-  }
-
-  return new Promise((resolve, reject) => {
-    const randomArray = new Uint32Array(1);
-    crypto.getRandomValues(randomArray);
-    const callbackName = `jsonp_callback_hydrate_${randomArray[0]}`;
-    const script = document.createElement('script');
-    // @ts-ignore
-    window[callbackName] = (data: T) => {
-      delete (window as any)[callbackName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src = `${url}${url.indexOf('?') >= 0 ? '&' : '?'}callback=${callbackName}`;
-    script.onerror = () => {
-      delete (window as any)[callbackName];
-      document.body.removeChild(script);
-      reject(new Error(`JSONP request failed for ${url}`));
-    };
-    document.body.appendChild(script);
-  });
 }
 
 async function jsonpLookupApple(ids: string): Promise<any> {
