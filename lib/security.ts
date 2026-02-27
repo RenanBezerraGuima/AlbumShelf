@@ -26,6 +26,7 @@ export interface SanitizationContext {
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
+const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 
 /**
@@ -67,9 +68,9 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
       return undefined;
     }
 
-    // Performance: Avoid redundant toLowerCase() by checking against common encoded variants directly
-    const lowerUrl = trimmedUrl.toLowerCase();
-    if (lowerUrl.includes('%3a') || lowerUrl.includes('%5c')) {
+    // Performance: Avoid redundant string allocation and copy from toLowerCase()
+    // by using a case-insensitive regex for encoded characters.
+    if (ENCODED_COLON_OR_BACKSLASH_REGEXP.test(trimmedUrl)) {
       return undefined;
     }
 
@@ -99,11 +100,11 @@ export function sanitizeImageUrl(url: string | undefined): string | undefined {
   // Performance: Avoid toLowerCase() unless potentially a data: URL.
   // Most URLs in the app are https:// which are handled by sanitizeUrl.
   if (trimmedUrl.length > 5 && trimmedUrl.slice(0, 5).toLowerCase() === 'data:') {
-    const lowerUrl = trimmedUrl.toLowerCase();
-    const commaIndex = lowerUrl.indexOf(',');
+    const commaIndex = trimmedUrl.indexOf(',');
     if (commaIndex === -1) return undefined;
 
-    const mimePart = lowerUrl.slice(0, commaIndex);
+    // Performance: Only lowercase the mime part, not the entire data string (which can be 256KB)
+    const mimePart = trimmedUrl.slice(0, commaIndex).toLowerCase();
     let decodedMimePart;
     try {
       // Decode to handle percent-encoding bypasses (e.g. svg%2Bxml)
