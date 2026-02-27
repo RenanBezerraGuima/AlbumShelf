@@ -384,6 +384,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             style={{ borderRadius: 'var(--radius)', fontFamily: 'var(--font-mono)' }}
             maxLength={200}
             aria-label="Search albums"
+            aria-describedby="album-search-counter"
             aria-keyshortcuts="/"
             aria-expanded={isOpen}
             aria-controls={listboxId}
@@ -391,14 +392,15 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
             role="combobox"
           />
-          {query.length > 0 && (
-            <div
-              className="absolute right-10 top-1/2 -translate-y-1/2 text-[9px] font-mono text-muted-foreground opacity-50 uppercase tracking-widest animate-in fade-in duration-300 select-none pointer-events-none"
-              aria-hidden="true"
-            >
-              {query.length}/{200}
-            </div>
-          )}
+          <div
+            id="album-search-counter"
+            className={cn(
+              "absolute right-10 top-1/2 -translate-y-1/2 text-[9px] font-mono text-muted-foreground opacity-50 uppercase tracking-widest animate-in fade-in duration-300 select-none pointer-events-none",
+              query.length === 0 && "hidden"
+            )}
+          >
+            {query.length}/{200}
+          </div>
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
