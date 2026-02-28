@@ -4,6 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { Play, Pause, SkipForward, SkipBack, Square, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { audioManager, type AudioState } from '@/lib/audio-store';
 import { cn } from '@/lib/utils';
 
@@ -63,51 +68,79 @@ export function AudioController() {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-1 md:gap-2 flex-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handlePrev}
-            disabled={state.currentIndex <= 0}
-            className="h-8 w-8"
-            title="Previous track"
-          >
-            <SkipBack className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handlePrev}
+                disabled={state.currentIndex <= 0}
+                className="h-8 w-8"
+                aria-label="Previous track"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Previous track
+            </TooltipContent>
+          </Tooltip>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleStop}
-            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-            title="Stop playback"
-          >
-            <Square className="h-4 w-4 fill-current" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleStop}
+                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                aria-label="Stop playback"
+              >
+                <Square className="h-4 w-4 fill-current" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Stop playback
+            </TooltipContent>
+          </Tooltip>
 
-          <Button
-            size="icon"
-            variant="default"
-            onClick={handleTogglePlay}
-            className="h-10 w-10 brutalist-shadow-sm"
-            title={state.isPlaying ? "Pause" : "Play"}
-          >
-            {state.isPlaying ? (
-              <Pause className="h-5 w-5 fill-current" />
-            ) : (
-              <Play className="h-5 w-5 fill-current" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="default"
+                onClick={handleTogglePlay}
+                className="h-10 w-10 brutalist-shadow-sm"
+                aria-label={state.isPlaying ? "Pause" : "Play"}
+              >
+                {state.isPlaying ? (
+                  <Pause className="h-5 w-5 fill-current" />
+                ) : (
+                  <Play className="h-5 w-5 fill-current" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              {state.isPlaying ? "Pause" : "Play"}
+            </TooltipContent>
+          </Tooltip>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleNext}
-            disabled={state.currentIndex >= state.playlist.length - 1}
-            className="h-8 w-8"
-            title="Next track"
-          >
-            <SkipForward className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleNext}
+                disabled={state.currentIndex >= state.playlist.length - 1}
+                className="h-8 w-8"
+                aria-label="Next track"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Next track
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Volume */}
