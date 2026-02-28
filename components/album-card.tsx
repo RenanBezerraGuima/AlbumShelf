@@ -1,8 +1,8 @@
 'use client';
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from 'react';
-import { Play, Trash2, Copy, ExternalLink } from 'lucide-react';
+import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,8 +20,10 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { useFolderStore } from '@/lib/store';
-import type { Album } from '@/lib/types';
+import type { Album, AlbumDetails } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { getAlbumDetailsDeezer } from '@/lib/search-service';
+import { audioManager } from '@/lib/audio-store';
 
 interface AlbumCardProps {
   album: Album;
@@ -53,6 +55,42 @@ const OpenInProviderMenuItem = React.memo(function OpenInProviderMenuItem({
 export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [details, setDetails] = useState<AlbumDetails | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrackUrl, setCurrentTrackUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = audioManager.subscribe((playing, url) => {
+      setIsPlaying(playing);
+      setCurrentTrackUrl(url);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleFlip = async (e?: React.MouseEvent) => {
+    // Only flip for Deezer for now
+    if (!album.id.startsWith('deezer-')) return;
+
+    if (!isFlipped && !details) {
+      setIsLoadingDetails(true);
+      try {
+        const data = await getAlbumDetailsDeezer(album.id);
+        setDetails(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    }
+
+    if (isFlipped) {
+      audioManager.stop();
+    }
+
+    setIsFlipped(!isFlipped);
+  };
 
   const handleRemove = () => {
     useFolderStore.getState().removeAlbumFromFolder(folderId, album.id);
@@ -86,10 +124,30 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group relative bg-card overflow-hidden border-2 border-border transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1'
+            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1',
+            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default',
+            isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
+          onClick={(e) => {
+            // Check if the click target is a button or inside a button
+            if ((e.target as HTMLElement).closest('button')) {
+              return;
+            }
+            handleFlip(e);
+          }}
         >
+          <div className={cn(
+            "relative w-full h-full transition-transform duration-700 preserve-3d cursor-pointer",
+            isFlipped && "rotate-y-180"
+          )}>
+            {/* Front Side */}
+            <div
+              className={cn(
+                'absolute inset-0 bg-card overflow-hidden border-2 border-border backface-hidden'
+              )}
+              style={{ borderRadius: 'var(--radius)' }}
+            >
       <div className="absolute top-2 right-2 opacity-40 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
         <Button
           size="icon"
@@ -182,6 +240,100 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           <span>{album.totalTracks} tracks</span>
         </div>
       </div>
+            </div>
+
+            {/* Back Side */}
+            <div
+              className={cn(
+                'absolute top-0 left-0 right-0 bg-card border-2 border-border backface-hidden rotate-y-180 flex flex-col transition-[height,box-shadow] duration-300',
+                isFlipped ? 'h-fit min-h-full max-h-[400px] brutalist-shadow z-50' : 'h-full overflow-hidden'
+              )}
+              style={{ borderRadius: 'var(--radius)' }}
+            >
+              <div className="p-3 border-b-2 border-border bg-muted/20 flex items-center justify-between">
+                <div className="min-w-0">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest truncate">{album.name}</h4>
+                  <p className="text-[8px] text-muted-foreground truncate">{album.artist}</p>
+                </div>
+                <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+              </div>
+
+              <div className={cn(
+                "p-1 custom-scrollbar",
+                isFlipped ? "overflow-y-auto max-h-[320px]" : "flex-1 overflow-y-auto"
+              )}>
+                {isLoadingDetails ? (
+                  <div className="space-y-2 p-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="h-3 w-3 bg-muted animate-pulse shrink-0" />
+                        <div className="h-3 flex-1 bg-muted animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : details ? (
+                  <div className="space-y-0.5">
+                    {details.tracks.map((track, idx) => {
+                      const isTrackPlaying = isPlaying && currentTrackUrl === track.preview;
+                      return (
+                        <div
+                          key={track.id}
+                          className={cn(
+                            "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
+                            isTrackPlaying && "bg-primary/20"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (track.preview) {
+                              audioManager.play(track.preview);
+                            }
+                          }}
+                        >
+                          <span className="text-muted-foreground w-3 shrink-0">{idx + 1}</span>
+                          <span className="flex-1 truncate font-medium">{track.title}</span>
+                          <div className="shrink-0">
+                            {isTrackPlaying ? (
+                              <Pause className="h-3 w-3 fill-current text-primary" />
+                            ) : (
+                              <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {(details.label || details.contributors) && (
+                      <div className="mt-4 p-2 border-t border-border/50 space-y-2">
+                        {details.label && (
+                          <div>
+                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Label</p>
+                            <p className="text-[9px] tracking-tighter">{details.label}</p>
+                          </div>
+                        )}
+                        {details.contributors && (
+                          <div>
+                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Contributors</p>
+                            <p className="text-[9px] leading-tight tracking-tighter">
+                              {details.contributors.join(', ')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+                    <Music className="h-8 w-8 text-muted/30 mb-2" />
+                    <p className="text-[10px] text-muted-foreground">Tracklist not available for this provider yet.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-2 border-t-2 border-border bg-muted/10 text-[8px] font-mono text-center text-muted-foreground">
+                CLICK TO FLIP FRONT
+              </div>
+            </div>
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

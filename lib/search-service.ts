@@ -158,3 +158,34 @@ async function searchAlbumsAppleInternal(query: string): Promise<Album[]> {
 export const searchAlbumsDeezer = withCache('deezer', searchAlbumsDeezerInternal);
 export const searchAlbumsApple = withCache('apple', searchAlbumsAppleInternal);
 export const searchAlbumsSpotify = withCache('spotify', searchAlbumsSpotifyInternal);
+
+export async function getAlbumDetailsDeezer(albumId: string): Promise<import('./types').AlbumDetails> {
+  const numericId = albumId.replace('deezer-', '');
+  try {
+    const data = await jsonp<any>(
+      `https://api.deezer.com/album/${numericId}?output=jsonp`
+    );
+
+    if (data.error) {
+      throw new Error(data.error.message || 'Deezer album lookup error');
+    }
+
+    const tracks = (data.tracks?.data || []).map((t: any) => ({
+      id: String(t.id),
+      title: t.title,
+      preview: t.preview,
+      duration: t.duration,
+    }));
+
+    const contributors = (data.contributors || []).map((c: any) => c.name);
+
+    return {
+      tracks,
+      label: data.label,
+      contributors: contributors.length > 0 ? contributors : undefined,
+    };
+  } catch (error) {
+    console.error('Deezer album lookup error:', error);
+    throw error;
+  }
+}
