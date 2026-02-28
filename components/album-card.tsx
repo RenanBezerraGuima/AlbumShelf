@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect } from "react";
-import { useState } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -107,11 +106,11 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     }
   };
 
-  const copyDetails = () => {
+  const copyDetails = useCallback(() => {
     navigator.clipboard.writeText(`${album.artist} - ${album.name}`);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-  };
+  }, [album.artist, album.name]);
 
   return (
     <ContextMenu>
@@ -215,10 +214,14 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <h3 className="font-medium text-sm text-foreground truncate" title={album.name} style={{ fontFamily: 'var(--font-display)' }}>
           {album.name}
         </h3>
-        <p className={cn(
-          "text-[10px] truncate mt-0.5 transition-colors duration-300",
-          isCopied ? "text-primary font-bold" : "text-muted-foreground"
-        )} title={album.artist}>
+        <p
+          className={cn(
+            "text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary",
+            isCopied ? "text-primary font-bold" : "text-muted-foreground"
+          )}
+          title={`${album.artist} [Click to copy]`}
+          onClick={copyDetails}
+        >
           {isCopied ? "Copied to clipboard!" : album.artist}
         </p>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
