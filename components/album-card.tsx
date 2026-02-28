@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect } from "react";
 import { useState } from 'react';
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -125,7 +125,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <div
           className={cn(
             'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1',
-            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default'
+            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default',
+            isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
           onClick={(e) => {
@@ -244,7 +245,8 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
             {/* Back Side */}
             <div
               className={cn(
-                'absolute inset-0 bg-card overflow-hidden border-2 border-border backface-hidden rotate-y-180 flex flex-col'
+                'absolute top-0 left-0 right-0 bg-card border-2 border-border backface-hidden rotate-y-180 flex flex-col transition-[height,box-shadow] duration-300',
+                isFlipped ? 'h-fit min-h-full max-h-[400px] brutalist-shadow z-50' : 'h-full overflow-hidden'
               )}
               style={{ borderRadius: 'var(--radius)' }}
             >
@@ -256,7 +258,10 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
                 <Info className="h-3 w-3 text-muted-foreground shrink-0" />
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+              <div className={cn(
+                "p-1 custom-scrollbar",
+                isFlipped ? "overflow-y-auto max-h-[320px]" : "flex-1 overflow-y-auto"
+              )}>
                 {isLoadingDetails ? (
                   <div className="space-y-2 p-2">
                     {[1, 2, 3, 4, 5].map((i) => (
