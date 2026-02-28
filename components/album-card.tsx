@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect } from "react";
-import { useState } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,70 +73,19 @@ const TrackList = React.memo(function TrackList({
     return unsubscribe;
   }, []);
 
-  return (
-    <div className="space-y-0.5">
-      {details.tracks.map((track, idx) => {
-        const isTrackPlaying = isPlaying && currentTrackUrl === track.preview;
-        return (
-          <div
-            key={track.id}
-            className={cn(
-              "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
-              isTrackPlaying && "bg-primary/20"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (track.preview) {
-                audioManager.play(track.preview);
-              }
-            }}
-          >
-            <span className="text-muted-foreground w-3 shrink-0">{idx + 1}</span>
-            <span className="flex-1 truncate font-medium">{track.title}</span>
-            <div className="shrink-0">
-              {isTrackPlaying ? (
-                <Pause className="h-3 w-3 fill-current text-primary" />
-              ) : (
-                <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
-              )}
-            </div>
-          </div>
-        );
-      })}
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFlipped) {
+        setIsFlipped(false);
+        audioManager.stop();
+      }
+    };
 
-      {(details.label || details.contributors) && (
-        <div className="mt-4 p-2 border-t border-border/50 space-y-2">
-          {details.label && (
-            <div>
-              <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Label</p>
-              <p className="text-[9px] tracking-tighter">{details.label}</p>
-            </div>
-          )}
-          {details.contributors && (
-            <div>
-              <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Contributors</p>
-              <p className="text-[9px] leading-tight tracking-tighter">
-                {details.contributors.join(', ')}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-});
-
-export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [details, setDetails] = useState<AlbumDetails | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped]);
 
   const handleFlip = async (e?: React.MouseEvent) => {
-    // Only flip for Deezer for now
-    if (!album.id.startsWith('deezer-')) return;
-
     if (!isFlipped && !details) {
       setIsLoadingDetails(true);
       try {
@@ -178,19 +126,18 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     }
   };
 
-  const copyDetails = () => {
+  const copyDetails = useCallback(() => {
     navigator.clipboard.writeText(`${album.artist} - ${album.name}`);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-  };
+  }, [album.artist, album.name]);
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1',
-            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default',
+            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer',
             isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
@@ -285,10 +232,14 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <h3 className="font-medium text-sm text-foreground truncate" title={album.name} style={{ fontFamily: 'var(--font-display)' }}>
           {album.name}
         </h3>
-        <p className={cn(
-          "text-[10px] truncate mt-0.5 transition-colors duration-300",
-          isCopied ? "text-primary font-bold" : "text-muted-foreground"
-        )} title={album.artist}>
+        <p
+          className={cn(
+            "text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary",
+            isCopied ? "text-primary font-bold" : "text-muted-foreground"
+          )}
+          title={`${album.artist} [Click to copy]`}
+          onClick={copyDetails}
+        >
           {isCopied ? "Copied to clipboard!" : album.artist}
         </p>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
