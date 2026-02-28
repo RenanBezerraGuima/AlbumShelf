@@ -16,8 +16,8 @@ describe('AlbumCard', () => {
 
   it('renders album info', () => {
     render(<AlbumCard album={mockAlbum} folderId="folder-1" />);
-    expect(screen.getByText('Test Album')).toBeInTheDocument();
-    expect(screen.getByText('Test Artist')).toBeInTheDocument();
+    expect(screen.getAllByText('Test Album')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Test Artist')[0]).toBeInTheDocument();
   });
 
   it('calls window.open when play button is clicked', () => {

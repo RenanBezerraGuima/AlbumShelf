@@ -47,3 +47,16 @@ export interface SpotifyAlbum {
   total_tracks: number;
   external_urls: { spotify: string };
 }
+
+export interface Track {
+  id: string;
+  title: string;
+  preview: string;
+  duration: number;
+}
+
+export interface AlbumDetails {
+  tracks: Track[];
+  label?: string;
+  contributors?: string[];
+}

@@ -1,0 +1,22 @@
+
+> album-shelf@0.1.0 dev /app
+> next dev
+
+▲ Next.js 16.1.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 701ms
+○ Compiling / ...
+ GET / 200 in 7.0s (compile: 5.7s, render: 1226ms)
+ GET / 200 in 87ms (compile: 5ms, render: 82ms)
+ GET / 200 in 85ms (compile: 3ms, render: 82ms)
+ GET / 200 in 82ms (compile: 3ms, render: 79ms)
+ GET / 200 in 79ms (compile: 4ms, render: 76ms)
+ GET / 200 in 827ms (compile: 281ms, render: 546ms)
