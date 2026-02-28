@@ -4,6 +4,11 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Search, Loader2, Check, X, Menu, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useShallow } from 'zustand/react/shallow';
 import { useFolderStore, findFolder } from '@/lib/store';
@@ -405,15 +410,21 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : query ? (
-              <button
-                onClick={clearSearch}
-                className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
-                aria-label="Clear search"
-                aria-keyshortcuts="Escape"
-                title="Clear search [Esc]"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={clearSearch}
+                    className="p-1 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-primary outline-none"
+                    aria-label="Clear search"
+                    aria-keyshortcuts="Escape"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Clear search [Esc]
+                </TooltipContent>
+              </Tooltip>
             ) : null}
           </div>
         </div>

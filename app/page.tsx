@@ -16,7 +16,13 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+  SheetHeader,
+} from '@/components/ui/sheet';
 import { useFolderStore } from '@/lib/store';
 import { decompressData } from '@/lib/share-service';
 import { hydrateAlbums } from '@/lib/hydration-service';
@@ -95,12 +101,12 @@ export default function Home() {
               <AlbumGrid isMobile={true} />
             </div>
 
-            <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <DialogContent className="p-0 sm:max-w-[300px] h-[100dvh] left-0 translate-x-0 top-0 translate-y-0 border-r-2 border-l-0 border-y-0 rounded-none shadow-none [&>button[aria-label='Close']]:hidden z-[100]">
-                <DialogHeader className="sr-only">
-                  <DialogTitle>Collections Menu</DialogTitle>
-                  <DialogDescription>Browse your music collections</DialogDescription>
-                </DialogHeader>
+            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <SheetContent side="left" showCloseButton={false} className="p-0 w-[280px] border-r-2 border-border rounded-none shadow-none z-[100]">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Collections Menu</SheetTitle>
+                  <SheetDescription>Browse your music collections</SheetDescription>
+                </SheetHeader>
                 <div className="h-full flex flex-col overflow-hidden" onClick={(e) => {
                   // Only close if we clicked a folder item (not a button or input)
                   const target = e.target as HTMLElement;
@@ -112,8 +118,8 @@ export default function Home() {
                     <FolderTree />
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
+              </SheetContent>
+            </Sheet>
             <div className="pb-[68px]">
               <AlbumSearch isMobile={true} />
             </div>
