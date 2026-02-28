@@ -18,12 +18,29 @@ export interface AudioState {
 
 type AudioStatusCallback = (state: AudioState) => void;
 
+const VOLUME_STORAGE_KEY = 'album-shelf-volume';
+
 let globalAudio: HTMLAudioElement | null = null;
+
+const getInitialVolume = () => {
+  if (typeof window === 'undefined') return 0.7;
+  try {
+    const saved = localStorage.getItem(VOLUME_STORAGE_KEY);
+    if (saved !== null) {
+      const vol = parseFloat(saved);
+      if (!isNaN(vol)) return Math.max(0, Math.min(1, vol));
+    }
+  } catch (e) {
+    console.error('Failed to load volume from localStorage:', e);
+  }
+  return 0.7;
+};
+
 let state: AudioState = {
   isPlaying: false,
   currentUrl: null,
   currentTrack: null,
-  volume: 0.7,
+  volume: getInitialVolume(),
   playlist: [],
   currentIndex: -1,
   albumName: null,
@@ -102,6 +119,13 @@ export const audioManager = {
     updateState({ volume: vol });
     if (globalAudio) {
       globalAudio.volume = vol;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(VOLUME_STORAGE_KEY, vol.toString());
+      } catch (e) {
+        console.error('Failed to save volume to localStorage:', e);
+      }
     }
   },
 
