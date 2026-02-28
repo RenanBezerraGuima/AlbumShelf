@@ -33,23 +33,37 @@ export default function Home() {
   const sharedFolders = useFolderStore(state => state.sharedFolders);
 
   useEffect(() => {
-    // Check for share parameter in URL
+    // Check for share data in URL (legacy query param or new hash)
     const urlParams = new URLSearchParams(window.location.search);
-    const shareData = urlParams.get('share');
+    const queryShareData = urlParams.get('share');
+    const hash = window.location.hash;
+    const hashShareData = hash.startsWith('#/share/') ? hash.replace('#/share/', '') : null;
+
+    const shareData = hashShareData || queryShareData;
 
     if (shareData) {
       const data = decompressData(shareData);
       if (data) {
         const { folders, provider } = data;
-        useFolderStore.getState().setSharedFolders(folders);
+        const store = useFolderStore.getState();
+
+        store.setSharedFolders(folders);
+        store.setIsGuestMode(true);
+
         // Select the first folder if none selected
         if (folders.length > 0) {
-          useFolderStore.getState().setSelectedFolder(folders[0].id);
+          store.setSelectedFolder(folders[0].id);
         }
+
+        // Cleanup URL (both legacy and new formats)
+        const url = new URL(window.location.href);
+        url.searchParams.delete('share');
+        url.hash = '';
+        window.history.replaceState({}, '', url.toString());
 
         // Hydration logic
         if (provider) {
-          const { spotifyToken, setHydrationProgress, hydrateSharedFolders } = useFolderStore.getState();
+          const { spotifyToken, setHydrationProgress, hydrateSharedFolders } = store;
 
           // Collect all IDs that need hydration
           const idsToHydrate = new Set<string>();

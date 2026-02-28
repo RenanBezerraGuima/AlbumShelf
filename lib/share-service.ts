@@ -143,6 +143,8 @@ export function generateShareUrl(folders: Folder[], provider: StreamingProvider)
   if (!compressed) return '';
 
   const url = new URL(window.location.href);
-  url.searchParams.set('share', compressed);
+  // Clear any existing share param and set hash instead
+  url.searchParams.delete('share');
+  url.hash = `/share/${compressed}`;
   return url.toString();
 }

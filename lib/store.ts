@@ -33,6 +33,7 @@ interface FolderStore {
   theme: Theme;
   geistFont: GeistFont;
   isSettingsOpen: boolean;
+  isGuestMode: boolean;
   hydrationProgress: { current: number; total: number } | null;
   lastUpdated: number;
 
@@ -42,6 +43,8 @@ interface FolderStore {
   deleteFolder: (id: string) => void;
   toggleFolderExpanded: (id: string) => void;
   setSelectedFolder: (id: string | null) => void;
+  setIsGuestMode: (isGuestMode: boolean) => void;
+  exitGuestMode: () => void;
   setSharedFolders: (folders: Folder[] | null) => void;
   hydrateSharedFolders: (albumMap: Map<string, Album>) => void;
   moveFolder: (
@@ -364,6 +367,7 @@ export const useFolderStore = create<FolderStore>()(
       theme: "industrial",
       geistFont: "mono",
       isSettingsOpen: false,
+      isGuestMode: false,
       hydrationProgress: null,
       lastUpdated: 0,
 
@@ -453,6 +457,19 @@ export const useFolderStore = create<FolderStore>()(
         const newId = id ? String(id).slice(0, MAX_ID_LENGTH) : null;
         if (get().selectedFolderId === newId) return;
         set({ selectedFolderId: newId, lastUpdated: Date.now() });
+      },
+
+      setIsGuestMode: (isGuestMode) => {
+        set({ isGuestMode, lastUpdated: Date.now() });
+      },
+
+      exitGuestMode: () => {
+        set((state) => ({
+          sharedFolders: null,
+          isGuestMode: false,
+          selectedFolderId: state.folders.length > 0 ? state.folders[0].id : null,
+          lastUpdated: Date.now()
+        }));
       },
 
       setSharedFolders: (folders) => {
@@ -838,8 +855,9 @@ export const useFolderStore = create<FolderStore>()(
           ) {
             state.lastUpdated = Date.now();
           }
-          // Always reset sharedFolders on rehydration
+          // Always reset sharedFolders and guest mode on rehydration
           state.sharedFolders = null;
+          state.isGuestMode = false;
         }
       },
       // Exclude drag-and-drop state and shared state from persistence
@@ -851,6 +869,7 @@ export const useFolderStore = create<FolderStore>()(
           draggedFolder,
           draggedFolderParentId,
           isSettingsOpen,
+          isGuestMode,
           sharedFolders,
           hydrationProgress,
           ...persistedState

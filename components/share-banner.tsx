@@ -6,28 +6,21 @@ import { Button } from '@/components/ui/button';
 import { useFolderStore } from '@/lib/store';
 
 export function ShareBanner() {
+  const isGuestMode = useFolderStore((state) => state.isGuestMode);
   const sharedFolders = useFolderStore((state) => state.sharedFolders);
   const hydrationProgress = useFolderStore((state) => state.hydrationProgress);
-  const setSharedFolders = useFolderStore((state) => state.setSharedFolders);
+  const exitGuestMode = useFolderStore((state) => state.exitGuestMode);
   const importFolders = useFolderStore((state) => state.importFolders);
 
-  if (!sharedFolders) return null;
+  if (!isGuestMode || !sharedFolders) return null;
 
   const handleImport = () => {
     importFolders(sharedFolders);
-    setSharedFolders(null);
-    // Remove the share param from URL
-    const url = new URL(window.location.href);
-    url.searchParams.delete('share');
-    window.history.replaceState({}, '', url.toString());
+    exitGuestMode();
   };
 
   const handleExit = () => {
-    setSharedFolders(null);
-    // Remove the share param from URL
-    const url = new URL(window.location.href);
-    url.searchParams.delete('share');
-    window.history.replaceState({}, '', url.toString());
+    exitGuestMode();
   };
 
   return (
