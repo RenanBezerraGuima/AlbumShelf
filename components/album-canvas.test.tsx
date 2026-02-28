@@ -43,7 +43,7 @@ describe('AlbumCanvas dragging', () => {
 
     render(<AlbumCanvas albums={[album]} folderId={folderId} />);
 
-    const albumCard = screen.getByText('Album').closest('[data-album-card]');
+    const albumCard = screen.getAllByText('Album')[0].closest('[data-album-card]');
     expect(albumCard).toBeInTheDocument();
 
     // Start drag

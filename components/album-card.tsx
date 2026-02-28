@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect } from "react";
-import { useState } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -69,10 +68,19 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     return unsubscribe;
   }, []);
 
-  const handleFlip = async (e?: React.MouseEvent) => {
-    // Only flip for Deezer for now
-    if (!album.id.startsWith('deezer-')) return;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFlipped) {
+        setIsFlipped(false);
+        audioManager.stop();
+      }
+    };
 
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped]);
+
+  const handleFlip = async (e?: React.MouseEvent) => {
     if (!isFlipped && !details) {
       setIsLoadingDetails(true);
       try {
@@ -113,19 +121,18 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     }
   };
 
-  const copyDetails = () => {
+  const copyDetails = useCallback(() => {
     navigator.clipboard.writeText(`${album.artist} - ${album.name}`);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-  };
+  }, [album.artist, album.name]);
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1',
-            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default',
+            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer',
             isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
@@ -220,10 +227,14 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <h3 className="font-medium text-sm text-foreground truncate" title={album.name} style={{ fontFamily: 'var(--font-display)' }}>
           {album.name}
         </h3>
-        <p className={cn(
-          "text-[10px] truncate mt-0.5 transition-colors duration-300",
-          isCopied ? "text-primary font-bold" : "text-muted-foreground"
-        )} title={album.artist}>
+        <p
+          className={cn(
+            "text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary",
+            isCopied ? "text-primary font-bold" : "text-muted-foreground"
+          )}
+          title={`${album.artist} [Click to copy]`}
+          onClick={copyDetails}
+        >
           {isCopied ? "Copied to clipboard!" : album.artist}
         </p>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
