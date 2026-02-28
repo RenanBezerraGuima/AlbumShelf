@@ -1,4 +1,4 @@
-import type { Album, Folder, Theme, AlbumViewMode, StreamingProvider, GeistFont } from './types';
+import type { Album, Folder, Theme, AlbumViewMode, StreamingProvider, GeistFont, AlbumDetails, Track } from './types';
 import { THEMES, VIEW_MODES, STREAMING_PROVIDERS, GEIST_FONTS } from './types';
 
 const ALLOWED_PROTOCOLS = ['https:'];
@@ -153,6 +153,40 @@ export function isValidStreamingProvider(provider: any): provider is StreamingPr
  */
 export function isValidGeistFont(font: any): font is GeistFont {
   return typeof font === 'string' && GEIST_FONTS.includes(font as GeistFont);
+}
+
+/**
+ * Sanitize AlbumDetails object.
+ * Truncates text fields, sanitizes track preview URLs, and enforces item limits.
+ */
+export function sanitizeAlbumDetails(details: any): AlbumDetails {
+  const tracks: Track[] = [];
+  if (Array.isArray(details.tracks)) {
+    // Limit to 100 tracks to prevent DoS from massive API responses
+    for (let i = 0; i < details.tracks.length && tracks.length < 100; i++) {
+      const t = details.tracks[i];
+      tracks.push({
+        id: String(t.id || i).slice(0, MAX_ID_LENGTH),
+        title: String(t.title || 'Unknown Track').slice(0, MAX_NAME_LENGTH),
+        preview: sanitizeUrl(t.preview) || '',
+        duration: Math.max(0, Math.min(3600, Number(t.duration) || 0)),
+      });
+    }
+  }
+
+  const sanitized: AlbumDetails = {
+    tracks,
+    label: details.label ? String(details.label).slice(0, MAX_TEXT_LENGTH) : undefined,
+  };
+
+  if (Array.isArray(details.contributors)) {
+    // Limit to 50 contributors
+    sanitized.contributors = details.contributors
+      .slice(0, 50)
+      .map((c: any) => String(c).slice(0, MAX_NAME_LENGTH));
+  }
+
+  return sanitized;
 }
 
 /**

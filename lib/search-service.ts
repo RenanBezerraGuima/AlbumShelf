@@ -1,5 +1,5 @@
-import type { Album } from './types';
-import { sanitizeAlbum, MAX_TEXT_LENGTH, jsonp } from './security';
+import type { Album, AlbumDetails } from './types';
+import { sanitizeAlbum, sanitizeAlbumDetails, MAX_TEXT_LENGTH, jsonp } from './security';
 
 // Simple in-memory cache for search results
 const searchCache = new Map<string, { data: Album[], timestamp: number }>();
@@ -159,7 +159,7 @@ export const searchAlbumsDeezer = withCache('deezer', searchAlbumsDeezerInternal
 export const searchAlbumsApple = withCache('apple', searchAlbumsAppleInternal);
 export const searchAlbumsSpotify = withCache('spotify', searchAlbumsSpotifyInternal);
 
-export async function getAlbumDetailsDeezer(albumId: string): Promise<import('./types').AlbumDetails> {
+export async function getAlbumDetailsDeezer(albumId: string): Promise<AlbumDetails> {
   const numericId = albumId.replace('deezer-', '');
   try {
     const data = await jsonp<any>(
@@ -170,20 +170,11 @@ export async function getAlbumDetailsDeezer(albumId: string): Promise<import('./
       throw new Error(data.error.message || 'Deezer album lookup error');
     }
 
-    const tracks = (data.tracks?.data || []).map((t: any) => ({
-      id: String(t.id),
-      title: t.title,
-      preview: t.preview,
-      duration: t.duration,
-    }));
-
-    const contributors = (data.contributors || []).map((c: any) => c.name);
-
-    return {
-      tracks,
+    return sanitizeAlbumDetails({
+      tracks: data.tracks?.data || [],
       label: data.label,
-      contributors: contributors.length > 0 ? contributors : undefined,
-    };
+      contributors: (data.contributors || []).map((c: any) => c.name),
+    });
   } catch (error) {
     console.error('Deezer album lookup error:', error);
     throw error;
