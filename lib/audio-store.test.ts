@@ -27,9 +27,12 @@ describe('audioManager', () => {
     expect(state.volume).toBe(0.7);
   });
 
-  it('should update volume', () => {
+  it('should update volume and persist it', () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     audioManager.setVolume(0.5);
     expect(audioManager.getState().volume).toBe(0.5);
+    expect(setItemSpy).toHaveBeenCalledWith('album-shelf-volume', '0.5');
+    setItemSpy.mockRestore();
   });
 
   it('should handle playlist navigation', () => {
