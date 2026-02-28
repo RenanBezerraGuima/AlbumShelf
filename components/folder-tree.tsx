@@ -11,6 +11,7 @@ import {
   Trash2,
   Check,
   X,
+  Search as SearchIcon,
   GripVertical,
   Settings,
   MoreVertical,
@@ -546,6 +547,7 @@ const FolderItem = React.memo(function FolderItem({
 export function FolderTree() {
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const createInputRef = useRef<HTMLInputElement>(null);
 
@@ -587,6 +589,39 @@ export function FolderTree() {
   // Actions are accessed via useFolderStore.getState() in handlers to avoid redundant subscriptions.
   const folders = useFolderStore((state) => state.sharedFolders ?? state.folders);
   const draggedFolder = useFolderStore((state) => state.draggedFolder);
+
+  const filteredFolders = React.useMemo(() => {
+    if (!searchQuery.trim()) return folders;
+
+    const query = searchQuery.toLowerCase();
+
+    const filterFolder = (folder: FolderType): FolderType | null => {
+      const matchesName = folder.name.toLowerCase().includes(query);
+      const matchesAlbum = folder.albums.some((album) =>
+        album.name.toLowerCase().includes(query) ||
+        album.artist.toLowerCase().includes(query),
+      );
+
+      const filteredSubfolders = folder.subfolders
+        .map(filterFolder)
+        .filter((f): f is FolderType => f !== null);
+
+      if (matchesName || matchesAlbum || filteredSubfolders.length > 0) {
+        return {
+          ...folder,
+          subfolders: filteredSubfolders,
+          // Expand folders that contain search results
+          isExpanded: true,
+        };
+      }
+
+      return null;
+    };
+
+    return folders
+      .map(filterFolder)
+      .filter((f): f is FolderType => f !== null);
+  }, [folders, searchQuery]);
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -664,6 +699,27 @@ export function FolderTree() {
         </div>
       </div>
 
+      <div className="px-4 py-3 border-b-2 border-border bg-background/50">
+        <div className="relative group">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            placeholder="Search collections..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-9 text-sm rounded-none border-2 border-border focus:border-primary transition-all bg-background"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:text-primary transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <ScrollArea className="flex-1 min-h-0">
         <div
           className={cn("p-2 min-h-full", isDragOver && "bg-primary/10")}
@@ -723,6 +779,22 @@ export function FolderTree() {
             </div>
           )}
 
+          {folders.length > 0 && filteredFolders.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <p className="text-sm text-muted-foreground font-mono mb-2">
+                No results for "{searchQuery}"
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+                className="text-xs font-mono uppercase tracking-tighter"
+              >
+                Clear search
+              </Button>
+            </div>
+          )}
+
           {folders.length === 0 && !isCreating && (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <p className="text-sm text-muted-foreground font-mono mb-4">
@@ -740,7 +812,7 @@ export function FolderTree() {
             </div>
           )}
 
-          {folders.map((folder) => (
+          {filteredFolders.map((folder) => (
             <FolderItem
               key={folder.id}
               folder={folder}
