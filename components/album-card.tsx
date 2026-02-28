@@ -23,7 +23,7 @@ import { useFolderStore } from '@/lib/store';
 import type { Album, AlbumDetails } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getAlbumDetailsDeezer } from '@/lib/search-service';
-import { audioManager } from '@/lib/audio-store';
+import { audioManager, type AudioState } from '@/lib/audio-store';
 
 interface AlbumCardProps {
   album: Album;
@@ -58,24 +58,18 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
   const [isFlipped, setIsFlipped] = useState(false);
   const [details, setDetails] = useState<AlbumDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrackUrl, setCurrentTrackUrl] = useState<string | null>(null);
+  const [audioState, setAudioState] = useState<AudioState>(audioManager.getState());
 
   useEffect(() => {
-    const unsubscribe = audioManager.subscribe((playing, url) => {
-      setIsPlaying(playing);
-      setCurrentTrackUrl(url);
-    });
-    return unsubscribe;
+    return audioManager.subscribe(setAudioState);
   }, []);
 
   const handleFlip = async (e?: React.MouseEvent) => {
-    // Only flip for Deezer for now
-    if (!album.id.startsWith('deezer-')) return;
-
     if (!isFlipped && !details) {
       setIsLoadingDetails(true);
       try {
+        // We still use the Deezer API for details as it's the most reliable for tracklists
+        // and doesn't require auth like Spotify. We use the original ID or search.
         const data = await getAlbumDetailsDeezer(album.id);
         setDetails(data);
       } catch (err) {
@@ -86,7 +80,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     }
 
     if (isFlipped) {
-      audioManager.stop();
+      // Don't stop audio when flipping back, only when clicking close on a specific album
     }
 
     setIsFlipped(!isFlipped);
@@ -123,9 +117,9 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
+          data-album-card
           className={cn(
-            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1',
-            album.id.startsWith('deezer-') ? 'cursor-pointer' : 'cursor-default',
+            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer',
             isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
@@ -143,6 +137,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           )}>
             {/* Front Side */}
             <div
+              data-testid="album-card-front"
               className={cn(
                 'absolute inset-0 bg-card overflow-hidden border-2 border-border backface-hidden'
               )}
@@ -274,29 +269,36 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
                 ) : details ? (
                   <div className="space-y-0.5">
                     {details.tracks.map((track, idx) => {
-                      const isTrackPlaying = isPlaying && currentTrackUrl === track.preview;
+                      const isTrackPlaying = audioState.isPlaying && audioState.currentUrl === track.preview;
                       return (
                         <div
                           key={track.id}
                           className={cn(
                             "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
-                            isTrackPlaying && "bg-primary/20"
+                            isTrackPlaying && "bg-primary/20",
+                            !track.preview && "opacity-50 cursor-not-allowed"
                           )}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (track.preview) {
-                              audioManager.play(track.preview);
+                              audioManager.play(
+                                track.preview,
+                                track,
+                                details.tracks,
+                                album.name,
+                                album.imageUrl
+                              );
                             }
                           }}
                         >
-                          <span className="text-muted-foreground w-3 shrink-0">{idx + 1}</span>
+                          <span className="text-muted-foreground w-3 shrink-0">{idx + 1}.</span>
                           <span className="flex-1 truncate font-medium">{track.title}</span>
                           <div className="shrink-0">
                             {isTrackPlaying ? (
                               <Pause className="h-3 w-3 fill-current text-primary" />
-                            ) : (
+                            ) : track.preview ? (
                               <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       );
