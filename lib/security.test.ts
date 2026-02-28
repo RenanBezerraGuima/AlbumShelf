@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useFolderStore } from './store';
-import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum, sanitizeFolder } from './security';
+import { sanitizeUrl, sanitizeImageUrl, sanitizeAlbum, sanitizeFolder, sanitizeAlbumDetails } from './security';
 
 describe('Security: Input Validation', () => {
   beforeEach(() => {
@@ -204,6 +204,56 @@ describe('Security Utilities', () => {
       const { jsonp } = await import('./security');
       const longUrl = 'https://api.deezer.com/test?q=' + 'a'.repeat(3000);
       await expect(jsonp(longUrl)).rejects.toThrow('URL exceeds maximum length');
+    });
+  });
+
+  describe('sanitizeAlbumDetails', () => {
+    it('should sanitize and truncate tracks, label and contributors', () => {
+      const longText = 'A'.repeat(300);
+      const details = {
+        tracks: [
+          {
+            id: longText,
+            title: longText,
+            preview: 'javascript:alert(1)',
+            duration: 9999
+          }
+        ],
+        label: longText,
+        contributors: [longText]
+      };
+
+      const sanitized = sanitizeAlbumDetails(details);
+      expect(sanitized.tracks[0].id.length).toBe(100);
+      expect(sanitized.tracks[0].title.length).toBe(100);
+      expect(sanitized.tracks[0].preview).toBe('');
+      expect(sanitized.tracks[0].duration).toBe(3600);
+      expect(sanitized.label?.length).toBe(200);
+      expect(sanitized.contributors?.[0].length).toBe(100);
+    });
+
+    it('should enforce item limits for tracks and contributors', () => {
+      const details = {
+        tracks: Array(200).fill({ id: '1', title: 'T' }),
+        contributors: Array(100).fill('C')
+      };
+
+      const sanitized = sanitizeAlbumDetails(details);
+      expect(sanitized.tracks.length).toBe(100);
+      expect(sanitized.contributors?.length).toBe(50);
+    });
+
+    it('should handle missing or invalid fields in details', () => {
+      const details = {
+        tracks: 'invalid',
+        label: null,
+        contributors: {}
+      };
+
+      const sanitized = sanitizeAlbumDetails(details as any);
+      expect(sanitized.tracks).toEqual([]);
+      expect(sanitized.label).toBeUndefined();
+      expect(sanitized.contributors).toBeUndefined();
     });
   });
 
