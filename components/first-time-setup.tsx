@@ -15,7 +15,7 @@ import type { StreamingProvider } from '@/lib/types';
 import { Music, Radio } from 'lucide-react';
 
 export function FirstTimeSetup() {
-  const { folders, hasSetPreference, setStreamingProvider, setHasSetPreference } = useFolderStore();
+  const { folders, hasSetPreference, setStreamingProvider, setHasSetPreference, isGuestMode } = useFolderStore();
   const [open, setOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -31,7 +31,7 @@ export function FirstTimeSetup() {
   }, [folders]);
 
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !isGuestMode) {
       if (hasAlbums && !hasSetPreference) {
         // If they have albums but haven't explicitly set preference (legacy data),
         // we assume they've already used the app and don't show the popup.
