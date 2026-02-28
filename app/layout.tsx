@@ -2,6 +2,8 @@ import React from "react"
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeHandler } from '@/components/theme-handler'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
@@ -43,8 +45,11 @@ export default function RootLayout({
           Skip to content
         </a>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ThemeHandler />
-          {children}
+          <TooltipProvider>
+            <ThemeHandler />
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

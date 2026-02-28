@@ -2,7 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +60,6 @@ const OpenInProviderMenuItem = React.memo(function OpenInProviderMenuItem({
 
 export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [details, setDetails] = useState<AlbumDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -108,8 +114,9 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
 
   const copyDetails = useCallback(() => {
     navigator.clipboard.writeText(`${album.artist} - ${album.name}`);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    toast.success('Copied to clipboard!', {
+      description: `${album.artist} - ${album.name}`,
+    });
   }, [album.artist, album.name]);
 
   return (
@@ -143,21 +150,27 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
               style={{ borderRadius: 'var(--radius)' }}
             >
       <div className="absolute top-2 right-2 opacity-40 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
-        <Button
-          size="icon"
-          variant="destructive"
-          className="h-7 w-7 border-2 border-border brutalist-shadow-sm"
-          style={{ borderRadius: 'var(--radius)' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDeleteDialogOpen(true);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Remove album"
-          title="Remove album"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7 border-2 border-border brutalist-shadow-sm"
+              style={{ borderRadius: 'var(--radius)' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDeleteDialogOpen(true);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label="Remove album"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm bg-destructive text-white rounded-none">
+            Remove album
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -197,17 +210,23 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         
-        <Button
-          size="icon-sm"
-          className="absolute bottom-2 right-2 opacity-40 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
-          style={{ borderRadius: 'var(--radius)' }}
-          onClick={handlePlay}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Play album"
-          title="Play album"
-        >
-          <Play className="h-3.5 w-3.5 fill-current" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon-sm"
+              className="absolute bottom-2 right-2 opacity-40 group-hover:opacity-100 focus-visible:opacity-100 transition-all duration-200 z-10 border-2 border-border brutalist-shadow-sm"
+              style={{ borderRadius: 'var(--radius)' }}
+              onClick={handlePlay}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label="Play album"
+            >
+              <Play className="h-3.5 w-3.5 fill-current" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm bg-primary text-primary-foreground rounded-none">
+            Play album
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="p-3 bg-card tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
@@ -215,14 +234,11 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
           {album.name}
         </h3>
         <p
-          className={cn(
-            "text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary",
-            isCopied ? "text-primary font-bold" : "text-muted-foreground"
-          )}
+          className="text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary text-muted-foreground"
           title={`${album.artist} [Click to copy]`}
           onClick={copyDetails}
         >
-          {isCopied ? "Copied to clipboard!" : album.artist}
+          {album.artist}
         </p>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
           <span className="bg-foreground text-background px-1 font-medium">
@@ -261,11 +277,12 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
                 isFlipped ? "overflow-y-auto max-h-[320px]" : "flex-1 overflow-y-auto"
               )}>
                 {isLoadingDetails ? (
-                  <div className="space-y-2 p-2">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className="h-3 w-3 bg-muted animate-pulse shrink-0" />
-                        <div className="h-3 flex-1 bg-muted animate-pulse" />
+                  <div className="space-y-3 p-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-3 w-4 shrink-0 rounded-none bg-muted-foreground/10" />
+                        <Skeleton className="h-3 flex-1 rounded-none bg-muted-foreground/10" />
+                        <Skeleton className="h-3 w-6 rounded-none bg-muted-foreground/10" />
                       </div>
                     ))}
                   </div>

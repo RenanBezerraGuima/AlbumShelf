@@ -3,6 +3,7 @@
 import React, { useRef, memo, useState, useCallback, useMemo } from 'react';
 import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
 import { generateShareUrl } from '@/lib/share-service';
@@ -43,9 +44,6 @@ export const SettingsDialog = memo(function SettingsDialog() {
   })));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isCopied, setIsCopied] = useState(false);
-  const [isExported, setIsExported] = useState(false);
-  const [isImported, setIsImported] = useState(false);
 
   const shareUrlInfo = useMemo(() => {
     try {
@@ -96,10 +94,12 @@ export const SettingsDialog = memo(function SettingsDialog() {
       link.download = `backup-${date}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      setIsExported(true);
-      setTimeout(() => setIsExported(false), 2000);
+      toast.success('Data exported successfully!', {
+        description: `Backup saved as backup-${date}.json`,
+      });
     } catch (error) {
       console.error(error);
+      toast.error('Failed to export data');
     }
   };
 
@@ -107,10 +107,12 @@ export const SettingsDialog = memo(function SettingsDialog() {
     try {
       if (!shareUrlInfo.url) return;
       await navigator.clipboard.writeText(shareUrlInfo.url);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      toast.success('Share link copied!', {
+        description: 'You can now share your collection with others.',
+      });
     } catch (error) {
       console.error('Failed to copy share URL:', error);
+      toast.error('Failed to copy share link');
     }
   }, [shareUrlInfo]);
 
@@ -129,8 +131,9 @@ export const SettingsDialog = memo(function SettingsDialog() {
         }
 
         useFolderStore.getState().importFolders(json);
-        setIsImported(true);
-        setTimeout(() => setIsImported(false), 2000);
+        toast.success('Data imported successfully!', {
+          description: `${json.length} collections added to your shelf.`,
+        });
 
         // Reset file input
         if (fileInputRef.current) {
@@ -250,8 +253,8 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     variant="default"
                     disabled={!shareUrlInfo.url}
                   >
-                    {isCopied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
-                    {isCopied ? 'Link Copied!' : 'Share Shelf Link'}
+                    <Share2 className="h-4 w-4" />
+                    Share Shelf Link
                   </Button>
                   {shareUrlInfo.length > 8000 && (
                     <div className="flex items-start gap-2 p-2 bg-destructive/10 border border-destructive/20 mt-1">
@@ -270,10 +273,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   <Button
                     onClick={handleExport}
                     className="w-full justify-start gap-2 transition-all duration-300"
-                    variant={isExported ? "default" : "outline"}
+                    variant="outline"
                   >
-                    {isExported ? <Check className="h-4 w-4 text-green-400" /> : <Download className="h-4 w-4" />}
-                    {isExported ? 'Data Exported!' : 'Export Data'}
+                    <Download className="h-4 w-4" />
+                    Export Data
                   </Button>
                 </div>
 
@@ -284,10 +287,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   <Button
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full justify-start gap-2 transition-all duration-300"
-                    variant={isImported ? "default" : "outline"}
+                    variant="outline"
                   >
-                    {isImported ? <Check className="h-4 w-4 text-green-400" /> : <Upload className="h-4 w-4" />}
-                    {isImported ? 'Data Imported!' : 'Import Data'}
+                    <Upload className="h-4 w-4" />
+                    Import Data
                   </Button>
                   <input
                     type="file"
