@@ -9,6 +9,7 @@ import { SettingsDialog } from '@/components/settings-dialog';
 import { SpotifyCallbackHandler } from '@/components/spotify-callback-handler';
 import { MobileHeader } from '@/components/mobile-header';
 import { ShareBanner } from '@/components/share-banner';
+import { AudioController } from '@/components/audio-controller';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -90,7 +91,7 @@ export default function Home() {
       <div className="flex-1 min-h-0 z-10 relative flex flex-col">
         {isMobile ? (
           <>
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden pb-[68px]">
               <AlbumGrid isMobile={true} />
             </div>
 
@@ -113,10 +114,12 @@ export default function Home() {
                 </div>
               </DialogContent>
             </Dialog>
-            <AlbumSearch isMobile={true} />
+            <div className="pb-[68px]">
+              <AlbumSearch isMobile={true} />
+            </div>
           </>
         ) : (
-          <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanelGroup direction="horizontal" className="h-full pb-[68px]">
             <ResizablePanel defaultSize={20} minSize={15} maxSize={35} className="flex flex-col">
               <FolderTree />
             </ResizablePanel>
@@ -129,6 +132,8 @@ export default function Home() {
           </ResizablePanelGroup>
         )}
       </div>
+
+      <AudioController />
     </main>
   );
 }

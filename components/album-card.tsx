@@ -22,7 +22,7 @@ import { useFolderStore } from '@/lib/store';
 import type { Album, AlbumDetails } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getAlbumDetailsDeezer } from '@/lib/search-service';
-import { audioManager } from '@/lib/audio-store';
+import { audioManager, type AudioState } from '@/lib/audio-store';
 
 interface AlbumCardProps {
   album: Album;
@@ -51,44 +51,24 @@ const OpenInProviderMenuItem = React.memo(function OpenInProviderMenuItem({
   );
 });
 
-/**
- * Performance: Separate component for the track list and audio state.
- * By moving the 'audioManager' subscription here, we ensure that
- * only flipped albums with active tracklists re-render during playback.
- * This reduces re-renders from O(N) to O(Flipped).
- */
-const TrackList = React.memo(function TrackList({
-  details,
-}: {
-  details: AlbumDetails;
-}) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrackUrl, setCurrentTrackUrl] = useState<string | null>(null);
+export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [details, setDetails] = useState<AlbumDetails | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [audioState, setAudioState] = useState<AudioState>(audioManager.getState());
 
   useEffect(() => {
-    const unsubscribe = audioManager.subscribe((playing, url) => {
-      setIsPlaying(playing);
-      setCurrentTrackUrl(url);
-    });
-    return unsubscribe;
+    return audioManager.subscribe(setAudioState);
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isFlipped) {
-        setIsFlipped(false);
-        audioManager.stop();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped]);
 
   const handleFlip = async (e?: React.MouseEvent) => {
     if (!isFlipped && !details) {
       setIsLoadingDetails(true);
       try {
+        // We still use the Deezer API for details as it's the most reliable for tracklists
+        // and doesn't require auth like Spotify. We use the original ID or search.
         const data = await getAlbumDetailsDeezer(album.id);
         setDetails(data);
       } catch (err) {
@@ -99,7 +79,7 @@ const TrackList = React.memo(function TrackList({
     }
 
     if (isFlipped) {
-      audioManager.stop();
+      // Don't stop audio when flipping back, only when clicking close on a specific album
     }
 
     setIsFlipped(!isFlipped);
@@ -136,6 +116,7 @@ const TrackList = React.memo(function TrackList({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
+          data-album-card
           className={cn(
             'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer',
             isFlipped ? 'z-50' : 'z-0'
@@ -155,6 +136,7 @@ const TrackList = React.memo(function TrackList({
           )}>
             {/* Front Side */}
             <div
+              data-testid="album-card-front"
               className={cn(
                 'absolute inset-0 bg-card overflow-hidden border-2 border-border backface-hidden'
               )}
@@ -288,7 +270,62 @@ const TrackList = React.memo(function TrackList({
                     ))}
                   </div>
                 ) : details ? (
-                  <TrackList details={details} />
+                  <div className="space-y-0.5">
+                    {details.tracks.map((track, idx) => {
+                      const isTrackPlaying = audioState.isPlaying && audioState.currentUrl === track.preview;
+                      return (
+                        <div
+                          key={track.id}
+                          className={cn(
+                            "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
+                            isTrackPlaying && "bg-primary/20",
+                            !track.preview && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (track.preview) {
+                              audioManager.play(
+                                track.preview,
+                                track,
+                                details.tracks,
+                                album.name,
+                                album.imageUrl
+                              );
+                            }
+                          }}
+                        >
+                          <span className="text-muted-foreground w-3 shrink-0">{idx + 1}.</span>
+                          <span className="flex-1 truncate font-medium">{track.title}</span>
+                          <div className="shrink-0">
+                            {isTrackPlaying ? (
+                              <Pause className="h-3 w-3 fill-current text-primary" />
+                            ) : track.preview ? (
+                              <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {(details.label || details.contributors) && (
+                      <div className="mt-4 p-2 border-t border-border/50 space-y-2">
+                        {details.label && (
+                          <div>
+                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Label</p>
+                            <p className="text-[9px] tracking-tighter">{details.label}</p>
+                          </div>
+                        )}
+                        {details.contributors && (
+                          <div>
+                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Contributors</p>
+                            <p className="text-[9px] leading-tight tracking-tighter">
+                              {details.contributors.join(', ')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center p-4 text-center">
                     <Music className="h-8 w-8 text-muted/30 mb-2" />
