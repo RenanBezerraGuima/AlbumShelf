@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import React from 'react';
+import { vi } from 'vitest';
 
 // Mock TooltipProvider for tests as it's required by shadcn Tooltip components
 vi.mock('@/components/ui/tooltip', async (importOriginal) => {
