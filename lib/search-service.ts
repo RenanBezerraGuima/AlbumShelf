@@ -6,6 +6,10 @@ const searchCache = new Map<string, { data: Album[], timestamp: number }>();
 // Performance: Track in-flight requests to avoid redundant simultaneous network calls for the same query.
 const pendingRequests = new Map<string, Promise<Album[]>>();
 
+// Performance: Cache for album details to avoid redundant network requests for tracklists.
+const detailsCache = new Map<string, { data: AlbumDetails, timestamp: number }>();
+const pendingDetailsRequests = new Map<string, Promise<AlbumDetails>>();
+
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 50;
 
@@ -161,22 +165,57 @@ export const searchAlbumsSpotify = withCache('spotify', searchAlbumsSpotifyInter
 
 export async function getAlbumDetailsDeezer(albumId: string): Promise<AlbumDetails> {
   const numericId = albumId.replace('deezer-', '');
-  try {
-    const data = await jsonp<any>(
-      `https://api.deezer.com/album/${numericId}?output=jsonp`
-    );
+  const cacheKey = `deezer:${numericId}`;
 
-    if (data.error) {
-      throw new Error(data.error.message || 'Deezer album lookup error');
-    }
-
-    return sanitizeAlbumDetails({
-      tracks: data.tracks?.data || [],
-      label: data.label,
-      contributors: (data.contributors || []).map((c: any) => c.name),
-    });
-  } catch (error) {
-    console.error('Deezer album lookup error:', error);
-    throw error;
+  // 1. Check if we have a valid completed cache entry
+  const cached = detailsCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    return cached.data;
   }
+
+  // 2. Check if there is already a request in flight for this album
+  const pending = pendingDetailsRequests.get(cacheKey);
+  if (pending) {
+    return pending;
+  }
+
+  // 3. Start a new request and track its promise
+  const requestPromise = (async () => {
+    try {
+      const data = await jsonp<any>(
+        `https://api.deezer.com/album/${numericId}?output=jsonp`
+      );
+
+      if (data.error) {
+        throw new Error(data.error.message || 'Deezer album lookup error');
+      }
+
+      const sanitized = sanitizeAlbumDetails({
+        tracks: data.tracks?.data || [],
+        label: data.label,
+        contributors: (data.contributors || []).map((c: any) => c.name),
+      });
+
+      // Update the completed cache
+      if (detailsCache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = detailsCache.keys().next().value;
+        if (oldestKey !== undefined) {
+          detailsCache.delete(oldestKey);
+        }
+      }
+
+      detailsCache.set(cacheKey, { data: sanitized, timestamp: Date.now() });
+      return sanitized;
+    } catch (error) {
+      console.error('Deezer album lookup error:', error);
+      throw error;
+    } finally {
+      // Always remove from pending regardless of success or failure
+      pendingDetailsRequests.delete(cacheKey);
+    }
+  })();
+
+  pendingDetailsRequests.set(cacheKey, requestPromise);
+  return requestPromise;
 }

@@ -36,13 +36,94 @@ interface AlbumCardProps {
   folderId: string;
 }
 
+interface AlbumDetailsContentProps {
+  album: Album;
+  details: AlbumDetails;
+  isFlipped: boolean;
+}
+
 /**
- * Performance: Separate component for the provider-specific menu item.
- * By moving the 'streamingProvider' subscription here, we ensure that
- * changes to the global provider setting only re-render this specific menu item
- * (and only when the context menu is actually open), instead of re-rendering
- * all 1000s of AlbumCard instances in the grid.
+ * Performance: Separate component for the album details (tracklist).
+ * By isolating the 'audioManager' subscription here, we ensure that
+ * only cards that are actually flipped (and showing their tracklist)
+ * re-render when the global audio state changes.
+ * This turns an O(Total Albums) re-render into O(Flipped Albums).
  */
+const AlbumDetailsContent = React.memo(function AlbumDetailsContent({
+  album,
+  details,
+  isFlipped,
+}: AlbumDetailsContentProps) {
+  const [audioState, setAudioState] = useState<AudioState>(audioManager.getState());
+
+  useEffect(() => {
+    if (!isFlipped) return;
+    // Performance: Sync the local state immediately upon subscription to ensure the UI
+    // matches the global state if it changed while the card was unsubscribed.
+    setAudioState(audioManager.getState());
+    return audioManager.subscribe(setAudioState);
+  }, [isFlipped]);
+
+  return (
+    <div className="space-y-0.5">
+      {details.tracks.map((track, idx) => {
+        const isTrackPlaying = audioState.isPlaying && audioState.currentUrl === track.preview;
+        return (
+          <div
+            key={track.id}
+            className={cn(
+              "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
+              isTrackPlaying && "bg-primary/20",
+              !track.preview && "opacity-50 cursor-not-allowed"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (track.preview) {
+                audioManager.play(
+                  track.preview,
+                  track,
+                  details.tracks,
+                  album.name,
+                  album.imageUrl
+                );
+              }
+            }}
+          >
+            <span className="text-muted-foreground w-3 shrink-0">{idx + 1}.</span>
+            <span className="flex-1 truncate font-medium">{track.title}</span>
+            <div className="shrink-0">
+              {isTrackPlaying ? (
+                <Pause className="h-3 w-3 fill-current text-primary" />
+              ) : track.preview ? (
+                <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+
+      {(details.label || details.contributors) && (
+        <div className="mt-4 p-2 border-t border-border/50 space-y-2">
+          {details.label && (
+            <div>
+              <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Label</p>
+              <p className="text-[9px] tracking-tighter">{details.label}</p>
+            </div>
+          )}
+          {details.contributors && (
+            <div>
+              <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Contributors</p>
+              <p className="text-[9px] leading-tight tracking-tighter">
+                {details.contributors.join(', ')}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 const OpenInProviderMenuItem = React.memo(function OpenInProviderMenuItem({
   onPlay,
 }: {
@@ -63,11 +144,6 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
   const [isFlipped, setIsFlipped] = useState(false);
   const [details, setDetails] = useState<AlbumDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [audioState, setAudioState] = useState<AudioState>(audioManager.getState());
-
-  useEffect(() => {
-    return audioManager.subscribe(setAudioState);
-  }, []);
 
   const handleFlip = async (e?: React.MouseEvent) => {
     if (!isFlipped && !details) {
@@ -287,62 +363,11 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
                     ))}
                   </div>
                 ) : details ? (
-                  <div className="space-y-0.5">
-                    {details.tracks.map((track, idx) => {
-                      const isTrackPlaying = audioState.isPlaying && audioState.currentUrl === track.preview;
-                      return (
-                        <div
-                          key={track.id}
-                          className={cn(
-                            "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
-                            isTrackPlaying && "bg-primary/20",
-                            !track.preview && "opacity-50 cursor-not-allowed"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (track.preview) {
-                              audioManager.play(
-                                track.preview,
-                                track,
-                                details.tracks,
-                                album.name,
-                                album.imageUrl
-                              );
-                            }
-                          }}
-                        >
-                          <span className="text-muted-foreground w-3 shrink-0">{idx + 1}.</span>
-                          <span className="flex-1 truncate font-medium">{track.title}</span>
-                          <div className="shrink-0">
-                            {isTrackPlaying ? (
-                              <Pause className="h-3 w-3 fill-current text-primary" />
-                            ) : track.preview ? (
-                              <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
-                            ) : null}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {(details.label || details.contributors) && (
-                      <div className="mt-4 p-2 border-t border-border/50 space-y-2">
-                        {details.label && (
-                          <div>
-                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Label</p>
-                            <p className="text-[9px] tracking-tighter">{details.label}</p>
-                          </div>
-                        )}
-                        {details.contributors && (
-                          <div>
-                            <p className="text-[7px] uppercase font-bold text-muted-foreground tracking-tighter">Contributors</p>
-                            <p className="text-[9px] leading-tight tracking-tighter">
-                              {details.contributors.join(', ')}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <AlbumDetailsContent
+                    album={album}
+                    details={details}
+                    isFlipped={isFlipped}
+                  />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center p-4 text-center">
                     <Music className="h-8 w-8 text-muted/30 mb-2" />
