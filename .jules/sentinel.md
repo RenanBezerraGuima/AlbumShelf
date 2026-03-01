@@ -114,3 +114,8 @@
 **Vulnerability:** Duplicated and insecure JSONP implementations in different services were vulnerable to parameter pollution and potential XSS if unvetted domains were used.
 **Learning:** Centralizing security-sensitive utilities like JSONP ensures consistent enforcement of defense-in-depth measures (HTTPS, whitelisting, CSPRNG for callbacks). Using the native `URL` object for parameter injection is more robust than string concatenation as it correctly handles existing query parameters and fragments.
 **Prevention:** Always centralize security utilities and avoid "security drift" from duplicated code. Use robust APIs like `URL.searchParams` for modifying untrusted URLs.
+
+## 2026-04-25 - [Identifier Hardening & Credential-Based URL Bypasses]
+**Vulnerability:** Application identifiers (album/track IDs) were trusted without format validation, and `sanitizeUrl` allowed URLs containing embedded credentials (`https://user:pass@domain`).
+**Learning:** Even if IDs are used primarily in memory or as lookup keys, they can become injection vectors if passed to dynamic contexts like DOM attributes or URL construction (especially when batched/joined). Similarly, while `https:` is generally safe, URLs with authority credentials are a common phishing vector and can bypass some SSRF/XSS filters that don't account for the `userinfo` component.
+**Prevention:** Enforce a strict safe-character regex (`[a-zA-Z0-9\-_]+`) for all identifiers entering the application state. Update URL sanitizers to explicitly reject the `userinfo` component (username/password) using the `URL` API's properties.

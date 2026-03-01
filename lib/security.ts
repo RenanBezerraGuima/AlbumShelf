@@ -28,6 +28,7 @@ const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
+const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
 
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
@@ -49,8 +50,8 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
   // Performance: Fast-path for common https:// URLs to avoid expensive 'new URL()' calls.
   // If it starts with https:// and passes the character checks above, it's safe for our default protocol.
   if (allowedProtocols === ALLOWED_PROTOCOLS && trimmedUrl.startsWith('https://')) {
-    // Ensure no additional colons (potential protocol bypasses) or backslashes
-    if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\')) {
+    // Ensure no additional colons (potential protocol bypasses), backslashes, or credentials (@)
+    if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\') && !trimmedUrl.includes('@')) {
       return trimmedUrl;
     }
   }
@@ -58,6 +59,11 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
   try {
     const parsed = new URL(trimmedUrl);
     if (allowedProtocols.includes(parsed.protocol)) {
+      // Security: Reject URLs with credentials (username/password) to prevent phishing
+      // and certain SSRF/XSS bypasses.
+      if (parsed.username || parsed.password) {
+        return undefined;
+      }
       return trimmedUrl;
     }
   } catch (e) {
@@ -165,8 +171,12 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
     // Limit to 100 tracks to prevent DoS from massive API responses
     for (let i = 0; i < details.tracks.length && tracks.length < 100; i++) {
       const t = details.tracks[i];
+      const rawId = String(t.id || i).slice(0, MAX_ID_LENGTH);
+      // Security: Enforce safe identifier format for track IDs
+      const id = SAFE_ID_REGEXP.test(rawId) ? rawId : `track-${i}`;
+
       tracks.push({
-        id: String(t.id || i).slice(0, MAX_ID_LENGTH),
+        id,
         title: String(t.title || 'Unknown Track').slice(0, MAX_NAME_LENGTH),
         preview: sanitizeUrl(t.preview) || '',
         duration: Math.max(0, Math.min(3600, Number(t.duration) || 0)),
@@ -196,11 +206,19 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
 export function sanitizeAlbum(album: any, regenerateId = false): Album {
   const rawId = album.id;
   const isProviderId = typeof rawId === 'string' && (rawId.startsWith('spotify-') || rawId.startsWith('deezer-') || rawId.startsWith('apple-'));
-  const id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(rawId || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
+  let id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(rawId || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
+
+  // Security: Enforce safe identifier format for album IDs to prevent injection
+  if (!SAFE_ID_REGEXP.test(id)) {
+    id = crypto.randomUUID();
+  }
+
+  const spotifyId = album.spotifyId ? String(album.spotifyId).slice(0, MAX_ID_LENGTH) : undefined;
+  const sanitizedSpotifyId = (spotifyId && SAFE_ID_REGEXP.test(spotifyId)) ? spotifyId : undefined;
 
   const sanitized: Album = {
     id,
-    spotifyId: album.spotifyId ? String(album.spotifyId).slice(0, MAX_ID_LENGTH) : undefined,
+    spotifyId: sanitizedSpotifyId,
     name: (typeof album.name === 'string' && album.name ? album.name : String(album.name || 'Unknown Album')).slice(0, MAX_TEXT_LENGTH),
     artist: (typeof album.artist === 'string' && album.artist ? album.artist : String(album.artist || 'Unknown Artist')).slice(0, MAX_TEXT_LENGTH),
     imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
