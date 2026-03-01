@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useFolderStore, getBreadcrumb } from './store';
+import { useFolderStore, getBreadcrumb, applySyncState, type SyncState } from './store';
 
 describe('useFolderStore', () => {
   beforeEach(() => {
@@ -306,5 +306,146 @@ describe('useFolderStore', () => {
         expect(typeof maliciousState.lastUpdated).toBe('number');
       }
     }
+  });
+
+  it('moves folders across parents and prevents invalid descendant moves', () => {
+    const { createFolder, moveFolder } = useFolderStore.getState();
+
+    createFolder('Root A', null);
+    createFolder('Root B', null);
+    const rootAId = useFolderStore.getState().folders.find((f) => f.name === 'Root A')!.id;
+    const rootBId = useFolderStore.getState().folders.find((f) => f.name === 'Root B')!.id;
+
+    createFolder('Child A1', rootAId);
+    const childA1Id = useFolderStore.getState().folders.find((f) => f.id === rootAId)!.subfolders[0].id;
+
+    // Move child from Root A -> Root B
+    moveFolder(childA1Id, rootBId, null);
+    const rootANow = useFolderStore.getState().folders.find((f) => f.id === rootAId)!;
+    const rootBNow = useFolderStore.getState().folders.find((f) => f.id === rootBId)!;
+    expect(rootANow.subfolders).toHaveLength(0);
+    expect(rootBNow.subfolders.map((f) => f.id)).toContain(childA1Id);
+
+    // Invalid move: parent into its own descendant should be ignored
+    moveFolder(rootBId, childA1Id, null);
+    const rootBAfterInvalid = useFolderStore.getState().folders.find((f) => f.id === rootBId)!;
+    expect(rootBAfterInvalid.parentId).toBe(null);
+  });
+
+  it('reorders albums and ignores invalid reorder indices', () => {
+    const { createFolder, addAlbumToFolder, reorderAlbum } = useFolderStore.getState();
+    createFolder('Playlist', null);
+    const folderId = useFolderStore.getState().folders[0].id;
+
+    addAlbumToFolder(folderId, { id: 'a1', name: 'A1', artist: 'X', imageUrl: 'u', totalTracks: 1 });
+    addAlbumToFolder(folderId, { id: 'a2', name: 'A2', artist: 'X', imageUrl: 'u', totalTracks: 1 });
+    addAlbumToFolder(folderId, { id: 'a3', name: 'A3', artist: 'X', imageUrl: 'u', totalTracks: 1 });
+
+    reorderAlbum(folderId, 0, 2);
+    expect(useFolderStore.getState().folders[0].albums.map((a) => a.id)).toEqual(['a2', 'a3', 'a1']);
+
+    const before = useFolderStore.getState().folders[0].albums;
+    reorderAlbum(folderId, -1, 0);
+    reorderAlbum(folderId, 0, 99);
+    expect(useFolderStore.getState().folders[0].albums).toEqual(before);
+  });
+
+  it('hydrates shared folders album metadata using album map', () => {
+    const { setSharedFolders, hydrateSharedFolders } = useFolderStore.getState();
+    setSharedFolders([
+      {
+        id: 'f1',
+        name: 'Shared',
+        parentId: null,
+        isExpanded: true,
+        viewMode: 'grid',
+        albums: [
+          {
+            id: 'spotify-1',
+            name: 'Loading...',
+            artist: '',
+            imageUrl: '',
+            totalTracks: 0,
+            position: { x: 12, y: 34 },
+          },
+        ],
+        subfolders: [],
+      } as any,
+    ]);
+
+    const hydratedAlbum = {
+      id: 'spotify-1',
+      spotifyId: '1',
+      name: 'Hydrated Name',
+      artist: 'Hydrated Artist',
+      imageUrl: 'https://example.com/x.jpg',
+      totalTracks: 10,
+    } as any;
+
+    hydrateSharedFolders(new Map([['spotify-1', hydratedAlbum]]));
+    const shared = useFolderStore.getState().sharedFolders!;
+    expect(shared[0].albums[0].name).toBe('Hydrated Name');
+    expect(shared[0].albums[0].position).toEqual({ x: 12, y: 34 });
+  });
+
+  it('sets drag state and guest mode flags', () => {
+    const {
+      setDraggedAlbum,
+      setDraggedFolderId,
+      setDraggedFolder,
+      setIsGuestMode,
+      setSharedFolders,
+      exitGuestMode,
+    } = useFolderStore.getState();
+
+    setDraggedAlbum({ id: 'a1' } as any, 'f1', 3);
+    setDraggedFolderId('f2');
+    setDraggedFolder({ id: 'f3' } as any, 'root');
+    setIsGuestMode(true);
+    setSharedFolders([]);
+    expect(useFolderStore.getState().draggedFolderId).toBe('f2');
+    expect(useFolderStore.getState().draggedFolder?.id).toBe('f3');
+    expect(useFolderStore.getState().isGuestMode).toBe(true);
+
+    useFolderStore.setState({
+      folders: [
+        {
+          id: 'persisted-root',
+          name: 'Persisted Root',
+          parentId: null,
+          albums: [],
+          subfolders: [],
+          isExpanded: true,
+          viewMode: 'grid',
+        } as any,
+      ],
+    });
+    exitGuestMode();
+    expect(useFolderStore.getState().isGuestMode).toBe(false);
+    expect(useFolderStore.getState().sharedFolders).toBe(null);
+    expect(useFolderStore.getState().selectedFolderId).toBe('persisted-root');
+  });
+
+  it('applies sync state values directly', () => {
+    const stateBefore = useFolderStore.getState();
+    const syncState: SyncState = {
+      folders: [],
+      selectedFolderId: 'synced',
+      streamingProvider: 'apple',
+      hasSetPreference: true,
+      spotifyToken: 'token',
+      spotifyTokenExpiry: 100,
+      spotifyTokenTimestamp: 200,
+      theme: 'mint',
+      geistFont: 'mono',
+      lastUpdated: stateBefore.lastUpdated + 1,
+    };
+
+    applySyncState(syncState);
+
+    const stateAfter = useFolderStore.getState();
+    expect(stateAfter.selectedFolderId).toBe('synced');
+    expect(stateAfter.streamingProvider).toBe('apple');
+    expect(stateAfter.theme).toBe('mint');
   });
 });

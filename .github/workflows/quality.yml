@@ -1,0 +1,84 @@
+name: Quality Gates
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: "quality-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'app/**'
+              - 'components/**'
+              - 'hooks/**'
+              - 'lib/**'
+              - '*.ts'
+              - '*.tsx'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'vitest.config.ts'
+              - 'tsconfig.json'
+            e2e:
+              - 'e2e/**'
+              - 'app/**'
+              - 'components/**'
+              - 'playwright.config.ts'
+            docs_only:
+              - 'docs/**'
+              - 'README.md'
+
+  unit-quality:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || github.event_name == 'push'
+    timeout-minutes: 12
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:coverage
+      - run: pnpm test:perf
+
+  e2e-smoke:
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
+      - run: pnpm test:e2e:smoke
+        env:
+          NEXT_PUBLIC_BASE_PATH: "/AlbumShelf"
+          NEXT_PUBLIC_SPOTIFY_CLIENT_ID: "test-client-id"

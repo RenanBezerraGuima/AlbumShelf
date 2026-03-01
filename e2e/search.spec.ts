@@ -7,8 +7,8 @@ test('search and add multiple albums', async ({ page }) => {
   await page.getByRole('button', { name: 'Deezer' }).click();
 
   // Create a collection
-  await page.click('button[title="Create collection"]');
-  await page.fill('input[placeholder="Collection name"]', 'My Albums');
+  await page.getByRole('button', { name: 'Create collection' }).click();
+  await page.getByPlaceholder('Collection name').fill('My Albums');
   await page.keyboard.press('Enter');
   await page.click('text=My Albums');
 
@@ -27,6 +27,6 @@ test('search and add multiple albums', async ({ page }) => {
   // Check if both are in the grid
   // Use scroll area to find the grid
   const grid = page.locator('.grid').first();
-  await expect(grid.getByText('Abbey Road')).toBeVisible();
-  await expect(grid.getByText('Let It Be')).toBeVisible();
+  await expect(grid.getByText(/Abbey Road/i).first()).toBeVisible();
+  await expect(grid.getByText(/Let It Be/i).first()).toBeVisible();
 });

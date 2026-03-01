@@ -4,6 +4,8 @@ export default [
       ".next/**",
       "out/**",
       "node_modules/**",
+      ".pnpm-store/**",
+      "coverage/**",
       "dist/**",
       "**/*.min.js",
     ],

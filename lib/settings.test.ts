@@ -32,4 +32,13 @@ describe('useFolderStore settings', () => {
     const state = useFolderStore.getState();
     expect(state.hasSetPreference).toBe(true);
   });
+
+  it('ignores invalid Geist font values', () => {
+    const { setGeistFont } = useFolderStore.getState();
+    const before = useFolderStore.getState().geistFont;
+
+    setGeistFont('serif' as any);
+
+    expect(useFolderStore.getState().geistFont).toBe(before);
+  });
 });

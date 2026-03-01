@@ -795,8 +795,8 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setGeistFont: (font) => {
-        if (get().geistFont === "mono") return;
-        set({ geistFont: "mono", lastUpdated: Date.now() });
+        if (!isValidGeistFont(font) || get().geistFont === font) return;
+        set({ geistFont: font, lastUpdated: Date.now() });
       },
 
       setSettingsOpen: (open) => {

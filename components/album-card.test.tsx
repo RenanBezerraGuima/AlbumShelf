@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AlbumCard } from '@/components/album-card';
 import type { Album } from '@/lib/types';
+import { useFolderStore } from '@/lib/store';
 
 describe('AlbumCard', () => {
   const mockAlbum: Album = {
@@ -66,5 +67,42 @@ describe('AlbumCard', () => {
     // However, it was inside a div with "cursor-grab".
     const grabDiv = document.querySelector('.cursor-grab');
     expect(grabDiv).toBeNull();
+  });
+
+  it('uses provider search URL when externalUrl is missing', () => {
+    useFolderStore.setState({ streamingProvider: 'apple' });
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const noUrlAlbum = { ...mockAlbum, externalUrl: undefined };
+    render(<AlbumCard album={noUrlAlbum} folderId="folder-1" />);
+
+    fireEvent.click(screen.getByLabelText('Play album'));
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('music.apple.com/search?term='),
+      '_blank',
+      'noopener,noreferrer',
+    );
+  });
+
+  it('copies artist and title to clipboard on artist click', () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn() },
+    });
+    render(<AlbumCard album={mockAlbum} folderId="folder-1" />);
+
+    fireEvent.click(screen.getAllByText('Test Artist')[0]);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'Test Artist - Test Album',
+    );
+  });
+
+  it('removes album after confirming delete dialog', () => {
+    const removeSpy = vi.spyOn(useFolderStore.getState(), 'removeAlbumFromFolder');
+    render(<AlbumCard album={mockAlbum} folderId="folder-1" />);
+
+    fireEvent.click(screen.getByLabelText('Remove album'));
+    fireEvent.click(screen.getByRole('button', { name: /Remove$/i }));
+
+    expect(removeSpy).toHaveBeenCalledWith('folder-1', 'test-album');
   });
 });

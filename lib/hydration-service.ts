@@ -117,5 +117,5 @@ async function jsonpLookupApple(ids: string): Promise<any> {
 }
 
 async function jsonpLookupDeezer(id: string): Promise<any> {
-  return jsonp(`https://api.deezer.com/album/${encodeURIComponent(id)}&output=jsonp`);
+  return jsonp(`https://api.deezer.com/album/${encodeURIComponent(id)}?output=jsonp`);
 }

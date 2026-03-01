@@ -1,10 +1,22 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AlbumGrid } from '@/components/album-grid';
 import { useFolderStore } from '@/lib/store';
 
 describe('AlbumGrid spatial mode toggle', () => {
+  it('shows empty state when no folder is selected', () => {
+    useFolderStore.setState({ selectedFolderId: null, folders: [] });
+    render(<AlbumGrid />);
+    expect(screen.getByText(/No collection selected/i)).toBeInTheDocument();
+  });
+
+  it('shows folder not found state for invalid selected folder', () => {
+    useFolderStore.setState({ selectedFolderId: 'missing', folders: [] });
+    render(<AlbumGrid />);
+    expect(screen.getByText(/Error: Collection not found/i)).toBeInTheDocument();
+  });
+
   it('Given a selected folder, when canvas mode is enabled, then the infinite canvas container is rendered', () => {
     const folderId = 'folder-1';
 
@@ -123,5 +135,28 @@ describe('AlbumGrid spatial mode toggle', () => {
 
     const folder = useFolderStore.getState().folders.find(f => f.id === folderId);
     expect(folder?.viewMode).toBe('grid');
+  });
+
+  it('dispatches search focus event from empty collection CTA', () => {
+    const folderId = 'folder-empty';
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    useFolderStore.setState({
+      selectedFolderId: folderId,
+      folders: [
+        {
+          id: folderId,
+          name: 'Empty',
+          parentId: null,
+          isExpanded: true,
+          subfolders: [],
+          viewMode: 'grid',
+          albums: [],
+        },
+      ],
+    });
+
+    render(<AlbumGrid />);
+    fireEvent.click(screen.getByRole('button', { name: /Find your first album/i }));
+    expect(dispatchSpy).toHaveBeenCalled();
   });
 });

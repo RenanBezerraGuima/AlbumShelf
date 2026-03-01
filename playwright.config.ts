@@ -18,8 +18,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    command: 'NEXT_PUBLIC_BASE_PATH=/AlbumShelf pnpm dev',
     url: 'http://localhost:3000/AlbumShelf',
+    timeout: 120 * 1000,
     reuseExistingServer: !process.env.CI,
   },
 });

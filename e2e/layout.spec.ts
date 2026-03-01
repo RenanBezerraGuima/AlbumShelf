@@ -7,8 +7,8 @@ test('headers should be aligned', async ({ page }) => {
   await page.getByRole('button', { name: 'Deezer' }).click();
 
   // Create a collection first
-  await page.click('button[title="Create collection"]');
-  await page.fill('input[placeholder="Collection name"]', 'Test Collection');
+  await page.getByRole('button', { name: 'Create collection' }).click();
+  await page.getByPlaceholder('Collection name').fill('Test Collection');
   await page.keyboard.press('Enter');
 
   // Select the collection
