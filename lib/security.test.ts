@@ -136,6 +136,11 @@ describe('Security Utilities', () => {
       expect(sanitizeUrl(undefined)).toBeUndefined();
       expect(sanitizeUrl('')).toBeUndefined();
     });
+
+    it('should reject URLs with credentials (username/password)', () => {
+      expect(sanitizeUrl('https://user:pass@example.com')).toBeUndefined();
+      expect(sanitizeUrl('https://user@example.com')).toBeUndefined();
+    });
   });
 
   describe('sanitizeImageUrl', () => {
@@ -255,6 +260,19 @@ describe('Security Utilities', () => {
       expect(sanitized.label).toBeUndefined();
       expect(sanitized.contributors).toBeUndefined();
     });
+
+    it('should sanitize track IDs in details', () => {
+      const details = {
+        tracks: [
+          { id: 'safe-id-1', title: 'T1' },
+          { id: 'malicious-id&param=value', title: 'T2' }
+        ]
+      };
+
+      const sanitized = sanitizeAlbumDetails(details);
+      expect(sanitized.tracks[0].id).toBe('safe-id-1');
+      expect(sanitized.tracks[1].id).toBe('track-1');
+    });
   });
 
   describe('sanitizeAlbum', () => {
@@ -342,6 +360,30 @@ describe('Security Utilities', () => {
 
       const sanitized = sanitizeAlbum(album);
       expect(sanitized.position).toBeUndefined();
+    });
+
+    it('should reject and regenerate unsafe album IDs', () => {
+      const album = {
+        id: 'malicious-id&extra=param',
+        name: 'Test',
+        artist: 'Test'
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.id).not.toBe(album.id);
+      expect(sanitized.id).toMatch(/^[a-z0-9-]{36}$/); // UUID format
+    });
+
+    it('should reject unsafe spotifyId', () => {
+      const album = {
+        id: '1',
+        spotifyId: 'malicious-id&extra=param',
+        name: 'Test',
+        artist: 'Test'
+      };
+
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.spotifyId).toBeUndefined();
     });
   });
 
