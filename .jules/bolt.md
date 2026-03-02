@@ -66,6 +66,10 @@
 **Learning:** Redundant state updates and frequent re-renders occur when store actions (setters and tree mutations) trigger a `set()` call even when the underlying data is unchanged. Implementing strict equality checks (`===`) within all actions and ensuring that recursive tree mutation helpers return the original array reference when no changes occur preserves structural sharing and prevents unnecessary re-renders across the entire application.
 **Action:** Always implement 'bail-out' logic in store actions. For scalar values, compare before calling `set()`. For tree mutations, ensure helpers return the original reference if the updater produces no changes, and check this reference before calling `set()`.
 
+## 2026-10-05 - [Optimizing Recursive Filtering with RegExp]
+**Learning:** Performing `toLowerCase().includes()` on every node in a recursive tree traversal (like `FolderTree` search) causes excessive string allocations and memory pressure. Using a single, pre-compiled case-insensitive `RegExp` with `.test()` avoids these allocations and significantly improves performance for large trees.
+**Action:** Use case-insensitive `RegExp` for multi-field matching in hot recursive paths. Always escape user input using a `escapeRegExp` utility.
+
 ## 2026-08-15 - [In-flight Search Request Deduplication]
 **Learning:** In highly interactive search interfaces, rapid user input or provider switching can trigger multiple identical network requests before the first one settles. While a debounce helps, it doesn't prevent redundant requests if the network latency is higher than the debounce interval or if the same search is triggered from multiple entry points. Caching the *promise* of the in-flight request in a Map and returning it for identical subsequent calls eliminates this redundancy and ensures only one network call is made per unique query.
 **Action:** Implement a `pendingRequests` Map in async service wrappers to deduplicate simultaneous identical operations. Ensure promises are removed in a `finally` block to prevent stale state or memory leaks.
