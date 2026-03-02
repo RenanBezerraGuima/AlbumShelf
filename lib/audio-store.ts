@@ -4,6 +4,7 @@
  */
 
 import type { Track } from './types';
+import { sanitizeUrl, sanitizeImageUrl, MAX_TEXT_LENGTH } from './security';
 
 export interface AudioState {
   isPlaying: boolean;
@@ -62,7 +63,10 @@ export const audioManager = {
   play: (url: string, track?: Track, playlist: Track[] = [], albumName?: string, albumImageUrl?: string) => {
     if (typeof window === 'undefined') return;
 
-    if (state.currentUrl === url && globalAudio) {
+    const sanitizedUrl = sanitizeUrl(url);
+    if (!sanitizedUrl) return;
+
+    if (state.currentUrl === sanitizedUrl && globalAudio) {
       if (globalAudio.paused) {
         globalAudio.play();
         updateState({ isPlaying: true });
@@ -77,19 +81,19 @@ export const audioManager = {
       globalAudio.pause();
     }
 
-    globalAudio = new Audio(url);
+    globalAudio = new Audio(sanitizedUrl);
     globalAudio.volume = state.volume;
 
-    const index = playlist.findIndex(t => t.preview === url);
+    const index = playlist.findIndex(t => t.preview === sanitizedUrl);
 
     updateState({
       isPlaying: true,
-      currentUrl: url,
+      currentUrl: sanitizedUrl,
       currentTrack: track || null,
       playlist,
       currentIndex: index,
-      albumName: albumName || null,
-      albumImageUrl: albumImageUrl || null
+      albumName: albumName ? String(albumName).slice(0, MAX_TEXT_LENGTH) : null,
+      albumImageUrl: sanitizeImageUrl(albumImageUrl) || null
     });
 
     globalAudio.onended = () => {
@@ -114,8 +118,26 @@ export const audioManager = {
     }
   },
 
+  reset: () => {
+    if (globalAudio) {
+      globalAudio.pause();
+      globalAudio = null;
+    }
+    updateState({
+      isPlaying: false,
+      currentUrl: null,
+      currentTrack: null,
+      currentIndex: -1,
+      playlist: [],
+      albumName: null,
+      albumImageUrl: null
+    });
+  },
+
   setVolume: (volume: number) => {
-    const vol = Math.max(0, Math.min(1, volume));
+    // Defense-in-depth: Ensure volume is a finite number
+    const numericVolume = typeof volume === 'number' && Number.isFinite(volume) ? volume : 0.7;
+    const vol = Math.max(0, Math.min(1, numericVolume));
     updateState({ volume: vol });
     if (globalAudio) {
       globalAudio.volume = vol;

@@ -119,3 +119,8 @@
 **Vulnerability:** Application identifiers (album/track IDs) were trusted without format validation, and `sanitizeUrl` allowed URLs containing embedded credentials (`https://user:pass@domain`).
 **Learning:** Even if IDs are used primarily in memory or as lookup keys, they can become injection vectors if passed to dynamic contexts like DOM attributes or URL construction (especially when batched/joined). Similarly, while `https:` is generally safe, URLs with authority credentials are a common phishing vector and can bypass some SSRF/XSS filters that don't account for the `userinfo` component.
 **Prevention:** Enforce a strict safe-character regex (`[a-zA-Z0-9\-_]+`) for all identifiers entering the application state. Update URL sanitizers to explicitly reject the `userinfo` component (username/password) using the `URL` API's properties.
+
+## 2026-05-01 - [Sink-level Defense-in-Depth & Hydration Hardening]
+**Vulnerability:** `audioManager` sinks were unsanitized, and `selectedFolderId` was unvalidated during rehydration.
+**Learning:** Even if data is sanitized at the API and store levels, high-impact sinks (like an audio player that handles URLs) should implement their own sanitization as a final line of defense. Similarly, simple scalar fields like IDs in the store must be validated during rehydration to prevent "time-of-check to time-of-use" bypasses where malicious state is injected directly into storage.
+**Prevention:** Always sanitize inputs at the final execution sink (e.g., `audioManager.play`). Enforce `SAFE_ID_REGEXP` validation symmetrically across all lifecycle stages: creation, mutation, and rehydration.

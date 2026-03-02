@@ -501,6 +501,30 @@ describe('Security Utilities', () => {
       expect(sanitized.albums.length).toBe(5000);
       expect(sanitized.subfolders.length).toBe(100);
     });
+
+    it('should reject and regenerate unsafe folder IDs', () => {
+      const folder = {
+        id: 'malicious-id&extra=param',
+        name: 'Test',
+        albums: []
+      };
+
+      const sanitized = sanitizeFolder(folder);
+      expect(sanitized.id).not.toBe(folder.id);
+      expect(sanitized.id).toMatch(/^[a-z0-9-]{36}$/); // UUID format
+    });
+
+    it('should reject unsafe parentId', () => {
+      const folder = {
+        id: 'safe-id',
+        name: 'Test',
+        parentId: 'malicious-id&extra=param',
+        albums: []
+      };
+
+      const sanitized = sanitizeFolder(folder);
+      expect(sanitized.parentId).toBeNull();
+    });
   });
 });
 
@@ -516,6 +540,17 @@ describe('Security: State Hydration', () => {
 
     expect(state.selectedFolderId.length).toBe(100);
     expect(state.selectedFolderId).toBe('A'.repeat(100));
+  });
+
+  it('should reject unsafe selectedFolderId during rehydration', () => {
+    const onRehydrate = (useFolderStore.persist as any).getOptions().onRehydrateStorage;
+    const callback = onRehydrate(useFolderStore.getState());
+
+    const unsafeId = 'malicious-id&extra=param';
+    const state: any = { selectedFolderId: unsafeId };
+    callback(state);
+
+    expect(state.selectedFolderId).toBeNull();
   });
 
   it('should validate spotifyTokenExpiry during rehydration', () => {
