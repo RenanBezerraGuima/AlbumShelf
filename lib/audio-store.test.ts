@@ -4,7 +4,7 @@ import { audioManager } from './audio-store';
 describe('audioManager', () => {
   beforeEach(() => {
     // Reset state before each test
-    audioManager.stop();
+    audioManager.reset();
     audioManager.setVolume(0.7);
 
     // Correctly mock Audio as a constructor on window
@@ -37,33 +37,33 @@ describe('audioManager', () => {
 
   it('should handle playlist navigation', () => {
     const playlist = [
-      { id: '1', title: 'Track 1', preview: 'url1', duration: 30 },
-      { id: '2', title: 'Track 2', preview: 'url2', duration: 30 },
+      { id: '1', title: 'Track 1', preview: 'https://example.com/1.mp3', duration: 30 },
+      { id: '2', title: 'Track 2', preview: 'https://example.com/2.mp3', duration: 30 },
     ];
 
-    audioManager.play('url1', playlist[0], playlist, 'Album', 'art');
+    audioManager.play('https://example.com/1.mp3', playlist[0], playlist, 'Album', 'https://example.com/art.jpg');
     let state = audioManager.getState();
     expect(state.currentIndex).toBe(0);
-    expect(state.currentUrl).toBe('url1');
+    expect(state.currentUrl).toBe('https://example.com/1.mp3');
 
     audioManager.next();
     state = audioManager.getState();
     expect(state.currentIndex).toBe(1);
-    expect(state.currentUrl).toBe('url2');
+    expect(state.currentUrl).toBe('https://example.com/2.mp3');
   });
 
   it('should stop playback but keep metadata', () => {
-    audioManager.play('url1');
+    audioManager.play('https://example.com/1.mp3');
     audioManager.stop();
     expect(audioManager.getState().isPlaying).toBe(false);
-    expect(audioManager.getState().currentUrl).toBe('url1');
+    expect(audioManager.getState().currentUrl).toBe('https://example.com/1.mp3');
   });
 
   it('should publish state updates to subscribers and allow unsubscribe', () => {
     const listener = vi.fn();
     const unsubscribe = audioManager.subscribe(listener);
 
-    audioManager.play('url-a');
+    audioManager.play('https://example.com/a.mp3');
     expect(listener).toHaveBeenCalled();
 
     const callsBefore = listener.mock.calls.length;
@@ -74,37 +74,74 @@ describe('audioManager', () => {
 
   it('should skip tracks without preview when navigating next', () => {
     const playlist = [
-      { id: '1', title: 'Track 1', preview: 'url1', duration: 30 },
+      { id: '1', title: 'Track 1', preview: 'https://example.com/1.mp3', duration: 30 },
       { id: '2', title: 'Track 2', preview: '', duration: 30 },
-      { id: '3', title: 'Track 3', preview: 'url3', duration: 30 },
+      { id: '3', title: 'Track 3', preview: 'https://example.com/3.mp3', duration: 30 },
     ];
 
-    audioManager.play('url1', playlist[0], playlist, 'Album', 'art');
+    audioManager.play('https://example.com/1.mp3', playlist[0], playlist, 'Album', 'https://example.com/art.jpg');
     audioManager.next();
 
-    expect(audioManager.getState().currentUrl).toBe('url3');
+    expect(audioManager.getState().currentUrl).toBe('https://example.com/3.mp3');
   });
 
   it('toggles playback when playing the same URL again', () => {
-    audioManager.play('same-url');
+    audioManager.play('https://example.com/same.mp3');
     expect(audioManager.getState().isPlaying).toBe(true);
 
-    audioManager.play('same-url');
+    audioManager.play('https://example.com/same.mp3');
     expect(audioManager.getState().isPlaying).toBe(false);
   });
 
   it('navigates to previous playable track and no-ops at start', () => {
     const playlist = [
-      { id: '1', title: 'Track 1', preview: 'url1', duration: 30 },
+      { id: '1', title: 'Track 1', preview: 'https://example.com/1.mp3', duration: 30 },
       { id: '2', title: 'Track 2', preview: '', duration: 30 },
-      { id: '3', title: 'Track 3', preview: 'url3', duration: 30 },
+      { id: '3', title: 'Track 3', preview: 'https://example.com/3.mp3', duration: 30 },
     ];
 
-    audioManager.play('url3', playlist[2], playlist, 'Album', 'art');
+    audioManager.play('https://example.com/3.mp3', playlist[2], playlist, 'Album', 'https://example.com/art.jpg');
     audioManager.prev();
-    expect(audioManager.getState().currentUrl).toBe('url1');
+    expect(audioManager.getState().currentUrl).toBe('https://example.com/1.mp3');
 
     audioManager.prev();
-    expect(audioManager.getState().currentUrl).toBe('url1');
+    expect(audioManager.getState().currentUrl).toBe('https://example.com/1.mp3');
+  });
+
+  describe('Security: Input Sanitization', () => {
+    it('should reject unsafe URLs in play()', () => {
+      audioManager.reset();
+      // Ensure it starts null
+      expect(audioManager.getState().currentUrl).toBeNull();
+
+      audioManager.play('javascript:alert(1)');
+      expect(audioManager.getState().currentUrl).toBeNull();
+      expect(audioManager.getState().isPlaying).toBe(false);
+    });
+
+    it('should sanitize album metadata in play()', () => {
+      const longName = 'A'.repeat(500);
+      const unsafeImageUrl = 'javascript:alert(1)';
+
+      audioManager.play('https://example.com/audio.mp3', undefined, [], longName, unsafeImageUrl);
+
+      const state = audioManager.getState();
+      expect(state.albumName?.length).toBe(200);
+      expect(state.albumImageUrl).toBeNull();
+    });
+
+    it('should handle non-finite volume values', () => {
+      audioManager.setVolume(Infinity);
+      expect(audioManager.getState().volume).toBe(0.7);
+
+      audioManager.setVolume(NaN);
+      expect(audioManager.getState().volume).toBe(0.7);
+
+      audioManager.setVolume(2.0); // Clamped
+      expect(audioManager.getState().volume).toBe(1.0);
+
+      audioManager.setVolume(-1.0); // Clamped
+      expect(audioManager.getState().volume).toBe(0.0);
+    });
   });
 });

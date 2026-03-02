@@ -28,7 +28,7 @@ const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
-const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
+export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
 
 /**
  * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
@@ -317,13 +317,20 @@ export function jsonp<T>(url: string): Promise<T> {
 export function sanitizeFolder(
   folder: any,
   regenerateIds = false,
-  parentId: string | null = folder.parentId ? String(folder.parentId).slice(0, MAX_ID_LENGTH) : null,
+  parentId: string | null = (folder.parentId && typeof folder.parentId === 'string' && SAFE_ID_REGEXP.test(folder.parentId.slice(0, MAX_ID_LENGTH)))
+    ? folder.parentId.slice(0, MAX_ID_LENGTH)
+    : null,
   albumMapper: (album: Album, index: number) => Album = (a) => a,
   depth = 0,
   context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 }
 ): Folder {
   context.totalFolders++;
-  const id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, MAX_ID_LENGTH);
+  let id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, MAX_ID_LENGTH);
+
+  // Security: Enforce safe identifier format for folder IDs
+  if (!SAFE_ID_REGEXP.test(id)) {
+    id = crypto.randomUUID();
+  }
 
   const albums: Album[] = [];
   // Defense-in-depth: only process albums if we haven't hit the folder limit

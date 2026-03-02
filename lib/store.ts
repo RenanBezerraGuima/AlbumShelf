@@ -10,6 +10,7 @@ import {
   isValidViewMode,
   isValidStreamingProvider,
   isValidGeistFont,
+  SAFE_ID_REGEXP,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   MAX_TOKEN_LENGTH,
@@ -838,7 +839,9 @@ export const useFolderStore = create<FolderStore>()(
             state.folders = [];
           }
 
-          state.selectedFolderId = typeof state.selectedFolderId === 'string' ? state.selectedFolderId.slice(0, MAX_ID_LENGTH) : null;
+          state.selectedFolderId = typeof state.selectedFolderId === 'string' && SAFE_ID_REGEXP.test(state.selectedFolderId.slice(0, MAX_ID_LENGTH))
+            ? state.selectedFolderId.slice(0, MAX_ID_LENGTH)
+            : null;
           state.hasSetPreference = Boolean(state.hasSetPreference);
           state.spotifyTokenExpiry = typeof state.spotifyTokenExpiry === 'number' && Number.isFinite(state.spotifyTokenExpiry) ? state.spotifyTokenExpiry : null;
           state.spotifyTokenTimestamp = typeof state.spotifyTokenTimestamp === 'number' && Number.isFinite(state.spotifyTokenTimestamp) ? state.spotifyTokenTimestamp : null;
