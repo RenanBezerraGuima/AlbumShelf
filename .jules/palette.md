@@ -33,3 +33,7 @@
 ## 2025-05-23 - [Feedback for File Export Actions]
 **Learning:** Actions that trigger background browser processes (like file downloads) often lack immediate UI feedback, leaving users unsure if the action succeeded. Momentarily transforming the button into a success state (e.g., "Data Exported!") provides clear confirmation and improves the perceived reliability of the interface.
 **Action:** Always provide momentary visual and textual feedback for actions that trigger file downloads or other non-UI browser events.
+
+## 2026-05-24 - [Formatting Bracketed Shortcut Hints]
+**Learning:** When using single-character bracket keys (like '[' or ']') as shortcuts, the standard bracketed hint format (e.g., '[[]') can be visually confusing and cluttered. Using parentheses for these specific hints (e.g., '([)' and '])') improves clarity and maintains the technical aesthetic without sacrificing discoverability.
+**Action:** Use parentheses for shortcut hints involving bracket keys, while maintaining standard square brackets for all other keyboard shortcuts.
