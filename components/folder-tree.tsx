@@ -49,6 +49,14 @@ import { useFolderStore } from "@/lib/store";
 import type { Folder as FolderType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+/**
+ * Performance: Escape special regex characters to allow safe use of RegExp
+ * for case-insensitive searching without repeated toLowerCase() calls.
+ */
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 interface FolderItemProps {
   folder: FolderType;
   depth: number;
@@ -591,15 +599,17 @@ export function FolderTree() {
   const draggedFolder = useFolderStore((state) => state.draggedFolder);
 
   const filteredFolders = React.useMemo(() => {
-    if (!searchQuery.trim()) return folders;
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return folders;
 
-    const query = searchQuery.toLowerCase();
+    // Performance: Use a single case-insensitive RegExp to avoid repeated
+    // toLowerCase() and string allocations during recursive filtering.
+    const queryRegex = new RegExp(escapeRegExp(trimmedQuery), "i");
 
     const filterFolder = (folder: FolderType): FolderType | null => {
-      const matchesName = folder.name.toLowerCase().includes(query);
+      const matchesName = queryRegex.test(folder.name);
       const matchesAlbum = folder.albums.some((album) =>
-        album.name.toLowerCase().includes(query) ||
-        album.artist.toLowerCase().includes(query),
+        queryRegex.test(album.name) || queryRegex.test(album.artist),
       );
 
       const filteredSubfolders = folder.subfolders
