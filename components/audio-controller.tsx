@@ -27,6 +27,7 @@ export function AudioController() {
 
   const handleNext = useCallback(() => audioManager.next(), []);
   const handlePrev = useCallback(() => audioManager.prev(), []);
+  const handleStop = useCallback(() => audioManager.stop(), []);
 
   const toggleMute = useCallback(() => {
     const s = audioManager.getState();
@@ -42,9 +43,13 @@ export function AudioController() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '') ||
-          (document.activeElement as HTMLElement)?.isContentEditable ||
-          e.metaKey || e.ctrlKey || e.altKey) return;
+      const s = audioManager.getState();
+      const isActive = s.currentUrl || s.playlist.length > 0;
+      const activeElement = document.activeElement;
+      const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(activeElement?.tagName || '');
+      const isContentEditable = (activeElement as HTMLElement)?.isContentEditable;
+
+      if (!isActive || isInputActive || isContentEditable || e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === ' ') { e.preventDefault(); handleTogglePlay(); }
       else if (e.key === '[') { e.preventDefault(); handlePrev(); }
