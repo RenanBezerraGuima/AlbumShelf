@@ -24,11 +24,12 @@ describe('SpotifyCallbackHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
     window.history.replaceState({}, '', 'http://localhost:3000/AlbumShelf/');
   });
 
   it('sets spotify token from implicit grant hash when state matches', async () => {
-    localStorage.setItem('spotify_auth_state', 'ok');
+    sessionStorage.setItem('spotify_auth_state', 'ok');
     window.history.replaceState({}, '', 'http://localhost:3000/AlbumShelf/#access_token=x&state=ok');
     parseSpotifyHashMock.mockReturnValue({
       accessToken: 'tok',
@@ -45,8 +46,8 @@ describe('SpotifyCallbackHandler', () => {
   });
 
   it('exchanges PKCE code and stores token when state matches', async () => {
-    localStorage.setItem('spotify_auth_state', 'state1');
-    localStorage.setItem('spotify_code_verifier', 'verifier');
+    sessionStorage.setItem('spotify_auth_state', 'state1');
+    sessionStorage.setItem('spotify_code_verifier', 'verifier');
     window.history.replaceState({}, '', 'http://localhost:3000/AlbumShelf/?code=abc&state=state1');
     exchangeCodeForTokenMock.mockResolvedValue({
       access_token: 'pkce-token',
@@ -58,7 +59,7 @@ describe('SpotifyCallbackHandler', () => {
     await waitFor(() => {
       expect(exchangeCodeForTokenMock).toHaveBeenCalledWith('abc');
       expect(setSpotifyToken).toHaveBeenCalledWith('pkce-token', 1800, expect.any(Number));
-      expect(localStorage.getItem('spotify_code_verifier')).toBeNull();
+      expect(sessionStorage.getItem('spotify_code_verifier')).toBeNull();
     });
   });
 });

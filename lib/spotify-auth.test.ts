@@ -4,6 +4,7 @@ import { getSpotifyAuthUrl, parseSpotifyHash } from './spotify-auth';
 describe('spotify-auth', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     window.history.replaceState({}, '', 'http://localhost:3000/AlbumShelf/');
     process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID = 'test-client-id';
     delete process.env.NEXT_PUBLIC_BASE_PATH;
@@ -38,7 +39,7 @@ describe('spotify-auth', () => {
     expect(url.searchParams.get('redirect_uri')).toBe(
       'http://localhost:3000/AlbumShelf/',
     );
-    expect(localStorage.getItem('spotify_auth_state')).toBeTruthy();
+    expect(sessionStorage.getItem('spotify_auth_state')).toBeTruthy();
   });
 
   it('uses explicit NEXT_PUBLIC_BASE_PATH override for redirect uri', () => {

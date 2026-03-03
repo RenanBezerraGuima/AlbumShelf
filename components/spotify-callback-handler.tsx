@@ -17,8 +17,8 @@ export function SpotifyCallbackHandler() {
         const authData = parseSpotifyHash(hash);
 
         if (authData) {
-          const storedState = localStorage.getItem('spotify_auth_state');
-          localStorage.removeItem('spotify_auth_state');
+          const storedState = sessionStorage.getItem('spotify_auth_state');
+          sessionStorage.removeItem('spotify_auth_state');
 
           if (!authData.state || authData.state !== storedState) {
             console.error('Spotify Auth State Mismatch');
@@ -45,7 +45,7 @@ export function SpotifyCallbackHandler() {
       const error = urlParams.get('error');
 
       if (error) {
-        localStorage.removeItem('spotify_auth_state');
+        sessionStorage.removeItem('spotify_auth_state');
         console.error('Spotify Auth Error:', error);
 
         // Clean up URL
@@ -58,8 +58,8 @@ export function SpotifyCallbackHandler() {
       }
 
       if (code) {
-        const storedState = localStorage.getItem('spotify_auth_state');
-        localStorage.removeItem('spotify_auth_state');
+        const storedState = sessionStorage.getItem('spotify_auth_state');
+        sessionStorage.removeItem('spotify_auth_state');
 
         if (!state || state !== storedState) {
           console.error('Spotify Auth State Mismatch');
@@ -83,7 +83,7 @@ export function SpotifyCallbackHandler() {
           console.error('Failed to exchange code:', err);
         } finally {
           // Clean up sensitive temporary data
-          localStorage.removeItem('spotify_code_verifier');
+          sessionStorage.removeItem('spotify_code_verifier');
         }
       }
     };
