@@ -144,4 +144,49 @@ describe('audioManager', () => {
       expect(audioManager.getState().volume).toBe(0.0);
     });
   });
+
+  describe('Performance: Optimization Checks', () => {
+    it('should NOT notify subscribers when updating state with identical values', () => {
+      audioManager.setVolume(0.5);
+      const listener = vi.fn();
+      audioManager.subscribe(listener);
+
+      // Listener is called once upon subscription
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Update with same volume
+      audioManager.setVolume(0.5);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // Update with different volume
+      audioManager.setVolume(0.6);
+      expect(listener).toHaveBeenCalledTimes(2);
+    });
+
+    it('should provide stable state reference for multiple calls to getState', () => {
+      audioManager.setVolume(0.8);
+      const s1 = audioManager.getState();
+      const s2 = audioManager.getState();
+
+      // Should be the exact same object reference
+      expect(s1).toBe(s2);
+
+      // After update, it should be a new reference
+      audioManager.setVolume(0.9);
+      const s3 = audioManager.getState();
+      expect(s3).not.toBe(s1);
+    });
+
+    it('should provide stable state reference to subscribers', () => {
+      const s1 = audioManager.getState();
+      let s2: any;
+
+      audioManager.subscribe((state) => {
+        s2 = state;
+      });
+
+      // Reference should be stable (no cloning)
+      expect(s1).toBe(s2);
+    });
+  });
 });

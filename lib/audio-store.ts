@@ -51,10 +51,18 @@ let state: AudioState = {
 let subscribers: Set<AudioStatusCallback> = new Set();
 
 const notifySubscribers = () => {
-  subscribers.forEach(cb => cb({ ...state }));
+  subscribers.forEach(cb => cb(state));
 };
 
 const updateState = (updates: Partial<AudioState>) => {
+  // Performance: Perform a shallow equality check before applying updates
+  // to prevent redundant state updates and unnecessary subscriber notifications.
+  const hasChanged = Object.entries(updates).some(([key, value]) => {
+    return state[key as keyof AudioState] !== value;
+  });
+
+  if (!hasChanged) return;
+
   state = { ...state, ...updates };
   notifySubscribers();
 };
@@ -183,12 +191,12 @@ export const audioManager = {
 
   subscribe: (callback: AudioStatusCallback) => {
     subscribers.add(callback);
-    callback({ ...state });
+    callback(state);
 
     return () => {
       subscribers.delete(callback);
     };
   },
 
-  getState: () => ({ ...state }),
+  getState: () => state,
 };
