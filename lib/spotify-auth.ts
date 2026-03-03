@@ -28,11 +28,22 @@ const resolveRedirectUri = () => {
 
 function generateRandomString(length: number) {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint32Array(length);
-  crypto.getRandomValues(values);
-  return Array.from(values)
-    .map((x) => possible[x % possible.length])
-    .join('');
+  const alphabetLength = possible.length;
+  // To eliminate modulo bias, we calculate the largest multiple of alphabetLength
+  // that fits into a 32-bit unsigned integer.
+  const maxSafeValue = 0xffffffff - (0xffffffff % alphabetLength);
+
+  let result = '';
+  const randomValues = new Uint32Array(1);
+
+  while (result.length < length) {
+    crypto.getRandomValues(randomValues);
+    const val = randomValues[0];
+    if (val < maxSafeValue) {
+      result += possible[val % alphabetLength];
+    }
+  }
+  return result;
 }
 
 async function generateCodeChallenge(codeVerifier: string) {
@@ -57,8 +68,8 @@ export const redirectToSpotifyAuth = async () => {
   const challenge = await generateCodeChallenge(verifier);
   const state = generateRandomString(16);
 
-  localStorage.setItem('spotify_code_verifier', verifier);
-  localStorage.setItem('spotify_auth_state', state);
+  sessionStorage.setItem('spotify_code_verifier', verifier);
+  sessionStorage.setItem('spotify_auth_state', state);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -76,7 +87,7 @@ export const redirectToSpotifyAuth = async () => {
 export const exchangeCodeForToken = async (code: string) => {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || 'YOUR_SPOTIFY_CLIENT_ID';
   const redirectUri = resolveRedirectUri();
-  const verifier = localStorage.getItem('spotify_code_verifier');
+  const verifier = sessionStorage.getItem('spotify_code_verifier');
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -112,7 +123,7 @@ export const getSpotifyAuthUrl = () => {
   const redirectUri = resolveRedirectUri();
 
   const state = generateRandomString(16);
-  localStorage.setItem('spotify_auth_state', state);
+  sessionStorage.setItem('spotify_auth_state', state);
 
   const params = new URLSearchParams({
     client_id: clientId,
