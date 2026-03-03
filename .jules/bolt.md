@@ -81,3 +81,7 @@
 ## 2024-05-22 - [Eliminating Layout Thrashing in High-Frequency Render Paths]
 **Learning:** Accessing DOM properties that trigger layout (like `clientWidth`, `clientHeight`, or `getBoundingClientRect`) inside a `useMemo` or render function causes synchronous layout thrashing when the component re-renders frequently (e.g., during panning or dragging). Moving these measurements into a `ResizeObserver` that updates a local state ensures that dimensions are available during render without forcing the browser to recalculate layout mid-cycle.
 **Action:** Use `ResizeObserver` and state to track element dimensions for spatial calculations. Avoid direct DOM measurement calls inside `useMemo` or the component body.
+
+## 2026-03-03 - [Audio Store Reference Stability and No-op Bail-outs]
+**Learning:** In custom store implementations like `audio-store.ts`, returning a new shallow clone (`{ ...state }`) on every `getState()` or `subscribe()` call breaks React's reference-based optimizations (like `React.memo` or `useMemo`). Consumers perceive a "change" even when the underlying data is identical. Additionally, triggering subscriber notifications for "no-op" updates (where new values match existing ones) causes cascading redundant re-renders across the application.
+**Action:** Always implement shallow equality checks in store setters to bail out of no-op updates. Provide a stable, immutable state reference to consumers and only replace it when a change actually occurs.
