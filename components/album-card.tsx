@@ -26,7 +26,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { useFolderStore } from '@/lib/store';
-import type { Album, AlbumDetails } from '@/lib/types';
+import type { Album, AlbumDetails, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getAlbumDetailsDeezer } from '@/lib/search-service';
 import { audioManager, type AudioState } from '@/lib/audio-store';
@@ -41,6 +41,49 @@ interface AlbumDetailsContentProps {
   details: AlbumDetails;
   isFlipped: boolean;
 }
+
+/**
+ * Performance: Memoized track item component.
+ * By isolating the track row, we turn O(N) reconciliations into O(1)
+ * for track changes within the list.
+ */
+const TrackItem = React.memo(function TrackItem({
+  track,
+  index,
+  isTrackPlaying,
+  onPlay,
+}: {
+  track: Track;
+  index: number;
+  isTrackPlaying: boolean;
+  onPlay: (track: Track) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
+        isTrackPlaying && "bg-primary/20",
+        !track.preview && "opacity-50 cursor-not-allowed"
+      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (track.preview) {
+          onPlay(track);
+        }
+      }}
+    >
+      <span className="text-muted-foreground w-3 shrink-0">{index + 1}.</span>
+      <span className="flex-1 truncate font-medium">{track.title}</span>
+      <div className="shrink-0">
+        {isTrackPlaying ? (
+          <Pause className="h-3 w-3 fill-current text-primary" />
+        ) : track.preview ? (
+          <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
+        ) : null}
+      </div>
+    </div>
+  );
+});
 
 /**
  * Performance: Separate component for the album details (tracklist).
@@ -61,46 +104,42 @@ const AlbumDetailsContent = React.memo(function AlbumDetailsContent({
     // Performance: Sync the local state immediately upon subscription to ensure the UI
     // matches the global state if it changed while the card was unsubscribed.
     setAudioState(audioManager.getState());
-    return audioManager.subscribe(setAudioState);
+    return audioManager.subscribe((newState) => {
+      setAudioState((oldState) => {
+        // Performance: Only trigger re-render if playing status or current track changed.
+        // Unrelated changes like volume updates will be ignored by this component.
+        if (
+          oldState.isPlaying === newState.isPlaying &&
+          oldState.currentUrl === newState.currentUrl
+        ) {
+          return oldState;
+        }
+        return newState;
+      });
+    });
   }, [isFlipped]);
+
+  const handleTrackPlay = useCallback((track: Track) => {
+    audioManager.play(
+      track.preview,
+      track,
+      details.tracks,
+      album.name,
+      album.imageUrl
+    );
+  }, [details.tracks, album.name, album.imageUrl]);
 
   return (
     <div className="space-y-0.5">
-      {details.tracks.map((track, idx) => {
-        const isTrackPlaying = audioState.isPlaying && audioState.currentUrl === track.preview;
-        return (
-          <div
-            key={track.id}
-            className={cn(
-              "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
-              isTrackPlaying && "bg-primary/20",
-              !track.preview && "opacity-50 cursor-not-allowed"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (track.preview) {
-                audioManager.play(
-                  track.preview,
-                  track,
-                  details.tracks,
-                  album.name,
-                  album.imageUrl
-                );
-              }
-            }}
-          >
-            <span className="text-muted-foreground w-3 shrink-0">{idx + 1}.</span>
-            <span className="flex-1 truncate font-medium">{track.title}</span>
-            <div className="shrink-0">
-              {isTrackPlaying ? (
-                <Pause className="h-3 w-3 fill-current text-primary" />
-              ) : track.preview ? (
-                <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
-              ) : null}
-            </div>
-          </div>
-        );
-      })}
+      {details.tracks.map((track, idx) => (
+        <TrackItem
+          key={track.id}
+          track={track}
+          index={idx}
+          isTrackPlaying={audioState.isPlaying && audioState.currentUrl === track.preview}
+          onPlay={handleTrackPlay}
+        />
+      ))}
 
       {(details.label || details.contributors) && (
         <div className="mt-4 p-2 border-t border-border/50 space-y-2">
@@ -183,7 +222,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     setIsDeleteDialogOpen(false);
   };
 
-  const handlePlay = (e: React.MouseEvent) => {
+  const handlePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (album.externalUrl) {
       window.open(album.externalUrl, '_blank', 'noopener,noreferrer');
@@ -197,7 +236,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         : `https://www.deezer.com/search/${encodeURIComponent(searchQuery)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }
-  };
+  }, [album.externalUrl, album.name, album.artist]);
 
   const copyDetails = useCallback(() => {
     navigator.clipboard.writeText(`${album.artist} - ${album.name}`);
