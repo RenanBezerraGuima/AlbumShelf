@@ -11,6 +11,7 @@ import {
   isValidStreamingProvider,
   isValidGeistFont,
   SAFE_ID_REGEXP,
+  CONTROL_CHARS_REGEXP,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   MAX_TOKEN_LENGTH,
@@ -373,10 +374,13 @@ export const useFolderStore = create<FolderStore>()(
       lastUpdated: 0,
 
       createFolder: (name, parentId) => {
+        const sanitizedParentId = parentId ? String(parentId).slice(0, MAX_ID_LENGTH) : null;
+        const finalParentId = (sanitizedParentId && SAFE_ID_REGEXP.test(sanitizedParentId)) ? sanitizedParentId : null;
+
         const newFolder: Folder = {
           id: generateId(),
           name: name.slice(0, MAX_NAME_LENGTH),
-          parentId: parentId ? String(parentId).slice(0, MAX_ID_LENGTH) : null,
+          parentId: finalParentId,
           albums: [],
           subfolders: [],
           isExpanded: true,
@@ -384,7 +388,7 @@ export const useFolderStore = create<FolderStore>()(
         };
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
-          const newFolders = addFolderToTree(currentFolders, parentId, newFolder);
+          const newFolders = addFolderToTree(currentFolders, finalParentId, newFolder);
           if (newFolders === currentFolders) return state;
           if (state.sharedFolders) {
             return { sharedFolders: newFolders, lastUpdated: Date.now() };
@@ -455,7 +459,9 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setSelectedFolder: (id) => {
-        const newId = id ? String(id).slice(0, MAX_ID_LENGTH) : null;
+        const sanitizedId = id ? String(id).slice(0, MAX_ID_LENGTH) : null;
+        const newId = (sanitizedId && SAFE_ID_REGEXP.test(sanitizedId)) ? sanitizedId : null;
+
         if (get().selectedFolderId === newId) return;
         set({ selectedFolderId: newId, lastUpdated: Date.now() });
       },
@@ -782,10 +788,13 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
+        const sanitizedToken = token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null;
+        const finalToken = (sanitizedToken && !CONTROL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
+
         set({
-          spotifyToken: token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null,
-          spotifyTokenExpiry: typeof expiresIn === 'number' && Number.isFinite(expiresIn) ? expiresIn : null,
-          spotifyTokenTimestamp: typeof timestamp === 'number' && Number.isFinite(timestamp) ? timestamp : null,
+          spotifyToken: finalToken,
+          spotifyTokenExpiry: typeof expiresIn === 'number' && Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : null,
+          spotifyTokenTimestamp: typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null,
           lastUpdated: Date.now(),
         });
       },
