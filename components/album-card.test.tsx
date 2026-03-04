@@ -4,6 +4,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AlbumCard } from '@/components/album-card';
 import type { Album } from '@/lib/types';
 import { useFolderStore } from '@/lib/store';
+import * as searchService from '@/lib/search-service';
+
+vi.mock('@/lib/search-service', () => ({
+  getAlbumDetailsDeezer: vi.fn().mockResolvedValue({ tracks: [], label: '', contributors: [] }),
+}));
 
 describe('AlbumCard', () => {
   const mockAlbum: Album = {
@@ -104,5 +109,23 @@ describe('AlbumCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Remove$/i }));
 
     expect(removeSpy).toHaveBeenCalledWith('folder-1', 'test-album');
+  });
+
+  it('flips when Enter or Space is pressed', async () => {
+    render(<AlbumCard album={mockAlbum} folderId="folder-1" />);
+    const card = screen.getByLabelText(/Test Album by Test Artist/i);
+
+    // Initial state: not flipped
+    expect(card).toHaveAttribute('aria-expanded', 'false');
+
+    // Press Enter
+    fireEvent.keyDown(card, { key: 'Enter' });
+    // Use findBy to wait for async state update
+    expect(await screen.findByLabelText(/Test Album by Test Artist - showing tracklist/i)).toBeInTheDocument();
+
+    // Press Space to flip back
+    const flippedCard = screen.getByLabelText(/Test Album by Test Artist - showing tracklist/i);
+    fireEvent.keyDown(flippedCard, { key: ' ' });
+    expect(await screen.findByLabelText(/Test Album by Test Artist - click to flip/i)).toBeInTheDocument();
   });
 });

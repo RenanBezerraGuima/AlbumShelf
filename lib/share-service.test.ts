@@ -62,4 +62,41 @@ describe('share-service v2 (reference-based)', () => {
     expect(data).toBeDefined();
     expect(data!.folders[0].name).toBe('Test Folder');
   });
+
+  it('should handle decompression of invalid json strings gracefully', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const invalidCompressed = LZString.compressToEncodedURIComponent('not valid json');
+    const data = decompressData(invalidCompressed);
+    expect(data).toBeNull();
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('should return null when decompressing empty or invalid data', () => {
+    expect(decompressData('')).toBeNull();
+    expect(decompressData('!!! invalid !!!')).toBeNull();
+  });
+
+  it('should return null for valid JSON that is not a recognized payload', () => {
+    const json = JSON.stringify({ unknown: 'data' });
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    const result = decompressData(compressed);
+    expect(result).toBeNull();
+  });
+
+  it('should return empty string if compression fails', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const circular: any = [];
+    circular.push(circular);
+    const result = compressData(circular, 'deezer');
+    expect(result).toBe('');
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('should generate a share URL with hash', () => {
+    const url = generateShareUrl(mockFolders, 'deezer');
+    expect(url).toContain('#/share/');
+    expect(url).toContain('http://localhost:3000/');
+  });
 });
