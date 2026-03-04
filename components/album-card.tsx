@@ -145,7 +145,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
   const [details, setDetails] = useState<AlbumDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  const handleFlip = async (e?: React.MouseEvent) => {
+  const handleFlip = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (!isFlipped && !details) {
       setIsLoadingDetails(true);
       try {
@@ -165,6 +165,17 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
     }
 
     setIsFlipped(!isFlipped);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleFlip(e);
+    } else if (e.key === 'Escape' && isFlipped) {
+      e.preventDefault();
+      handleFlip(e);
+      audioManager.stop();
+    }
   };
 
   const handleRemove = () => {
@@ -200,8 +211,12 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
       <ContextMenuTrigger asChild>
         <div
           data-album-card
+          tabIndex={0}
+          role="button"
+          aria-expanded={isFlipped}
+          aria-label={`${album.name} by ${album.artist}${isFlipped ? ' - showing tracklist' : ' - click to flip'}`}
           className={cn(
-            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer',
+            'group relative aspect-square perspective-1000 transition-all duration-200 hover:brutalist-shadow hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0 focus-within:brutalist-shadow focus-within:-translate-x-1 focus-within:-translate-y-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
             isFlipped ? 'z-50' : 'z-0'
           )}
           style={{ borderRadius: 'var(--radius)' }}
@@ -212,6 +227,7 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
             }
             handleFlip(e);
           }}
+          onKeyDown={handleKeyDown}
         >
           <div className={cn(
             "relative w-full h-full transition-transform duration-700 preserve-3d cursor-pointer",
@@ -309,13 +325,28 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         <h3 className="font-medium text-sm text-foreground truncate" title={album.name} style={{ fontFamily: 'var(--font-display)' }}>
           {album.name}
         </h3>
-        <p
-          className="text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary text-muted-foreground"
-          title={`${album.artist} [Click to copy]`}
-          onClick={copyDetails}
-        >
-          {album.artist}
-        </p>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="text-[10px] truncate mt-0.5 transition-colors duration-300 cursor-pointer hover:text-primary text-muted-foreground text-left w-full outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyDetails();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                }
+              }}
+              aria-label={`Copy album details: ${album.artist} - ${album.name}`}
+            >
+              {album.artist}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+            {album.artist} [Click to copy]
+          </TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
           <span className="bg-foreground text-background px-1 font-medium">
             {album.id.split('-')[0].toUpperCase()}
