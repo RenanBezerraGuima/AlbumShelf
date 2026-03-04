@@ -448,4 +448,43 @@ describe('useFolderStore', () => {
     expect(stateAfter.streamingProvider).toBe('apple');
     expect(stateAfter.theme).toBe('mint');
   });
+
+  describe('Security: Setter Hardening', () => {
+    it('setSelectedFolder should reject unsafe IDs', () => {
+      const { setSelectedFolder } = useFolderStore.getState();
+      setSelectedFolder('safe-id-123');
+      expect(useFolderStore.getState().selectedFolderId).toBe('safe-id-123');
+
+      setSelectedFolder('malicious-id&param=value');
+      expect(useFolderStore.getState().selectedFolderId).toBeNull();
+    });
+
+    it('createFolder should reject unsafe parentId', () => {
+      const { createFolder } = useFolderStore.getState();
+      createFolder('New Folder', 'malicious-id&param=value');
+
+      const folders = useFolderStore.getState().folders;
+      expect(folders[0].parentId).toBeNull();
+    });
+
+    it('setSpotifyToken should reject tokens with control characters', () => {
+      const { setSpotifyToken } = useFolderStore.getState();
+      const unsafeToken = 'token\nwith\nnewlines';
+      setSpotifyToken(unsafeToken, 3600, Date.now());
+      expect(useFolderStore.getState().spotifyToken).toBeNull();
+    });
+
+    it('setSpotifyToken should reject non-positive or non-finite metadata', () => {
+      const { setSpotifyToken } = useFolderStore.getState();
+
+      setSpotifyToken('valid-token', -1, Date.now());
+      expect(useFolderStore.getState().spotifyTokenExpiry).toBeNull();
+
+      setSpotifyToken('valid-token', 3600, -100);
+      expect(useFolderStore.getState().spotifyTokenTimestamp).toBeNull();
+
+      setSpotifyToken('valid-token', Infinity, Date.now());
+      expect(useFolderStore.getState().spotifyTokenExpiry).toBeNull();
+    });
+  });
 });

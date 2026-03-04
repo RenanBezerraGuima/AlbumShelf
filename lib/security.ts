@@ -24,7 +24,7 @@ export interface SanitizationContext {
 }
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
+export const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
