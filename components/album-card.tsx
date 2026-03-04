@@ -26,7 +26,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { useFolderStore } from '@/lib/store';
-import type { Album, AlbumDetails } from '@/lib/types';
+import type { Album, AlbumDetails, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { getAlbumDetailsDeezer } from '@/lib/search-service';
 import { audioManager, type AudioState } from '@/lib/audio-store';
@@ -41,13 +41,6 @@ interface AlbumDetailsContentProps {
   details: AlbumDetails;
   isFlipped: boolean;
 }
-
-/**
- * Performance: Memoized track item component.
- * By isolating the track row, we turn O(N) reconciliations into O(1)
- * for track changes within the list.
- */
-import type { Album, AlbumDetails, Track } from '@/lib/types';
 
 /**
  * Performance: Memoized track item component.
