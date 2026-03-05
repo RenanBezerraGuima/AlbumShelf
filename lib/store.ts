@@ -485,29 +485,53 @@ export const useFolderStore = create<FolderStore>()(
 
       hydrateSharedFolders: (albumMap) => {
         set((state) => {
-          if (!state.sharedFolders) return state;
+          if (!state.sharedFolders || albumMap.size === 0) return state;
 
           const hydrateNode = (folders: Folder[]): Folder[] => {
-            return folders.map((f) => {
-              const updatedAlbums = f.albums.map((a) => {
+            let anyFolderChanged = false;
+            const result = [];
+
+            for (let i = 0; i < folders.length; i++) {
+              const f = folders[i];
+
+              let albumsChanged = false;
+              const updatedAlbums = [];
+              for (let j = 0; j < f.albums.length; j++) {
+                const a = f.albums[j];
                 const hydrated = albumMap.get(a.id);
                 if (hydrated) {
-                  // Merge positions and other existing fields
-                  return { ...hydrated, position: a.position };
+                  albumsChanged = true;
+                  updatedAlbums.push({ ...hydrated, position: a.position });
+                } else {
+                  updatedAlbums.push(a);
                 }
-                return a;
-              });
+              }
 
-              return {
-                ...f,
-                albums: updatedAlbums,
-                subfolders: hydrateNode(f.subfolders),
-              };
-            });
+              const newSubfolders = hydrateNode(f.subfolders);
+              const subfoldersChanged = newSubfolders !== f.subfolders;
+
+              if (albumsChanged || subfoldersChanged) {
+                anyFolderChanged = true;
+                result.push({
+                  ...f,
+                  albums: albumsChanged ? updatedAlbums : f.albums,
+                  subfolders: newSubfolders,
+                });
+              } else {
+                result.push(f);
+              }
+            }
+
+            return anyFolderChanged ? result : folders;
           };
 
+          const nextFolders = hydrateNode(state.sharedFolders);
+          // Performance: Bail out if no albums were actually hydrated to preserve
+          // structural sharing and prevent redundant re-renders.
+          if (nextFolders === state.sharedFolders) return state;
+
           return {
-            sharedFolders: hydrateNode(state.sharedFolders),
+            sharedFolders: nextFolders,
             lastUpdated: Date.now(),
           };
         });
