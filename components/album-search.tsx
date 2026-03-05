@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, Loader2, Check, X, Menu, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -354,8 +355,14 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     if (existingAlbums.length > 0) {
       // Remove all matching albums
       existingAlbums.forEach(a => removeAlbumFromFolder(selectedFolderId, a.id));
+      toast.success('Removed from collection', {
+        description: `${album.name} by ${album.artist}`,
+      });
     } else {
       addAlbumToFolder(selectedFolderId, album);
+      toast.success('Added to collection', {
+        description: `${album.name} by ${album.artist}`,
+      });
     }
   }, []); // Stable handler reference
 

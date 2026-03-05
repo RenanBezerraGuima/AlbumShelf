@@ -219,6 +219,9 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
 
   const handleRemove = () => {
     useFolderStore.getState().removeAlbumFromFolder(folderId, album.id);
+    toast.success('Removed from collection', {
+      description: `${album.name} by ${album.artist}`,
+    });
     setIsDeleteDialogOpen(false);
   };
 
