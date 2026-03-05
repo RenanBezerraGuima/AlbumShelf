@@ -55,6 +55,7 @@ export function AudioController() {
       else if (e.key === '[') { e.preventDefault(); handlePrev(); }
       else if (e.key === ']') { e.preventDefault(); handleNext(); }
       else if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMute(); }
+      else if (e.key.toLowerCase() === 'x') { e.preventDefault(); handleStop(); }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -118,13 +119,14 @@ export function AudioController() {
                 variant="ghost"
                 onClick={handleStop}
                 className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                aria-label="Stop playback"
+                aria-label="Stop playback [X]"
+                aria-keyshortcuts="x"
               >
                 <Square className="h-4 w-4 fill-current" />
               </Button>
             </TooltipTrigger>
             <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
-              Stop playback
+              Stop playback [X]
             </TooltipContent>
           </Tooltip>
 

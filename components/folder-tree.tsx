@@ -16,6 +16,7 @@ import {
   Settings,
   MoreVertical,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -123,6 +124,9 @@ const FolderItem = React.memo(function FolderItem({
 
   const handleDelete = () => {
     useFolderStore.getState().deleteFolder(folder.id);
+    toast.success('Collection deleted', {
+      description: `"${folder.name}" has been removed.`,
+    });
   };
 
   const handleCreateSubfolder = () => {
