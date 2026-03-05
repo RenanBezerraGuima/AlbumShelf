@@ -85,3 +85,7 @@
 ## 2026-03-03 - [Audio Store Reference Stability and No-op Bail-outs]
 **Learning:** In custom store implementations like `audio-store.ts`, returning a new shallow clone (`{ ...state }`) on every `getState()` or `subscribe()` call breaks React's reference-based optimizations (like `React.memo` or `useMemo`). Consumers perceive a "change" even when the underlying data is identical. Additionally, triggering subscriber notifications for "no-op" updates (where new values match existing ones) causes cascading redundant re-renders across the application.
 **Action:** Always implement shallow equality checks in store setters to bail out of no-op updates. Provide a stable, immutable state reference to consumers and only replace it when a change actually occurs.
+
+## 2026-11-20 - [Structural Sharing in Recursive Hydration]
+**Learning:** Recursive hydration or transformation functions (like `hydrateSharedFolders`) that use `map()` unconditionally break structural sharing even if no data is changed. This causes O(N) re-renders in React and invalidates traversal caches. Implementing a manual loop with a "changed" flag allows returning the original array/object references for unmodified subtrees, reducing overhead to O(depth) for stable branches.
+**Action:** Use manual loops with reference-stability checks in recursive tree transformations. Short-circuit early if the input change-set (e.g., a Map) is empty.

@@ -388,6 +388,60 @@ describe('useFolderStore', () => {
     expect(shared[0].albums[0].position).toEqual({ x: 12, y: 34 });
   });
 
+  it('Performance: hydrateSharedFolders implements structural sharing', () => {
+    const { setSharedFolders, hydrateSharedFolders } = useFolderStore.getState();
+    const initialFolders = [
+      {
+        id: 'f-root',
+        name: 'Root',
+        albums: [{ id: 'a-root', name: 'A-root' }],
+        subfolders: [
+          {
+            id: 'f-child-1',
+            name: 'Child 1',
+            albums: [{ id: 'a-child-1', name: 'A-child-1' }],
+            subfolders: [],
+          },
+          {
+            id: 'f-child-2',
+            name: 'Child 2',
+            albums: [{ id: 'a-child-2', name: 'A-child-2' }],
+            subfolders: [],
+          }
+        ],
+      }
+    ] as any;
+
+    setSharedFolders(initialFolders);
+    const state1 = useFolderStore.getState();
+    const folderChild1Before = state1.sharedFolders![0].subfolders[0];
+    const folderChild2Before = state1.sharedFolders![0].subfolders[1];
+    const rootBefore = state1.sharedFolders![0];
+
+    // Hydrate ONLY an album in Child 1
+    const hydratedAlbum = { id: 'a-child-1', name: 'Hydrated' } as any;
+    hydrateSharedFolders(new Map([['a-child-1', hydratedAlbum]]));
+
+    const state2 = useFolderStore.getState();
+    const rootAfter = state2.sharedFolders![0];
+    const folderChild1After = state2.sharedFolders![0].subfolders[0];
+    const folderChild2After = state2.sharedFolders![0].subfolders[1];
+
+    // Root and Child 1 should have new references because they or their children changed
+    expect(rootAfter).not.toBe(rootBefore);
+    expect(folderChild1After).not.toBe(folderChild1Before);
+    expect(folderChild1After.albums[0].name).toBe('Hydrated');
+
+    // Child 2 should RETAIN its original reference because nothing changed in it
+    expect(folderChild2After).toBe(folderChild2Before);
+
+    // Call hydrate again with an empty map - everything should retain original references
+    hydrateSharedFolders(new Map());
+    const state3 = useFolderStore.getState();
+    expect(state3.sharedFolders).toBe(state2.sharedFolders);
+    expect(state3.sharedFolders![0]).toBe(rootAfter);
+  });
+
   it('sets drag state and guest mode flags', () => {
     const {
       setDraggedAlbum,
