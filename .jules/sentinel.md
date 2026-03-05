@@ -124,3 +124,8 @@
 **Vulnerability:** `audioManager` sinks were unsanitized, and `selectedFolderId` was unvalidated during rehydration.
 **Learning:** Even if data is sanitized at the API and store levels, high-impact sinks (like an audio player that handles URLs) should implement their own sanitization as a final line of defense. Similarly, simple scalar fields like IDs in the store must be validated during rehydration to prevent "time-of-check to time-of-use" bypasses where malicious state is injected directly into storage.
 **Prevention:** Always sanitize inputs at the final execution sink (e.g., `audioManager.play`). Enforce `SAFE_ID_REGEXP` validation symmetrically across all lifecycle stages: creation, mutation, and rehydration.
+
+## 2026-05-05 - [Asymmetric Authentication State Hardening]
+**Vulnerability:** Spotify authentication tokens and metadata were strictly validated in setters but loaded from `localStorage` without identical rigor during rehydration.
+**Learning:** In applications using persisted state, security is only as strong as its weakest entry point. If hydration logic is less strict than runtime setters, a "persistent injection" vector exists where malicious data can be placed in storage to bypass runtime checks on the next session.
+**Prevention:** Ensure that all security-sensitive fields (especially authentication tokens and their TTLs) are validated with identical strictness across both mutation and rehydration lifecycles.
