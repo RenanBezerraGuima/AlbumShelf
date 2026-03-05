@@ -569,4 +569,34 @@ describe('Security: State Hydration', () => {
     callback(state3);
     expect(state3.spotifyTokenExpiry).toBe(3600);
   });
+
+  it('should reject non-positive spotifyTokenExpiry during rehydration', () => {
+    const onRehydrate = (useFolderStore.persist as any).getOptions().onRehydrateStorage;
+    const callback = onRehydrate(useFolderStore.getState());
+
+    const state: any = { spotifyTokenExpiry: -100 };
+    callback(state);
+    expect(state.spotifyTokenExpiry).toBeNull();
+
+    const state2: any = { spotifyTokenExpiry: 0 };
+    callback(state2);
+    expect(state2.spotifyTokenExpiry).toBeNull();
+  });
+
+  it('should reject malicious or empty spotifyToken during rehydration', () => {
+    const onRehydrate = (useFolderStore.persist as any).getOptions().onRehydrateStorage;
+    const callback = onRehydrate(useFolderStore.getState());
+
+    const state: any = { spotifyToken: 'token\nwith-newline' };
+    callback(state);
+    expect(state.spotifyToken).toBeNull();
+
+    const state2: any = { spotifyToken: '' };
+    callback(state2);
+    expect(state2.spotifyToken).toBeNull();
+
+    const state3: any = { spotifyToken: ' ' };
+    callback(state3);
+    expect(state3.spotifyToken).toBeNull();
+  });
 });
