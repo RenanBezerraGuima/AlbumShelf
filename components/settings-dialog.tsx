@@ -21,6 +21,9 @@ import { Theme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export const SettingsDialog = memo(function SettingsDialog() {
+  const [isExported, setIsExported] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+
   /**
    * Performance: Granular subscriptions and useShallow prevent the SettingsDialog
    * from re-rendering whenever the entire folder tree changes (e.g., adding an album).
@@ -94,6 +97,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
       link.download = `backup-${date}.json`;
       link.click();
       URL.revokeObjectURL(url);
+
+      setIsExported(true);
+      setTimeout(() => setIsExported(false), 2000);
+
       toast.success('Data exported successfully!', {
         description: `Backup saved as backup-${date}.json`,
       });
@@ -107,6 +114,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
     try {
       if (!shareUrlInfo.url) return;
       await navigator.clipboard.writeText(shareUrlInfo.url);
+
+      setIsShared(true);
+      setTimeout(() => setIsShared(false), 2000);
+
       toast.success('Share link copied!', {
         description: 'You can now share your collection with others.',
       });
@@ -249,12 +260,16 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   </div>
                   <Button
                     onClick={handleShare}
-                    className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-none brutalist-shadow-sm"
+                    className={cn(
+                      "w-full justify-start gap-2 rounded-none brutalist-shadow-sm transition-all duration-300",
+                      isShared ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
+                    )}
                     variant="default"
                     disabled={!shareUrlInfo.url}
+                    aria-label={isShared ? "Link copied!" : "Share Shelf Link"}
                   >
-                    <Share2 className="h-4 w-4" />
-                    Share Shelf Link
+                    {isShared ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                    {isShared ? "Link Copied!" : "Share Shelf Link"}
                   </Button>
                   {shareUrlInfo.length > 8000 && (
                     <div className="flex items-start gap-2 p-2 bg-destructive/10 border border-destructive/20 mt-1">
@@ -272,11 +287,15 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   </p>
                   <Button
                     onClick={handleExport}
-                    className="w-full justify-start gap-2 transition-all duration-300"
+                    className={cn(
+                      "w-full justify-start gap-2 transition-all duration-300",
+                      isExported && "border-green-600 text-green-600"
+                    )}
                     variant="outline"
+                    aria-label={isExported ? "Data exported!" : "Export Data"}
                   >
-                    <Download className="h-4 w-4" />
-                    Export Data
+                    {isExported ? <Check className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                    {isExported ? "Data Exported!" : "Export Data"}
                   </Button>
                 </div>
 
