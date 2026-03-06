@@ -1,6 +1,12 @@
 import LZString from 'lz-string';
 import type { Folder, Album, StreamingProvider } from './types';
-import { sanitizeFolderTree, isValidStreamingProvider } from './security';
+import {
+  sanitizeFolderTree,
+  isValidStreamingProvider,
+  MAX_FOLDER_DEPTH,
+  MAX_SUBFOLDERS_PER_FOLDER,
+  MAX_ALBUMS_PER_FOLDER
+} from './security';
 
 interface SharePayload {
   v: number; // version
@@ -12,14 +18,17 @@ interface SharePayload {
  * Maps a Folder array to a compact format to reduce URL length.
  * Strips metadata from albums that can be hydrated via provider IDs.
  */
-function toCompact(folders: Folder[]): any[] {
-  return folders.map(f => ({
+function toCompact(folders: Folder[], depth = 0): any[] {
+  if (depth > MAX_FOLDER_DEPTH) return [];
+
+  // Defense-in-depth: slice to prevent processing massive arrays
+  return folders.slice(0, MAX_SUBFOLDERS_PER_FOLDER).map(f => ({
     i: f.id,
     n: f.name,
     p: f.parentId,
     e: f.isExpanded ? 1 : 0,
     v: f.viewMode === 'canvas' ? 1 : 0,
-    a: f.albums.map(a => {
+    a: f.albums.slice(0, MAX_ALBUMS_PER_FOLDER).map(a => {
       // If it's a provider album, we only need the ID and position
       const isProviderAlbum = a.id.startsWith('spotify-') || a.id.startsWith('deezer-') || a.id.startsWith('apple-');
 
@@ -44,7 +53,7 @@ function toCompact(folders: Folder[]): any[] {
         p: a.position ? { x: Math.round(a.position.x), y: Math.round(a.position.y) } : undefined
       };
     }),
-    s: toCompact(f.subfolders)
+    s: toCompact(f.subfolders || [], depth + 1)
   }));
 }
 
@@ -52,14 +61,17 @@ function toCompact(folders: Folder[]): any[] {
  * Maps a compact format back to a Folder array.
  * Albums will be missing metadata if they are provider-linked.
  */
-function fromCompact(compact: any[]): any[] {
-  return compact.map(f => ({
+function fromCompact(compact: any[], depth = 0): any[] {
+  if (depth > MAX_FOLDER_DEPTH) return [];
+
+  // Defense-in-depth: slice to prevent processing massive arrays
+  return compact.slice(0, MAX_SUBFOLDERS_PER_FOLDER).map(f => ({
     id: f.i,
     name: f.n,
     parentId: f.p,
     isExpanded: !!f.e,
     viewMode: f.v === 1 ? 'canvas' : 'grid',
-    albums: (f.a || []).map((a: any) => ({
+    albums: (f.a || []).slice(0, MAX_ALBUMS_PER_FOLDER).map((a: any) => ({
       id: a.i,
       spotifyId: a.s,
       name: a.n || 'Loading...', // Placeholder
@@ -72,7 +84,7 @@ function fromCompact(compact: any[]): any[] {
       position: a.p ? { x: a.p.x, y: a.p.y } : undefined,
       _needsHydration: !a.n // Internal flag for hydration
     })),
-    subfolders: fromCompact(f.s || [])
+    subfolders: fromCompact(f.s || [], depth + 1)
   }));
 }
 

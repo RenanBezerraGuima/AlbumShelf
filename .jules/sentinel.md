@@ -129,3 +129,8 @@
 **Vulnerability:** Spotify authentication tokens and metadata were strictly validated in setters but loaded from `localStorage` without identical rigor during rehydration.
 **Learning:** In applications using persisted state, security is only as strong as its weakest entry point. If hydration logic is less strict than runtime setters, a "persistent injection" vector exists where malicious data can be placed in storage to bypass runtime checks on the next session.
 **Prevention:** Ensure that all security-sensitive fields (especially authentication tokens and their TTLs) are validated with identical strictness across both mutation and rehydration lifecycles.
+
+## 2026-05-10 - [Recursive DoS in Sharing Service]
+**Vulnerability:** The sharing service lacked depth and breadth limits when compressing or decompressing folder structures, allowing for stack overflow or memory exhaustion DoS via malicious share links.
+**Learning:** Even if data is eventually sanitized by a central layer (like `sanitizeFolderTree`), the intermediate transformation steps (like `fromCompact`) can still be vulnerable to DoS if they process untrusted nested structures recursively without their own limits.
+**Prevention:** Implement explicit recursion depth counters and array slicing (breadth limits) in all data transformation utilities that handle nested structures from untrusted sources.
