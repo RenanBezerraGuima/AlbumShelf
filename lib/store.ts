@@ -153,6 +153,10 @@ const getBreadcrumbSegment = (folder: Folder): { id: string; name: string } => {
 };
 
 export const findFolder = (folders: Folder[], id: string): Folder | null => {
+  // Performance: Early exit for empty folder lists to avoid unnecessary cache
+  // lookups and Map allocations at the leaf level of the tree.
+  if (folders.length === 0) return null;
+
   let cache = findCache.get(folders);
   if (!cache) {
     cache = new Map();
@@ -181,6 +185,10 @@ export const getBreadcrumb = (
   folders: Folder[],
   targetId: string,
 ): { id: string; name: string }[] => {
+  // Performance: Early exit for empty folder lists to avoid unnecessary cache
+  // lookups and Map allocations at the leaf level of the tree.
+  if (folders.length === 0) return [];
+
   let cache = breadcrumbCache.get(folders);
   if (!cache) {
     cache = new Map();
