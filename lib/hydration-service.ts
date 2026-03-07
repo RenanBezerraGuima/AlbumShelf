@@ -2,7 +2,34 @@ import type { Album, StreamingProvider } from './types';
 import { sanitizeAlbum, jsonp } from './security';
 
 /**
+ * Performance: Limits the number of concurrent asynchronous operations.
+ * This prevents overwhelming the browser's network stack or hitting API rate limits
+ * during mass hydration of large collections.
+ */
+async function limitConcurrency<T, R>(
+  concurrency: number,
+  items: T[],
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await fn(items[currentIndex]);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
+/**
  * Hydrates metadata for a list of album IDs from a specific provider.
+ * Performance: Uses parallel batching with concurrency limits to significantly
+ * speed up the hydration of shared collections in Guest Mode.
  */
 export async function hydrateAlbums(
   ids: string[],
@@ -24,8 +51,13 @@ export async function hydrateAlbums(
   if (provider === 'spotify' && spotifyToken) {
     // Spotify allows batching up to 20 IDs
     const cleanIds = ids.map(id => id.replace('spotify-', ''));
+    const batches = [];
     for (let i = 0; i < cleanIds.length; i += 20) {
-      const batch = cleanIds.slice(i, i + 20);
+      batches.push(cleanIds.slice(i, i + 20));
+    }
+
+    // Performance: Process multiple batches in parallel (concurrency of 5)
+    await limitConcurrency(5, batches, async (batch) => {
       try {
         const response = await fetch(
           `https://api.spotify.com/v1/albums?ids=${batch.join(',')}`,
@@ -53,14 +85,18 @@ export async function hydrateAlbums(
         console.error('Spotify hydration error:', e);
       }
       updateProgress(batch.length);
-    }
+    });
   } else if (provider === 'apple') {
     // Apple allows lookup up to 200 IDs
     const cleanIds = ids.map(id => id.replace('apple-', ''));
+    const batches = [];
     for (let i = 0; i < cleanIds.length; i += 200) {
-      const batch = cleanIds.slice(i, i + 200);
+      batches.push(cleanIds.slice(i, i + 200));
+    }
+
+    // Performance: Process multiple batches in parallel (concurrency of 3 for JSONP)
+    await limitConcurrency(3, batches, async (batch) => {
       try {
-        // Since we need JSONP for Apple, we use a custom fetch-like wrapper for the lookup
         const data = await jsonpLookupApple(batch.join(','));
         data.results.forEach((item: any) => {
           if (item.wrapperType !== 'collection') return;
@@ -79,34 +115,33 @@ export async function hydrateAlbums(
         console.error('Apple hydration error:', e);
       }
       updateProgress(batch.length);
-    }
+    });
   } else if (provider === 'deezer') {
-    // Deezer requires individual calls. We'll use a limited concurrency.
+    // Deezer requires individual calls.
     const cleanIds = ids.map(id => id.replace('deezer-', ''));
-    const CONCURRENCY = 5;
-    for (let i = 0; i < cleanIds.length; i += CONCURRENCY) {
-      const batch = cleanIds.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(async (id) => {
-        try {
-          const data = await jsonpLookupDeezer(id);
-          if (data && !data.error) {
-            const album = sanitizeAlbum({
-              id: `deezer-${data.id}`,
-              name: data.title,
-              artist: data.artist.name,
-              imageUrl: data.cover_big || data.cover_xl,
-              releaseDate: data.release_date,
-              totalTracks: data.nb_tracks,
-              externalUrl: data.link,
-            });
-            results.set(album.id, album);
-          }
-        } catch (e) {
-          console.error(`Deezer hydration error for ${id}:`, e);
+
+    // Performance: Use sliding window concurrency (5) for individual items.
+    // This is more efficient than waiting for entire batches to settle.
+    await limitConcurrency(5, cleanIds, async (id) => {
+      try {
+        const data = await jsonpLookupDeezer(id);
+        if (data && !data.error) {
+          const album = sanitizeAlbum({
+            id: `deezer-${data.id}`,
+            name: data.title,
+            artist: data.artist.name,
+            imageUrl: data.cover_big || data.cover_xl,
+            releaseDate: data.release_date,
+            totalTracks: data.nb_tracks,
+            externalUrl: data.link,
+          });
+          results.set(album.id, album);
         }
-      }));
-      updateProgress(batch.length);
-    }
+      } catch (e) {
+        console.error(`Deezer hydration error for ${id}:`, e);
+      }
+      updateProgress(1);
+    });
   }
 
   return results;

@@ -89,3 +89,7 @@
 ## 2026-11-20 - [Structural Sharing in Recursive Hydration]
 **Learning:** Recursive hydration or transformation functions (like `hydrateSharedFolders`) that use `map()` unconditionally break structural sharing even if no data is changed. This causes O(N) re-renders in React and invalidates traversal caches. Implementing a manual loop with a "changed" flag allows returning the original array/object references for unmodified subtrees, reducing overhead to O(depth) for stable branches.
 **Action:** Use manual loops with reference-stability checks in recursive tree transformations. Short-circuit early if the input change-set (e.g., a Map) is empty.
+
+## 2024-05-23 - [Parallel Batching with Concurrency Limits for Mass Hydration]
+**Learning:** Sequential batching for mass metadata hydration (e.g., fetching 1000+ albums after a shared link is opened) is a significant performance bottleneck. While batching IDs into a single request (like Spotify's 20-album limit) helps, waiting for each batch to finish before starting the next leaves network capacity unused. Implementing a parallel worker-pool pattern with concurrency limits allows multiple batches to be fetched simultaneously, dramatically reducing total hydration time while staying within safe browser and API limits.
+**Action:** Use parallel batching with concurrency limits for high-volume async operations. A sliding-window concurrency model is superior to fixed-batch loops as it prevents the slowest request in a batch from blocking all other progress.
