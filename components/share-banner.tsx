@@ -1,8 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Share2, Import, X, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useFolderStore } from '@/lib/store';
 
 export function ShareBanner() {
@@ -12,16 +18,42 @@ export function ShareBanner() {
   const exitGuestMode = useFolderStore((state) => state.exitGuestMode);
   const importFolders = useFolderStore((state) => state.importFolders);
 
-  if (!isGuestMode || !sharedFolders) return null;
-
-  const handleImport = () => {
+  const handleImport = useCallback(() => {
+    if (!sharedFolders) return;
     importFolders(sharedFolders);
+    toast.success('Collection imported!', {
+      description: `${sharedFolders.length} collection${sharedFolders.length !== 1 ? 's' : ''} added to your shelf.`,
+    });
     exitGuestMode();
-  };
+  }, [sharedFolders, importFolders, exitGuestMode]);
 
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     exitGuestMode();
-  };
+  }, [exitGuestMode]);
+
+  useEffect(() => {
+    if (!isGuestMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+      const isContentEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+
+      if (isInputActive || isContentEditable || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handleImport();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleExit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isGuestMode, handleImport, handleExit]);
+
+  if (!isGuestMode || !sharedFolders) return null;
 
   return (
     <div className="bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between gap-4 z-[100] border-b-2 border-primary-foreground/20 animate-in slide-in-from-top duration-300">
@@ -49,20 +81,30 @@ export function ShareBanner() {
           size="sm"
           onClick={handleImport}
           className="h-8 text-[10px] font-bold uppercase tracking-wider rounded-none gap-2 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+          aria-label="Import to my collections [I]"
+          aria-keyshortcuts="i"
         >
           <Import className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Import to my collections</span>
-          <span className="sm:hidden">Import</span>
+          <span className="hidden sm:inline">Import to my collections [I]</span>
+          <span className="sm:hidden">Import [I]</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleExit}
-          className="h-8 w-8 p-0 text-primary-foreground hover:bg-primary-foreground/10 rounded-none"
-          title="Exit shared view"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExit}
+              className="h-8 w-8 p-0 text-primary-foreground hover:bg-primary-foreground/10 rounded-none"
+              aria-label="Exit shared view [Esc]"
+              aria-keyshortcuts="Escape"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+            Exit shared view [Esc]
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

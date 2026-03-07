@@ -34,7 +34,7 @@ describe('ShareBanner', () => {
     state.sharedFolders = [{ id: 'f1' }, { id: 'f2' }];
 
     render(<ShareBanner />);
-    fireEvent.click(screen.getByRole('button', { name: /import to my collections/i }));
+    fireEvent.click(screen.getByLabelText(/Import to my collections/i));
 
     expect(state.importFolders).toHaveBeenCalledWith(state.sharedFolders);
     expect(state.exitGuestMode).toHaveBeenCalledTimes(1);
@@ -48,7 +48,7 @@ describe('ShareBanner', () => {
     render(<ShareBanner />);
     expect(screen.getByText(/Hydrating metadata: 1\/3/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle('Exit shared view'));
+    fireEvent.click(screen.getByLabelText(/Exit shared view/i));
     expect(state.exitGuestMode).toHaveBeenCalledTimes(1);
   });
 });
