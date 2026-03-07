@@ -23,6 +23,40 @@ export interface SanitizationContext {
   totalFolders: number;
 }
 
+/**
+ * Calculates the depth of a folder in the tree.
+ * Root folders have depth 1.
+ */
+export function getFolderDepth(folders: Folder[], id: string, currentDepth = 1): number {
+  for (const folder of folders) {
+    if (folder.id === id) return currentDepth;
+    const subDepth = getFolderDepth(folder.subfolders, id, currentDepth + 1);
+    if (subDepth > 0) return subDepth;
+  }
+  return 0;
+}
+
+/**
+ * Calculates the maximum depth of a folder's subtree.
+ * A folder with no subfolders has depth 1.
+ */
+export function getTreeDepth(folder: Folder): number {
+  if (folder.subfolders.length === 0) return 1;
+  return 1 + Math.max(...folder.subfolders.map(getTreeDepth));
+}
+
+/**
+ * Recursively counts all folders and albums in a tree.
+ */
+export function countTreeItems(folders: Folder[], context = { folders: 0, albums: 0 }) {
+  for (const folder of folders) {
+    context.folders++;
+    context.albums += folder.albums.length;
+    countTreeItems(folder.subfolders, context);
+  }
+  return context;
+}
+
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 export const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
