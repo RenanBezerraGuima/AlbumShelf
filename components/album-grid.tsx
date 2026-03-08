@@ -6,6 +6,7 @@ import { Music, Grid2X2, Orbit, Search } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
+import { preloadAlbumImages, registerAlbumImageServiceWorker } from '@/lib/album-image-cache';
 import { AlbumCard } from './album-card';
 import type { Album } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,14 @@ const GRID_OVERSCAN_ROWS = 2;
 const GRID_DEFAULT_HEIGHT = 720;
 const GRID_DEFAULT_WIDTH_DESKTOP = 1280;
 const GRID_DEFAULT_WIDTH_MOBILE = 390;
+const EAGER_IMAGE_COUNT_DESKTOP = 8;
+const EAGER_IMAGE_COUNT_MOBILE = 4;
+const PRELOAD_IMAGE_COUNT_DESKTOP = 24;
+const PRELOAD_IMAGE_COUNT_MOBILE = 12;
+const WARMUP_COPY_BY_MODE = {
+  desktop: 'Staging local album art cache',
+  mobile: 'Staging album art cache',
+} as const;
 
 function getGridColumnCount(width: number) {
   if (width >= 1280) return 6;
@@ -53,6 +62,8 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDrop,
   onDragEnd,
   style,
+  imageLoading,
+  imageFetchPriority,
 }: {
   album: Album;
   index: number;
@@ -65,6 +76,8 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDrop: (index: number) => void;
   onDragEnd: () => void;
   style?: React.CSSProperties;
+  imageLoading: 'lazy' | 'eager';
+  imageFetchPriority: 'auto' | 'high' | 'low';
 }) {
   return (
     <div
@@ -84,8 +97,8 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
       <AlbumCard
         album={album}
         folderId={folderId}
-        imageLoading="eager"
-        imageFetchPriority="high"
+        imageLoading={imageLoading}
+        imageFetchPriority={imageFetchPriority}
       />
     </div>
   );
@@ -113,6 +126,53 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     viewportHeight: 0,
     scrollTop: 0,
   });
+  const [coverWarmupProgress, setCoverWarmupProgress] = useState<{
+    current: number;
+    total: number;
+    folderId: string;
+  } | null>(null);
+  const warmupSequenceRef = useRef(0);
+
+  useEffect(() => {
+    void registerAlbumImageServiceWorker();
+  }, []);
+
+  useEffect(() => {
+    const albums = selectedFolder?.albums ?? [];
+    if (!selectedFolderId || albums.length === 0) {
+      setCoverWarmupProgress(null);
+      return;
+    }
+
+    const requestId = ++warmupSequenceRef.current;
+    setCoverWarmupProgress({
+      current: 0,
+      total: albums.length,
+      folderId: selectedFolderId,
+    });
+
+    void preloadAlbumImages(
+      albums.map((album) => album.imageUrl),
+      isMobile ? PRELOAD_IMAGE_COUNT_MOBILE : PRELOAD_IMAGE_COUNT_DESKTOP,
+      (current, total) => {
+        if (warmupSequenceRef.current !== requestId) return;
+
+        if (total === 0) {
+          setCoverWarmupProgress(null);
+          return;
+        }
+
+        setCoverWarmupProgress({
+          current,
+          total,
+          folderId: selectedFolderId,
+        });
+      },
+    ).finally(() => {
+      if (warmupSequenceRef.current !== requestId) return;
+      setCoverWarmupProgress(null);
+    });
+  }, [isMobile, selectedFolder?.albums, selectedFolderId]);
 
   useEffect(() => {
     if (albumViewMode !== 'grid') return;
@@ -222,6 +282,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
     return { totalHeight, visibleAlbums };
   }, [gridMetrics, isMobile, selectedFolder?.albums]);
+
+  const eagerImageCount = isMobile ? EAGER_IMAGE_COUNT_MOBILE : EAGER_IMAGE_COUNT_DESKTOP;
+  const isWarmingAlbumArt = coverWarmupProgress?.folderId === selectedFolderId;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -378,6 +441,47 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             Find your first album [/]
           </Button>
         </div>
+      ) : isWarmingAlbumArt ? (
+        <div
+          className="flex-1 min-h-0 flex items-center justify-center border-t border-border/30 bg-background"
+          data-testid="album-grid-cover-warmup"
+        >
+          <div className="w-full max-w-md px-6 py-8 text-center space-y-4">
+            <div className="space-y-2">
+              <p
+                className="text-[10px] uppercase tracking-[0.35em] text-primary"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {isMobile ? WARMUP_COPY_BY_MODE.mobile : WARMUP_COPY_BY_MODE.desktop}
+              </p>
+              <h2
+                className="text-xl font-semibold tracking-tight text-foreground"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                Loading covers before opening {selectedFolder.name}
+              </h2>
+              <p
+                className="text-xs text-muted-foreground"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                {coverWarmupProgress?.total
+                  ? `${coverWarmupProgress.current}/${coverWarmupProgress.total} covers cached locally`
+                  : 'Preparing local album art cache'}
+              </p>
+            </div>
+
+            <div className="h-2 border-2 border-border bg-muted/40">
+              <div
+                className="h-full bg-primary transition-[width] duration-200"
+                style={{
+                  width: coverWarmupProgress?.total
+                    ? `${(coverWarmupProgress.current / coverWarmupProgress.total) * 100}%`
+                    : '0%',
+                }}
+              />
+            </div>
+          </div>
+        </div>
       ) : albumViewMode === 'canvas' ? (
         <AlbumCanvas albums={selectedFolder.albums} folderId={selectedFolderId} />
       ) : (
@@ -390,7 +494,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             className="relative"
             style={{ height: Math.max(virtualGrid.totalHeight, gridMetrics.viewportHeight || GRID_DEFAULT_HEIGHT) }}
           >
-            {virtualGrid.visibleAlbums.map(({ album, index, style }) => (
+            {virtualGrid.visibleAlbums.map(({ album, index, style }, visibleIndex) => (
               <DraggableAlbumItem
                 key={album.id}
                 album={album}
@@ -404,6 +508,8 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
                 style={style}
+                imageLoading={visibleIndex < eagerImageCount ? 'eager' : 'lazy'}
+                imageFetchPriority={visibleIndex < eagerImageCount ? 'high' : 'auto'}
               />
             ))}
           </div>
