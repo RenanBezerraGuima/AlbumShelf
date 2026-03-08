@@ -47,6 +47,12 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
+    const handleOpenMenu = () => setIsMenuOpen(true);
+    window.addEventListener('albumshelf:open-menu', handleOpenMenu);
+    return () => window.removeEventListener('albumshelf:open-menu', handleOpenMenu);
+  }, []);
+
+  useEffect(() => {
     // Check for share data in URL (legacy query param or new hash)
     const urlParams = new URLSearchParams(window.location.search);
     const queryShareData = urlParams.get('share');

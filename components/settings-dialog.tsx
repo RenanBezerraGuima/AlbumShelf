@@ -210,6 +210,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     variant={theme === t ? 'default' : 'outline'}
                     className="justify-start gap-2 rounded-none h-12 relative overflow-hidden group"
                     onClick={() => useFolderStore.getState().setTheme(t)}
+                    aria-pressed={theme === t}
                   >
                     <span className="relative z-10 text-[10px] font-medium tracking-widest capitalize">{t}</span>
                     {theme === t && (
