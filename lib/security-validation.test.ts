@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { isValidTheme, isValidViewMode, isValidStreamingProvider, isValidGeistFont } from './security';
+import {
+  isValidTheme,
+  isValidViewMode,
+  isValidStreamingProvider,
+  isValidGeistFont,
+  sanitizeAlbum,
+  sanitizeFolder,
+  sanitizeAlbumDetails
+} from './security';
 import { useFolderStore } from './store';
 
 describe('Security Validation', () => {
@@ -53,6 +61,43 @@ describe('Security Validation', () => {
       expect(isValidGeistFont('serif')).toBe(false);
       expect(isValidGeistFont('sans')).toBe(false);
       expect(isValidGeistFont(null)).toBe(false);
+    });
+  });
+
+  describe('sanitizeText enforcement', () => {
+    it('should strip control characters from album and artist names', () => {
+      const album = {
+        id: '1',
+        name: 'Album\x00Name',
+        artist: 'Artist\x1FName',
+        imageUrl: 'https://example.com/image.jpg'
+      };
+      const sanitized = sanitizeAlbum(album);
+      expect(sanitized.name).toBe('AlbumName');
+      expect(sanitized.artist).toBe('ArtistName');
+    });
+
+    it('should strip control characters from folder names', () => {
+      const folder = {
+        id: '1',
+        name: 'Folder\x0AName',
+        albums: [],
+        subfolders: []
+      };
+      const sanitized = sanitizeFolder(folder);
+      expect(sanitized.name).toBe('FolderName');
+    });
+
+    it('should strip control characters from album details', () => {
+      const details = {
+        tracks: [{ id: '1', title: 'Track\x7FTitle', preview: 'https://example.com/p.mp3' }],
+        label: 'Label\x01Name',
+        contributors: ['Artist\x02Name']
+      };
+      const sanitized = sanitizeAlbumDetails(details);
+      expect(sanitized.tracks[0].title).toBe('TrackTitle');
+      expect(sanitized.label).toBe('LabelName');
+      expect(sanitized.contributors?.[0]).toBe('ArtistName');
     });
   });
 
