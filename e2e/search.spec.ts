@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('search and add multiple albums', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
   await page.goto('./');
 
   // Handle First Time Setup
@@ -16,17 +20,19 @@ test('search and add multiple albums', async ({ page }) => {
   await page.fill('input[placeholder^="Search albums on"]', 'Beatles');
 
   // Wait for results
-  await page.waitForSelector('text=Abbey Road', { timeout: 10000 });
+  const abbeyRoadResult = page.getByRole('option', { name: /Abbey Road/i }).first();
+  const letItBeResult = page.getByRole('option', { name: /Let It Be/i }).first();
+  await abbeyRoadResult.waitFor({ timeout: 10000 });
 
   // Add first album
-  await page.click('text=Abbey Road');
+  await abbeyRoadResult.click();
 
   // Add second album (should work now!)
-  await page.click('text=Let It Be');
+  await letItBeResult.click();
 
   // Check if both are in the grid
-  // Use scroll area to find the grid
-  const grid = page.locator('.grid').first();
+  const grid = page.getByTestId('album-grid-viewport');
+  await expect(grid).toBeVisible();
   await expect(grid.getByText(/Abbey Road/i).first()).toBeVisible();
   await expect(grid.getByText(/Let It Be/i).first()).toBeVisible();
 });

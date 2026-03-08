@@ -114,7 +114,12 @@ describe('SettingsDialog', () => {
   it('copies share link and exports data', async () => {
     render(<SettingsDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Share Shelf Link/i }));
+    const shareButton = await screen.findByRole('button', { name: /Share Shelf Link/i });
+    await waitFor(() => {
+      expect(shareButton).toBeEnabled();
+    });
+
+    fireEvent.click(shareButton);
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://example.com/share');
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -172,7 +177,12 @@ describe('SettingsDialog', () => {
     });
     render(<SettingsDialog />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Share Shelf Link/i }));
+    const shareButton = await screen.findByRole('button', { name: /Share Shelf Link/i });
+    await waitFor(() => {
+      expect(shareButton).toBeEnabled();
+    });
+
+    fireEvent.click(shareButton);
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalled();

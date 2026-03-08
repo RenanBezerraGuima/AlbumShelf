@@ -2,16 +2,28 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const state = {
-  folders: [] as any[],
-  hasSetPreference: false,
-  isGuestMode: false,
-  setStreamingProvider: vi.fn(),
-  setHasSetPreference: vi.fn(),
-};
+const { state, useFolderStoreMock } = vi.hoisted(() => {
+  const mockState = {
+    folders: [] as any[],
+    hasSetPreference: false,
+    isGuestMode: false,
+    setStreamingProvider: vi.fn(),
+    setHasSetPreference: vi.fn(),
+  };
+
+  const hook: any = (selector?: (state: typeof mockState) => unknown) =>
+    selector ? selector(mockState) : mockState;
+
+  hook.getState = () => mockState;
+
+  return {
+    state: mockState,
+    useFolderStoreMock: hook,
+  };
+});
 
 vi.mock('@/lib/store', () => ({
-  useFolderStore: () => state,
+  useFolderStore: useFolderStoreMock,
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
