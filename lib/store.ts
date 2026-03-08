@@ -58,6 +58,7 @@ interface FolderStore {
   // Album actions
   addAlbumToFolder: (folderId: string, album: Album) => void;
   removeAlbumFromFolder: (folderId: string, albumId: string) => void;
+  removeAlbumsFromFolder: (folderId: string, albumIds: string[]) => void;
   moveAlbum: (
     fromFolderId: string,
     toFolderId: string,
@@ -142,6 +143,13 @@ const breadcrumbCache = new WeakMap<
 // Since the store uses structural sharing, unmodified folders retain their references.
 // Caching the {id, name} objects allows useShallow to skip re-renders for unchanged paths.
 const segmentCache = new WeakMap<Folder, { id: string; name: string }>();
+interface FolderTreeIndex {
+  foldersById: Map<string, Folder>;
+  breadcrumbsById: Map<string, { id: string; name: string }[]>;
+  parentIdsById: Map<string, string | null>;
+}
+
+const folderIndexCache = new WeakMap<Folder[], FolderTreeIndex>();
 
 const getBreadcrumbSegment = (folder: Folder): { id: string; name: string } => {
   let segment = segmentCache.get(folder);
@@ -152,66 +160,58 @@ const getBreadcrumbSegment = (folder: Folder): { id: string; name: string } => {
   return segment;
 };
 
+const getFolderTreeIndex = (folders: Folder[]): FolderTreeIndex => {
+  let index = folderIndexCache.get(folders);
+  if (index) return index;
+
+  const foldersById = new Map<string, Folder>();
+  const breadcrumbsById = new Map<string, { id: string; name: string }[]>();
+  const parentIdsById = new Map<string, string | null>();
+
+  const visit = (nodes: Folder[], path: { id: string; name: string }[]) => {
+    for (const folder of nodes) {
+      const segment = getBreadcrumbSegment(folder);
+      const nextPath = [...path, segment];
+      foldersById.set(folder.id, folder);
+      breadcrumbsById.set(folder.id, nextPath);
+      parentIdsById.set(folder.id, folder.parentId);
+      visit(folder.subfolders, nextPath);
+    }
+  };
+
+  visit(folders, []);
+  index = { foldersById, breadcrumbsById, parentIdsById };
+  folderIndexCache.set(folders, index);
+  return index;
+};
+
 export const findFolder = (folders: Folder[], id: string): Folder | null => {
-  // Performance: Early exit for empty folder lists to avoid unnecessary cache
-  // lookups and Map allocations at the leaf level of the tree.
   if (folders.length === 0) return null;
+  const indexedFolder = getFolderTreeIndex(folders).foldersById.get(id) ?? null;
 
   let cache = findCache.get(folders);
   if (!cache) {
     cache = new Map();
     findCache.set(folders, cache);
   }
-  if (cache.has(id)) return cache.get(id)!;
-
-  let result: Folder | null = null;
-  for (const folder of folders) {
-    if (folder.id === id) {
-      result = folder;
-      break;
-    }
-    const found = findFolder(folder.subfolders, id);
-    if (found) {
-      result = found;
-      break;
-    }
-  }
-
-  cache.set(id, result);
-  return result;
+  cache.set(id, indexedFolder);
+  return indexedFolder;
 };
 
 export const getBreadcrumb = (
   folders: Folder[],
   targetId: string,
 ): { id: string; name: string }[] => {
-  // Performance: Early exit for empty folder lists to avoid unnecessary cache
-  // lookups and Map allocations at the leaf level of the tree.
   if (folders.length === 0) return [];
+  const breadcrumb = getFolderTreeIndex(folders).breadcrumbsById.get(targetId) ?? [];
 
   let cache = breadcrumbCache.get(folders);
   if (!cache) {
     cache = new Map();
     breadcrumbCache.set(folders, cache);
   }
-  if (cache.has(targetId)) return cache.get(targetId)!;
-
-  for (const folder of folders) {
-    if (folder.id === targetId) {
-      const result = [getBreadcrumbSegment(folder)];
-      cache.set(targetId, result);
-      return result;
-    }
-    const subPath = getBreadcrumb(folder.subfolders, targetId);
-    if (subPath.length > 0) {
-      const result = [getBreadcrumbSegment(folder), ...subPath];
-      cache.set(targetId, result);
-      return result;
-    }
-  }
-
-  cache.set(targetId, []);
-  return [];
+  cache.set(targetId, breadcrumb);
+  return breadcrumb;
 };
 
 const updateFolderInTree = (
@@ -295,15 +295,15 @@ const isDescendant = (
   ancestorId: string,
   descendantId: string,
 ): boolean => {
-  const ancestor = findFolder(folders, ancestorId);
-  if (!ancestor) return false;
+  const { parentIdsById } = getFolderTreeIndex(folders);
+  let currentId: string | null = descendantId;
 
-  const checkDescendant = (folder: Folder): boolean => {
-    if (folder.id === descendantId) return true;
-    return folder.subfolders.some(checkDescendant);
-  };
+  while (currentId) {
+    if (currentId === ancestorId) return true;
+    currentId = parentIdsById.get(currentId) ?? null;
+  }
 
-  return checkDescendant(ancestor);
+  return false;
 };
 
 const insertFolderAtPosition = (
@@ -624,6 +624,28 @@ export const useFolderStore = create<FolderStore>()(
           const currentFolders = state.sharedFolders ?? state.folders;
           const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
             const newAlbums = folder.albums.filter((a) => a.id !== albumId);
+            if (newAlbums.length === folder.albums.length) return folder;
+            return { ...folder, albums: newAlbums };
+          });
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
+      },
+
+      removeAlbumsFromFolder: (folderId, albumIds) => {
+        if (albumIds.length === 0) return;
+        const albumIdsSet = new Set(albumIds);
+
+        set((state) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
+            const newAlbums = folder.albums.filter((album) => !albumIdsSet.has(album.id));
             if (newAlbums.length === folder.albums.length) return folder;
             return { ...folder, albums: newAlbums };
           });

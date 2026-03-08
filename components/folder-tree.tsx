@@ -47,27 +47,26 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useFolderStore } from "@/lib/store";
+import { getFolderSearchState } from "@/lib/folder-search";
 import type { Folder as FolderType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-/**
- * Performance: Escape special regex characters to allow safe use of RegExp
- * for case-insensitive searching without repeated toLowerCase() calls.
- */
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 interface FolderItemProps {
   folder: FolderType;
   depth: number;
   parentId: string | null;
+  hasQuery: boolean;
+  visibleFolderIds: Set<string>;
+  forcedExpandedFolderIds: Set<string>;
 }
 
 const FolderItem = React.memo(function FolderItem({
   folder,
   depth,
   parentId,
+  hasQuery,
+  visibleFolderIds,
+  forcedExpandedFolderIds,
 }: FolderItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
@@ -104,7 +103,11 @@ const FolderItem = React.memo(function FolderItem({
     (state) => state.selectedFolderId === folder.id,
   );
 
-  const hasSubfolders = folder.subfolders.length > 0;
+  const visibleSubfolders = hasQuery
+    ? folder.subfolders.filter((subfolder) => visibleFolderIds.has(subfolder.id))
+    : folder.subfolders;
+  const hasSubfolders = visibleSubfolders.length > 0;
+  const isExpanded = folder.isExpanded || forcedExpandedFolderIds.has(folder.id);
 
   const handleClick = () => {
     useFolderStore.getState().setSelectedFolder(folder.id);
@@ -288,18 +291,18 @@ const FolderItem = React.memo(function FolderItem({
               )}
               tabIndex={!hasSubfolders ? -1 : undefined}
               aria-label={
-                folder.isExpanded ? "Collapse collection" : "Expand collection"
+                isExpanded ? "Collapse collection" : "Expand collection"
               }
-              title={folder.isExpanded ? "Collapse" : "Expand"}
+              title={isExpanded ? "Collapse" : "Expand"}
             >
-              {folder.isExpanded ? (
+              {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
             </button>
 
-            {folder.isExpanded ? (
+            {isExpanded ? (
               <FolderOpen className="h-4 w-4 shrink-0" />
             ) : (
               <Folder className="h-4 w-4 shrink-0" />
@@ -486,7 +489,7 @@ const FolderItem = React.memo(function FolderItem({
         </DialogContent>
       </Dialog>
 
-      {folder.isExpanded && (hasSubfolders || isCreatingSubfolder) && (
+      {isExpanded && (hasSubfolders || isCreatingSubfolder) && (
         <div>
           {isCreatingSubfolder && (
             <div
@@ -542,12 +545,15 @@ const FolderItem = React.memo(function FolderItem({
               </Button>
             </div>
           )}
-          {folder.subfolders.map((subfolder) => (
+          {visibleSubfolders.map((subfolder) => (
             <FolderItem
               key={subfolder.id}
               folder={subfolder}
               depth={depth + 1}
               parentId={folder.id}
+              hasQuery={hasQuery}
+              visibleFolderIds={visibleFolderIds}
+              forcedExpandedFolderIds={forcedExpandedFolderIds}
             />
           ))}
         </div>
@@ -602,40 +608,14 @@ export function FolderTree() {
   const folders = useFolderStore((state) => state.sharedFolders ?? state.folders);
   const draggedFolder = useFolderStore((state) => state.draggedFolder);
 
-  const filteredFolders = React.useMemo(() => {
-    const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) return folders;
-
-    // Performance: Use a single case-insensitive RegExp to avoid repeated
-    // toLowerCase() and string allocations during recursive filtering.
-    const queryRegex = new RegExp(escapeRegExp(trimmedQuery), "i");
-
-    const filterFolder = (folder: FolderType): FolderType | null => {
-      const matchesName = queryRegex.test(folder.name);
-      const matchesAlbum = folder.albums.some((album) =>
-        queryRegex.test(album.name) || queryRegex.test(album.artist),
-      );
-
-      const filteredSubfolders = folder.subfolders
-        .map(filterFolder)
-        .filter((f): f is FolderType => f !== null);
-
-      if (matchesName || matchesAlbum || filteredSubfolders.length > 0) {
-        return {
-          ...folder,
-          subfolders: filteredSubfolders,
-          // Expand folders that contain search results
-          isExpanded: true,
-        };
-      }
-
-      return null;
-    };
-
-    return folders
-      .map(filterFolder)
-      .filter((f): f is FolderType => f !== null);
-  }, [folders, searchQuery]);
+  const searchState = React.useMemo(
+    () => getFolderSearchState(folders, searchQuery),
+    [folders, searchQuery],
+  );
+  const filteredFolders = React.useMemo(
+    () => folders.filter((folder) => searchState.visibleFolderIds.has(folder.id)),
+    [folders, searchState.visibleFolderIds],
+  );
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -832,6 +812,9 @@ export function FolderTree() {
               folder={folder}
               depth={0}
               parentId={null}
+              hasQuery={searchState.hasQuery}
+              visibleFolderIds={searchState.visibleFolderIds}
+              forcedExpandedFolderIds={searchState.forcedExpandedFolderIds}
             />
           ))}
 

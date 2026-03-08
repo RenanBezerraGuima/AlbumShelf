@@ -15,7 +15,9 @@ import type { StreamingProvider } from '@/lib/types';
 import { Music, Radio } from 'lucide-react';
 
 export function FirstTimeSetup() {
-  const { folders, hasSetPreference, setStreamingProvider, setHasSetPreference, isGuestMode } = useFolderStore();
+  const folders = useFolderStore((state) => state.folders);
+  const hasSetPreference = useFolderStore((state) => state.hasSetPreference);
+  const isGuestMode = useFolderStore((state) => state.isGuestMode);
   const [open, setOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -35,14 +37,15 @@ export function FirstTimeSetup() {
       if (hasAlbums && !hasSetPreference) {
         // If they have albums but haven't explicitly set preference (legacy data),
         // we assume they've already used the app and don't show the popup.
-        setHasSetPreference(true);
+        useFolderStore.getState().setHasSetPreference(true);
       } else if (!hasSetPreference) {
         setOpen(true);
       }
     }
-  }, [isHydrated, hasSetPreference, hasAlbums, setHasSetPreference]);
+  }, [isHydrated, hasSetPreference, hasAlbums, isGuestMode]);
 
   const handleSelect = (provider: StreamingProvider) => {
+    const { setStreamingProvider, setHasSetPreference } = useFolderStore.getState();
     setStreamingProvider(provider);
     setHasSetPreference(true);
     setOpen(false);

@@ -1,15 +1,39 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Music, Grid2X2, Orbit, Search } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
 import { AlbumCard } from './album-card';
-import { AlbumCanvas } from './album-canvas';
 import type { Album } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+const AlbumCanvas = dynamic(
+  () => import('./album-canvas').then((mod) => mod.AlbumCanvas),
+  {
+    ssr: false,
+    loading: () => <div data-testid="album-canvas-loading" className="flex-1" />,
+  },
+);
+
+const GRID_PADDING_DESKTOP = 16;
+const GRID_PADDING_MOBILE = 8;
+const GRID_GAP_DESKTOP = 16;
+const GRID_GAP_MOBILE = 8;
+const GRID_OVERSCAN_ROWS = 2;
+const GRID_DEFAULT_HEIGHT = 720;
+const GRID_DEFAULT_WIDTH_DESKTOP = 1280;
+const GRID_DEFAULT_WIDTH_MOBILE = 390;
+
+function getGridColumnCount(width: number) {
+  if (width >= 1280) return 6;
+  if (width >= 1024) return 5;
+  if (width >= 768) return 4;
+  if (width >= 640) return 3;
+  return 2;
+}
 
 /**
  * Performance: Memoized item wrapper for the grid.
@@ -28,6 +52,7 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDragLeave,
   onDrop,
   onDragEnd,
+  style,
 }: {
   album: Album;
   index: number;
@@ -39,6 +64,7 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDragLeave: () => void;
   onDrop: (index: number) => void;
   onDragEnd: () => void;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
@@ -53,6 +79,7 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
         isDragged && 'opacity-50',
         isDropTarget && 'ring-2 ring-primary ring-offset-2 rounded-none'
       )}
+      style={style}
     >
       <AlbumCard album={album} folderId={folderId} />
     </div>
@@ -75,6 +102,123 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const albumViewMode = selectedFolder?.viewMode || 'grid';
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const gridViewportRef = useRef<HTMLDivElement>(null);
+  const [gridMetrics, setGridMetrics] = useState({
+    viewportWidth: 0,
+    viewportHeight: 0,
+    scrollTop: 0,
+  });
+
+  useEffect(() => {
+    if (albumViewMode !== 'grid') return;
+
+    const node = gridViewportRef.current;
+    if (!node) return;
+
+    const updateMetrics = () => {
+      const rect = node.getBoundingClientRect();
+      setGridMetrics((current) => {
+        const nextWidth =
+          rect.width || (isMobile ? GRID_DEFAULT_WIDTH_MOBILE : GRID_DEFAULT_WIDTH_DESKTOP);
+        const nextHeight = rect.height || GRID_DEFAULT_HEIGHT;
+        const nextScrollTop = node.scrollTop;
+
+        if (
+          current.viewportWidth === nextWidth &&
+          current.viewportHeight === nextHeight &&
+          current.scrollTop === nextScrollTop
+        ) {
+          return current;
+        }
+
+        return {
+          viewportWidth: nextWidth,
+          viewportHeight: nextHeight,
+          scrollTop: nextScrollTop,
+        };
+      });
+    };
+
+    updateMetrics();
+
+    const handleScroll = () => {
+      setGridMetrics((current) => {
+        const nextScrollTop = node.scrollTop;
+        if (current.scrollTop === nextScrollTop) return current;
+        return { ...current, scrollTop: nextScrollTop };
+      });
+    };
+
+    const observer = new ResizeObserver(updateMetrics);
+    observer.observe(node);
+    node.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', updateMetrics);
+
+    return () => {
+      observer.disconnect();
+      node.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', updateMetrics);
+    };
+  }, [albumViewMode, isMobile, selectedFolderId]);
+
+  const virtualGrid = useMemo(() => {
+    const albums = selectedFolder?.albums ?? [];
+    if (albums.length === 0) {
+      return {
+        totalHeight: 0,
+        visibleAlbums: [] as Array<{ album: Album; index: number; style: React.CSSProperties }>,
+      };
+    }
+
+    const padding = isMobile ? GRID_PADDING_MOBILE : GRID_PADDING_DESKTOP;
+    const gap = isMobile ? GRID_GAP_MOBILE : GRID_GAP_DESKTOP;
+    const viewportWidth =
+      gridMetrics.viewportWidth || (isMobile ? GRID_DEFAULT_WIDTH_MOBILE : GRID_DEFAULT_WIDTH_DESKTOP);
+    const viewportHeight = gridMetrics.viewportHeight || GRID_DEFAULT_HEIGHT;
+    const columnCount = getGridColumnCount(viewportWidth);
+    const itemWidth = Math.max(
+      140,
+      (viewportWidth - padding * 2 - gap * (columnCount - 1)) / columnCount,
+    );
+    const rowStride = itemWidth + gap;
+    const rowCount = Math.ceil(albums.length / columnCount);
+    const totalHeight =
+      padding * 2 + rowCount * itemWidth + Math.max(0, rowCount - 1) * gap;
+
+    const firstVisibleRow = Math.max(
+      0,
+      Math.floor(gridMetrics.scrollTop / rowStride) - GRID_OVERSCAN_ROWS,
+    );
+    const lastVisibleRow = Math.min(
+      rowCount,
+      Math.ceil((gridMetrics.scrollTop + viewportHeight) / rowStride) + GRID_OVERSCAN_ROWS,
+    );
+
+    const visibleAlbums = [];
+
+    for (let row = firstVisibleRow; row < lastVisibleRow; row++) {
+      for (let column = 0; column < columnCount; column++) {
+        const index = row * columnCount + column;
+        const album = albums[index];
+        if (!album) break;
+
+        visibleAlbums.push({
+          album,
+          index,
+          style: {
+            position: 'absolute' as const,
+            top: padding + row * rowStride,
+            left: padding + column * (itemWidth + gap),
+            width: itemWidth,
+            contentVisibility: 'auto' as const,
+            containIntrinsicSize: `${Math.round(itemWidth)}px`,
+          },
+        });
+      }
+    }
+
+    return { totalHeight, visibleAlbums };
+  }, [gridMetrics, isMobile, selectedFolder?.albums]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -234,12 +378,16 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
       ) : albumViewMode === 'canvas' ? (
         <AlbumCanvas albums={selectedFolder.albums} folderId={selectedFolderId} />
       ) : (
-        <ScrollArea className="flex-1 min-h-0">
-          <div className={cn(
-            'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
-            isMobile ? 'gap-2 p-2' : 'gap-4 p-4'
-          )}>
-            {selectedFolder.albums.map((album, index) => (
+        <div
+          ref={gridViewportRef}
+          className="flex-1 min-h-0 overflow-auto"
+          data-testid="album-grid-viewport"
+        >
+          <div
+            className="relative"
+            style={{ height: Math.max(virtualGrid.totalHeight, gridMetrics.viewportHeight || GRID_DEFAULT_HEIGHT) }}
+          >
+            {virtualGrid.visibleAlbums.map(({ album, index, style }) => (
               <DraggableAlbumItem
                 key={album.id}
                 album={album}
@@ -252,10 +400,11 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
+                style={style}
               />
             ))}
           </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
   );

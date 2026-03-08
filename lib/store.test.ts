@@ -129,6 +129,20 @@ describe('useFolderStore', () => {
     expect(newState.folders.find(f => f.id === folder2.id)!.albums[0].id).toBe('album-1');
   });
 
+  it('removes multiple albums from a folder in a single action', () => {
+    const { createFolder, addAlbumToFolder, removeAlbumsFromFolder } = useFolderStore.getState();
+    createFolder('Batch Remove', null);
+    const folderId = useFolderStore.getState().folders[0].id;
+
+    addAlbumToFolder(folderId, { id: 'a1', name: 'Album 1', artist: 'Artist', imageUrl: 'u', totalTracks: 1 });
+    addAlbumToFolder(folderId, { id: 'a2', name: 'Album 1', artist: 'Artist', imageUrl: 'u', totalTracks: 1 });
+    addAlbumToFolder(folderId, { id: 'a3', name: 'Album 3', artist: 'Artist', imageUrl: 'u', totalTracks: 1 });
+
+    removeAlbumsFromFolder(folderId, ['a1', 'a2']);
+
+    expect(useFolderStore.getState().folders[0].albums.map((album) => album.id)).toEqual(['a3']);
+  });
+
   it('should import folders and handle collisions with OLD/NEW naming', () => {
     const { createFolder, importFolders } = useFolderStore.getState();
 

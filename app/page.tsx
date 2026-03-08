@@ -1,15 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { FolderTree } from '@/components/folder-tree';
 import { AlbumGrid } from '@/components/album-grid';
 import { AlbumSearch } from '@/components/album-search';
-import { FirstTimeSetup } from '@/components/first-time-setup';
-import { SettingsDialog } from '@/components/settings-dialog';
-import { SpotifyCallbackHandler } from '@/components/spotify-callback-handler';
 import { MobileHeader } from '@/components/mobile-header';
-import { ShareBanner } from '@/components/share-banner';
-import { AudioController } from '@/components/audio-controller';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -27,10 +23,28 @@ import { useFolderStore } from '@/lib/store';
 import { decompressData } from '@/lib/share-service';
 import { hydrateAlbums } from '@/lib/hydration-service';
 
+const FirstTimeSetup = dynamic(
+  () => import('@/components/first-time-setup').then((mod) => mod.FirstTimeSetup),
+);
+const SettingsDialog = dynamic(
+  () => import('@/components/settings-dialog').then((mod) => mod.SettingsDialog),
+);
+const SpotifyCallbackHandler = dynamic(
+  () =>
+    import('@/components/spotify-callback-handler').then(
+      (mod) => mod.SpotifyCallbackHandler,
+    ),
+);
+const ShareBanner = dynamic(
+  () => import('@/components/share-banner').then((mod) => mod.ShareBanner),
+);
+const AudioController = dynamic(
+  () => import('@/components/audio-controller').then((mod) => mod.AudioController),
+);
+
 export default function Home() {
   const isMobile = useIsMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const sharedFolders = useFolderStore(state => state.sharedFolders);
 
   useEffect(() => {
     // Check for share data in URL (legacy query param or new hash)

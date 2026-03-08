@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AlbumGrid } from '@/components/album-grid';
 import { useFolderStore } from '@/lib/store';
 
@@ -17,7 +17,7 @@ describe('AlbumGrid spatial mode toggle', () => {
     expect(screen.getByText(/Error: Collection not found/i)).toBeInTheDocument();
   });
 
-  it('Given a selected folder, when canvas mode is enabled, then the infinite canvas container is rendered', () => {
+  it('Given a selected folder, when canvas mode is enabled, then the infinite canvas container is rendered', async () => {
     const folderId = 'folder-1';
 
     useFolderStore.setState({
@@ -48,12 +48,14 @@ describe('AlbumGrid spatial mode toggle', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Switch to canvas view/i }));
 
-    expect(screen.getByTestId('album-canvas')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('album-canvas')).toBeInTheDocument();
+    });
     const folder = useFolderStore.getState().folders.find(f => f.id === folderId);
     expect(folder?.viewMode).toBe('canvas');
   });
 
-  it('Given canvas mode is already persisted for a folder, when the grid renders, then the infinite canvas is shown by default', () => {
+  it('Given canvas mode is already persisted for a folder, when the grid renders, then the infinite canvas is shown by default', async () => {
     const folderId = 'folder-1';
 
     useFolderStore.setState({
@@ -82,7 +84,9 @@ describe('AlbumGrid spatial mode toggle', () => {
 
     render(<AlbumGrid />);
 
-    expect(screen.getByTestId('album-canvas')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('album-canvas')).toBeInTheDocument();
+    });
   });
 
   it('Given a selected folder, when "V" key is pressed, then the view mode switches to canvas', () => {
@@ -158,5 +162,35 @@ describe('AlbumGrid spatial mode toggle', () => {
     render(<AlbumGrid />);
     fireEvent.click(screen.getByRole('button', { name: /Find your first album/i }));
     expect(dispatchSpy).toHaveBeenCalled();
+  });
+
+  it('virtualizes large album collections in grid mode', () => {
+    const folderId = 'folder-big';
+    useFolderStore.setState({
+      selectedFolderId: folderId,
+      folders: [
+        {
+          id: folderId,
+          name: 'Large Folder',
+          parentId: null,
+          isExpanded: true,
+          subfolders: [],
+          viewMode: 'grid',
+          albums: Array.from({ length: 120 }, (_, index) => ({
+            id: `album-${index}`,
+            name: `Album ${index}`,
+            artist: 'Artist',
+            imageUrl: 'https://example.com/image.jpg',
+            totalTracks: 10,
+          })),
+        },
+      ],
+    });
+
+    render(<AlbumGrid />);
+
+    const renderedCards = screen.getAllByTestId('album-card-front');
+    expect(renderedCards.length).toBeLessThan(120);
+    expect(renderedCards.length).toBeGreaterThan(0);
   });
 });

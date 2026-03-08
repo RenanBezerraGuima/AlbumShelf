@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useRef, memo, useState, useCallback, useMemo } from 'react';
+import React, { useRef, memo, useState, useCallback, useEffect } from 'react';
 import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
@@ -20,9 +19,27 @@ import { useFolderStore } from '@/lib/store';
 import { Theme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+function formatDateForExport(date: Date) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+function getShareUrlInfo() {
+  try {
+    const { folders, streamingProvider } = useFolderStore.getState();
+    const url = generateShareUrl(folders, streamingProvider);
+    return { url, length: url.length };
+  } catch {
+    return { url: '', length: 0 };
+  }
+}
+
 export const SettingsDialog = memo(function SettingsDialog() {
   const [isExported, setIsExported] = useState(false);
   const [isShared, setIsShared] = useState(false);
+  const [shareUrlInfo, setShareUrlInfo] = useState({ url: '', length: 0 });
 
   /**
    * Performance: Granular subscriptions and useShallow prevent the SettingsDialog
@@ -48,16 +65,6 @@ export const SettingsDialog = memo(function SettingsDialog() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const shareUrlInfo = useMemo(() => {
-    try {
-      const { folders, streamingProvider } = useFolderStore.getState();
-      const url = generateShareUrl(folders, streamingProvider);
-      return { url, length: url.length };
-    } catch (e) {
-      return { url: '', length: 0 };
-    }
-  }, [isOpen]);
-
   const isSpotifyConnected = React.useMemo(() => {
     if (!spotifyToken || !spotifyTokenExpiry || !spotifyTokenTimestamp) return false;
     const now = Date.now();
@@ -80,6 +87,27 @@ export const SettingsDialog = memo(function SettingsDialog() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setShareUrlInfo({ url: '', length: 0 });
+      return;
+    }
+
+    const compute = () => setShareUrlInfo(getShareUrlInfo());
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+      const idleId = idleWindow.requestIdleCallback(compute);
+      return () => idleWindow.cancelIdleCallback?.(idleId);
+    }
+
+    const timeoutId = window.setTimeout(compute, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen]);
+
   /**
    * Performance: Accessing large state slices (like 'folders') only inside event handlers
    * using getState() instead of subscribing to them prevents re-rendering the component
@@ -92,7 +120,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const date = format(new Date(), 'dd-MM-yyyy');
+      const date = formatDateForExport(new Date());
       link.href = url;
       link.download = `backup-${date}.json`;
       link.click();
@@ -112,8 +140,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
 
   const handleShare = useCallback(async () => {
     try {
-      if (!shareUrlInfo.url) return;
-      await navigator.clipboard.writeText(shareUrlInfo.url);
+      const nextShareUrlInfo = shareUrlInfo.url ? shareUrlInfo : getShareUrlInfo();
+      if (!nextShareUrlInfo.url) return;
+      setShareUrlInfo(nextShareUrlInfo);
+      await navigator.clipboard.writeText(nextShareUrlInfo.url);
 
       setIsShared(true);
       setTimeout(() => setIsShared(false), 2000);

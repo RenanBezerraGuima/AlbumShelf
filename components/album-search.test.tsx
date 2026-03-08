@@ -10,6 +10,7 @@ const { mockState, useFolderStoreMock } = vi.hoisted(() => {
     selectedFolderId: null as string | null,
     addAlbumToFolder: vi.fn(),
     removeAlbumFromFolder: vi.fn(),
+    removeAlbumsFromFolder: vi.fn(),
     setStreamingProvider: vi.fn(),
     streamingProvider: 'deezer',
     spotifyToken: null as string | null,
@@ -184,9 +185,9 @@ describe('AlbumSearch top panel layout', () => {
     });
 
     fireEvent.click(screen.getByTitle(/Remove "Dup" from collection/i));
-    expect(mockState.removeAlbumFromFolder).toHaveBeenCalledWith(
+    expect(mockState.removeAlbumsFromFolder).toHaveBeenCalledWith(
       'folder-1',
-      'existing-1',
+      ['existing-1'],
     );
   });
 });

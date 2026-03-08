@@ -336,7 +336,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
   };
 
   const handleAddAlbum = useCallback((album: Album) => {
-    const { selectedFolderId, folders, sharedFolders, addAlbumToFolder, removeAlbumFromFolder } = useFolderStore.getState();
+    const { selectedFolderId, folders, sharedFolders, addAlbumToFolder, removeAlbumsFromFolder } = useFolderStore.getState();
 
     if (!selectedFolderId) {
       setError('Please select a folder first');
@@ -353,8 +353,7 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     );
 
     if (existingAlbums.length > 0) {
-      // Remove all matching albums
-      existingAlbums.forEach(a => removeAlbumFromFolder(selectedFolderId, a.id));
+      removeAlbumsFromFolder(selectedFolderId, existingAlbums.map((existingAlbum) => existingAlbum.id));
       toast.success('Removed from collection', {
         description: `${album.name} by ${album.artist}`,
       });
