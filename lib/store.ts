@@ -11,7 +11,7 @@ import {
   isValidStreamingProvider,
   isValidGeistFont,
   SAFE_ID_REGEXP,
-  CONTROL_CHARS_REGEXP,
+  DISALLOWED_URL_CHARS_REGEXP,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   MAX_TOKEN_LENGTH,
@@ -843,7 +843,7 @@ export const useFolderStore = create<FolderStore>()(
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
         const sanitizedToken = token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null;
-        const finalToken = (sanitizedToken && !CONTROL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
+        const finalToken = (sanitizedToken && !DISALLOWED_URL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
 
         set({
           spotifyToken: finalToken,
@@ -919,7 +919,7 @@ export const useFolderStore = create<FolderStore>()(
           // Defense-in-depth: Harden token validation during rehydration
           if (state.spotifyToken) {
             const token = String(state.spotifyToken).slice(0, MAX_TOKEN_LENGTH);
-            state.spotifyToken = (token && !CONTROL_CHARS_REGEXP.test(token)) ? token : null;
+            state.spotifyToken = (token && !DISALLOWED_URL_CHARS_REGEXP.test(token)) ? token : null;
           } else {
             state.spotifyToken = null;
           }

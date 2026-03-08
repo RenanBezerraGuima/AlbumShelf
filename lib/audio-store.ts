@@ -4,7 +4,7 @@
  */
 
 import type { Track } from './types';
-import { sanitizeUrl, sanitizeImageUrl, MAX_TEXT_LENGTH } from './security';
+import { sanitizeUrl, sanitizeImageUrl, sanitizeText } from './security';
 
 export interface AudioState {
   isPlaying: boolean;
@@ -100,7 +100,7 @@ export const audioManager = {
       currentTrack: track || null,
       playlist,
       currentIndex: index,
-      albumName: albumName ? String(albumName).slice(0, MAX_TEXT_LENGTH) : null,
+      albumName: albumName ? sanitizeText(albumName) : null,
       albumImageUrl: sanitizeImageUrl(albumImageUrl) || null
     });
 

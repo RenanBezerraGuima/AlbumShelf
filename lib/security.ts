@@ -24,7 +24,8 @@ export interface SanitizationContext {
 }
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-export const CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
+const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F]/g;
 const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
@@ -42,7 +43,7 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
 
   // Enforce maximum length and block control characters/internal whitespace (including encoded ones)
   if (trimmedUrl.length > MAX_URL_LENGTH ||
-      CONTROL_CHARS_REGEXP.test(trimmedUrl) ||
+      DISALLOWED_URL_CHARS_REGEXP.test(trimmedUrl) ||
       (trimmedUrl.includes('%') && ENCODED_CONTROL_CHARS_REGEXP.test(trimmedUrl))) {
     return undefined;
   }
@@ -162,6 +163,18 @@ export function isValidGeistFont(font: any): font is GeistFont {
 }
 
 /**
+ * Sanitize a text field by enforcing length limits and stripping control characters.
+ * Preserves valid whitespace and international characters while protecting
+ * against injection or storage-based DoS.
+ */
+export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
+  if (text === null || text === undefined) return '';
+  const str = String(text);
+  // Security: Slice first to minimize work for DoS payloads, then strip control chars.
+  return str.slice(0, maxLength).replace(STRIP_CONTROL_CHARS_REGEXP, '');
+}
+
+/**
  * Sanitize AlbumDetails object.
  * Truncates text fields, sanitizes track preview URLs, and enforces item limits.
  */
@@ -177,7 +190,7 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
 
       tracks.push({
         id,
-        title: String(t.title || 'Unknown Track').slice(0, MAX_NAME_LENGTH),
+        title: sanitizeText(t.title || 'Unknown Track', MAX_NAME_LENGTH),
         preview: sanitizeUrl(t.preview) || '',
         duration: Math.max(0, Math.min(3600, Number(t.duration) || 0)),
       });
@@ -186,14 +199,14 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
 
   const sanitized: AlbumDetails = {
     tracks,
-    label: details.label ? String(details.label).slice(0, MAX_TEXT_LENGTH) : undefined,
+    label: details.label ? sanitizeText(details.label) : undefined,
   };
 
   if (Array.isArray(details.contributors)) {
     // Limit to 50 contributors
     sanitized.contributors = details.contributors
       .slice(0, 50)
-      .map((c: any) => String(c).slice(0, MAX_NAME_LENGTH));
+      .map((c: any) => sanitizeText(c, MAX_NAME_LENGTH));
   }
 
   return sanitized;
@@ -219,8 +232,8 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
   const sanitized: Album = {
     id,
     spotifyId: sanitizedSpotifyId,
-    name: (typeof album.name === 'string' && album.name ? album.name : String(album.name || 'Unknown Album')).slice(0, MAX_TEXT_LENGTH),
-    artist: (typeof album.artist === 'string' && album.artist ? album.artist : String(album.artist || 'Unknown Artist')).slice(0, MAX_TEXT_LENGTH),
+    name: sanitizeText(album.name || 'Unknown Album', MAX_TEXT_LENGTH),
+    artist: sanitizeText(album.artist || 'Unknown Artist', MAX_TEXT_LENGTH),
     imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
     releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, MAX_DATE_LENGTH) : undefined,
     totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
@@ -354,7 +367,7 @@ export function sanitizeFolder(
 
   return {
     id,
-    name: String(folder.name || 'Untitled').slice(0, MAX_NAME_LENGTH),
+    name: sanitizeText(folder.name || 'Untitled', MAX_NAME_LENGTH),
     parentId,
     albums,
     subfolders,

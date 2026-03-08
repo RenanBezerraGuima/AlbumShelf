@@ -134,3 +134,8 @@
 **Vulnerability:** The sharing service lacked depth and breadth limits when compressing or decompressing folder structures, allowing for stack overflow or memory exhaustion DoS via malicious share links.
 **Learning:** Even if data is eventually sanitized by a central layer (like `sanitizeFolderTree`), the intermediate transformation steps (like `fromCompact`) can still be vulnerable to DoS if they process untrusted nested structures recursively without their own limits.
 **Prevention:** Implement explicit recursion depth counters and array slicing (breadth limits) in all data transformation utilities that handle nested structures from untrusted sources.
+
+## 2026-05-15 - [Centralized Metadata Text Sanitization]
+**Vulnerability:** Metadata text fields (album/artist names, track titles) were truncated but not stripped of non-printable control characters, potentially causing UI issues or exploitation in downstream sinks.
+**Learning:** React escapes HTML, but non-printable control characters (\x00-\x1F, \x7F) can still disrupt layout, terminal output, or clipboard operations. Defense-in-depth requires sanitizing these characters at the state boundary.
+**Prevention:** Implement a centralized `sanitizeText` utility that enforces length limits AND strips control characters. Distinguish between "Text" (allows spaces) and "URLs/Tokens" (blocks spaces) to maintain correct validation logic for different field types.
