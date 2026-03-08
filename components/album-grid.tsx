@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Music, Grid2X2, Orbit, Search } from 'lucide-react';
+import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
@@ -107,6 +107,7 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
 export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
+  const folders = useFolderStore(state => state.sharedFolders ?? state.folders);
   const selectedFolder = useFolderStore(useCallback(state =>
     state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
   , []));
@@ -349,7 +350,34 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
         <Music className="h-16 w-16 mb-4 opacity-10" />
         <p className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>No collection selected</p>
-        <p className="text-xs mt-1" style={{ fontFamily: 'var(--font-mono)' }}>Select a catalog entry to begin</p>
+        <p className="text-xs mt-1 mb-4" style={{ fontFamily: 'var(--font-mono)' }}>Select a catalog entry to begin</p>
+
+        {folders.length === 0 ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:create-collection'))}
+            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+            title="Create your first collection [N]"
+            aria-label="Create your first collection [N]"
+            aria-keyshortcuts="n"
+          >
+            <FolderPlus className="h-4 w-4" />
+            Create your first collection [N]
+          </Button>
+        ) : isMobile ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:open-menu'))}
+            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+            title="Open collections menu"
+            aria-label="Open collections menu"
+          >
+            <Menu className="h-4 w-4" />
+            Open collections menu
+          </Button>
+        ) : null}
       </div>
     );
   }

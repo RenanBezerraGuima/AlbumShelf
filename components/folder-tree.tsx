@@ -579,6 +579,12 @@ export function FolderTree() {
   }, [isCreating]);
 
   useEffect(() => {
+    const handleCreateCollection = () => setIsCreating(true);
+    window.addEventListener('albumshelf:create-collection', handleCreateCollection);
+    return () => window.removeEventListener('albumshelf:create-collection', handleCreateCollection);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isInputActive =
         ["INPUT", "TEXTAREA", "SELECT"].includes(
