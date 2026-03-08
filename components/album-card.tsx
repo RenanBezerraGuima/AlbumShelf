@@ -34,6 +34,8 @@ import { audioManager, type AudioState } from '@/lib/audio-store';
 interface AlbumCardProps {
   album: Album;
   folderId: string;
+  imageLoading?: 'lazy' | 'eager';
+  imageFetchPriority?: 'auto' | 'high' | 'low';
 }
 
 interface AlbumDetailsContentProps {
@@ -178,11 +180,41 @@ const OpenInProviderMenuItem = React.memo(function OpenInProviderMenuItem({
   );
 });
 
-export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: AlbumCardProps) {
+const loadedAlbumCoverUrls = new Set<string>();
+
+export const AlbumCard = React.memo(function AlbumCard({
+  album,
+  folderId,
+  imageLoading = 'lazy',
+  imageFetchPriority = 'auto',
+}: AlbumCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [details, setDetails] = useState<AlbumDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const coverSrc = album.imageUrl || '/placeholder.svg';
+  const coverImageRef = React.useRef<HTMLImageElement>(null);
+  const [isCoverLoaded, setIsCoverLoaded] = useState(() => loadedAlbumCoverUrls.has(coverSrc));
+
+  useEffect(() => {
+    setIsCoverLoaded(loadedAlbumCoverUrls.has(coverSrc));
+  }, [coverSrc]);
+
+  useEffect(() => {
+    if (coverImageRef.current?.complete) {
+      loadedAlbumCoverUrls.add(coverSrc);
+      setIsCoverLoaded(true);
+    }
+  }, [coverSrc]);
+
+  const handleCoverLoad = useCallback(() => {
+    loadedAlbumCoverUrls.add(coverSrc);
+    setIsCoverLoaded(true);
+  }, [coverSrc]);
+
+  const handleCoverError = useCallback(() => {
+    setIsCoverLoaded(true);
+  }, []);
 
   const handleFlip = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (!isFlipped && !details) {
@@ -334,14 +366,28 @@ export const AlbumCard = React.memo(function AlbumCard({ album, folderId }: Albu
         </DialogContent>
       </Dialog>
 
-      <div className="aspect-square relative border-b-2 border-border overflow-hidden">
+      <div className="aspect-square relative border-b-2 border-border overflow-hidden bg-muted/40">
+        <div
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-0 bg-gradient-to-br from-muted via-muted/80 to-muted/30 transition-opacity duration-200',
+            isCoverLoaded && 'opacity-0',
+          )}
+        />
         <img
-          src={album.imageUrl || "/placeholder.svg"}
+          ref={coverImageRef}
+          src={coverSrc}
           alt={`${album.name} by ${album.artist}`}
-          draggable="false"
-          loading="lazy"
+          draggable={false}
+          loading={imageLoading}
+          fetchPriority={imageFetchPriority}
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className={cn(
+            'w-full h-full object-cover transition-all duration-500 group-hover:scale-110',
+            isCoverLoaded ? 'opacity-100' : 'opacity-0',
+          )}
+          onLoad={handleCoverLoad}
+          onError={handleCoverError}
         />
         
         <Tooltip>

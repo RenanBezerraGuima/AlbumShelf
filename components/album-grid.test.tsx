@@ -193,4 +193,34 @@ describe('AlbumGrid spatial mode toggle', () => {
     expect(renderedCards.length).toBeLessThan(120);
     expect(renderedCards.length).toBeGreaterThan(0);
   });
+
+  it('renders visible album covers eagerly to avoid cover flashes on collection switches', () => {
+    const folderId = 'folder-eager';
+    useFolderStore.setState({
+      selectedFolderId: folderId,
+      folders: [
+        {
+          id: folderId,
+          name: 'Favorites',
+          parentId: null,
+          isExpanded: true,
+          subfolders: [],
+          viewMode: 'grid',
+          albums: [
+            {
+              id: 'album-1',
+              name: 'Album',
+              artist: 'Artist',
+              imageUrl: 'https://example.com/image.jpg',
+              totalTracks: 10,
+            },
+          ],
+        },
+      ],
+    });
+
+    render(<AlbumGrid />);
+
+    expect(screen.getByAltText(/Album by Artist/i)).toHaveAttribute('loading', 'eager');
+  });
 });

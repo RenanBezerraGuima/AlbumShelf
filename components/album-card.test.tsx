@@ -128,4 +128,25 @@ describe('AlbumCard', () => {
     fireEvent.keyDown(flippedCard, { key: ' ' });
     expect(await screen.findByLabelText(/Test Album by Test Artist - click to flip/i)).toBeInTheDocument();
   });
+
+  it('keeps a previously loaded cover visible after remounting the same album art', () => {
+    const cachedAlbum = {
+      ...mockAlbum,
+      id: 'cached-album',
+      imageUrl: 'https://example.com/cached-cover.jpg',
+    };
+
+    const { unmount } = render(<AlbumCard album={cachedAlbum} folderId="folder-1" />);
+
+    const initialImage = screen.getByAltText(/Test Album by Test Artist/i);
+    expect(initialImage).toHaveClass('opacity-0');
+
+    fireEvent.load(initialImage);
+    expect(initialImage).toHaveClass('opacity-100');
+
+    unmount();
+    render(<AlbumCard album={cachedAlbum} folderId="folder-2" />);
+
+    expect(screen.getByAltText(/Test Album by Test Artist/i)).toHaveClass('opacity-100');
+  });
 });

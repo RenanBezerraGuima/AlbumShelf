@@ -81,7 +81,12 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
       )}
       style={style}
     >
-      <AlbumCard album={album} folderId={folderId} />
+      <AlbumCard
+        album={album}
+        folderId={folderId}
+        imageLoading="eager"
+        imageFetchPriority="high"
+      />
     </div>
   );
 });
@@ -210,8 +215,6 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             top: padding + row * rowStride,
             left: padding + column * (itemWidth + gap),
             width: itemWidth,
-            contentVisibility: 'auto' as const,
-            containIntrinsicSize: `${Math.round(itemWidth)}px`,
           },
         });
       }
