@@ -37,3 +37,7 @@
 ## 2025-05-24 - [Formatting Bracketed Shortcut Hints]
 **Learning:** When using single-character bracket keys (like '[' or ']') as shortcuts, the standard bracketed hint format (e.g., '[[]') can be visually confusing and cluttered. Using parentheses for these specific hints (e.g., '([)' and '])') improves clarity and maintains the technical aesthetic without sacrificing discoverability.
 **Action:** Use parentheses for shortcut hints involving bracket keys, while maintaining standard square brackets for all other keyboard shortcuts.
+
+## 2026-05-25 - [Accessibility and Metadata in Tracklists]
+**Learning:** Using semantic `<button>` elements for list items (like tracks in a tracklist) ensures they are keyboard-focusable and correctly identified by assistive technologies. Pairing these with `aria-live="polite"` on the global player status ensures that track changes (especially automatic ones) are communicated clearly to screen reader users. Additionally, providing track durations in a concise `font-mono` format adds professional metadata polish without cluttering the "industrial" UI.
+**Action:** Always use semantic interactive elements with descriptive ARIA labels for list items, and use `aria-live` regions for any background state changes that impact the user's focus or context.
