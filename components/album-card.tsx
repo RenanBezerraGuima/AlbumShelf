@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Play, Pause, Trash2, Copy, ExternalLink, Music, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,12 @@ interface AlbumDetailsContentProps {
   isFlipped: boolean;
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 /**
  * Performance: Memoized track item component.
  * By isolating the track row, we turn O(N) reconciliations into O(1)
@@ -60,10 +66,14 @@ const TrackItem = React.memo(function TrackItem({
   isTrackPlaying: boolean;
   onPlay: (track: Track) => void;
 }) {
+  const durationStr = useMemo(() => formatDuration(track.duration), [track.duration]);
+
   return (
-    <div
+    <button
+      type="button"
+      disabled={!track.preview}
       className={cn(
-        "group/track flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight",
+        "group/track w-full flex items-center gap-2 p-1.5 hover:bg-primary/10 transition-colors text-[10px] leading-tight text-left outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:relative focus-visible:z-10",
         isTrackPlaying && "bg-primary/20",
         !track.preview && "opacity-50 cursor-not-allowed"
       )}
@@ -73,9 +83,11 @@ const TrackItem = React.memo(function TrackItem({
           onPlay(track);
         }
       }}
+      aria-label={`${isTrackPlaying ? "Pause" : "Play"} track: ${track.title} (${durationStr})`}
     >
       <span className="text-muted-foreground w-3 shrink-0">{index + 1}.</span>
       <span className="flex-1 truncate font-medium">{track.title}</span>
+      <span className="shrink-0 font-mono opacity-50 text-[9px] tabular-nums">{durationStr}</span>
       <div className="shrink-0">
         {isTrackPlaying ? (
           <Pause className="h-3 w-3 fill-current text-primary" />
@@ -83,7 +95,7 @@ const TrackItem = React.memo(function TrackItem({
           <Play className="h-3 w-3 opacity-0 group-hover/track:opacity-100 transition-opacity" />
         ) : null}
       </div>
-    </div>
+    </button>
   );
 });
 

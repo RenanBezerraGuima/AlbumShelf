@@ -72,7 +72,10 @@ export function AudioController() {
     >
       <div className="max-w-screen-2xl mx-auto flex items-center gap-4 md:gap-8">
         {/* Track Info */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-initial md:w-64">
+        <div
+          className="flex items-center gap-3 min-w-0 flex-1 md:flex-initial md:w-64"
+          aria-live="polite"
+        >
           {state.albumImageUrl && (
             <img
               src={state.albumImageUrl}
