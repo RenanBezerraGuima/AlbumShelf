@@ -15,6 +15,13 @@ import {
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   MAX_TOKEN_LENGTH,
+  MAX_TOTAL_ALBUMS,
+  MAX_TOTAL_FOLDERS,
+  MAX_FOLDER_DEPTH,
+  MAX_ALBUMS_PER_FOLDER,
+  MAX_SUBFOLDERS_PER_FOLDER,
+  countTreeItems,
+  getTreeDepth,
 } from "./security";
 import { createInitialAlbumPosition, normalizeAlbumPosition } from "./spatial";
 
@@ -209,6 +216,10 @@ export const getBreadcrumb = (
   return path;
 };
 
+const getFolderDepth = (folders: Folder[], id: string): number => {
+  return getBreadcrumb(folders, id).length;
+};
+
 const updateFolderInTree = (
   folders: Folder[],
   id: string,
@@ -381,17 +392,37 @@ export const useFolderStore = create<FolderStore>()(
         const sanitizedParentId = parentId ? String(parentId).slice(0, MAX_ID_LENGTH) : null;
         const finalParentId = (sanitizedParentId && SAFE_ID_REGEXP.test(sanitizedParentId)) ? sanitizedParentId : null;
 
-        const newFolder: Folder = {
-          id: generateId(),
-          name: name.slice(0, MAX_NAME_LENGTH),
-          parentId: finalParentId,
-          albums: [],
-          subfolders: [],
-          isExpanded: true,
-          viewMode: "grid",
-        };
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
+          const context = countTreeItems(currentFolders);
+
+          // Security: Enforce global total folder limit
+          if (context.totalFolders >= MAX_TOTAL_FOLDERS) return state;
+
+          if (finalParentId) {
+            const parent = findFolder(currentFolders, finalParentId);
+            if (!parent) return state;
+
+            // Security: Enforce per-folder subfolder limit
+            if (parent.subfolders.length >= MAX_SUBFOLDERS_PER_FOLDER) return state;
+
+            // Security: Enforce maximum folder depth
+            if (getFolderDepth(currentFolders, finalParentId) >= MAX_FOLDER_DEPTH) return state;
+          } else {
+            // Security: Enforce root-level folder limit
+            if (currentFolders.length >= MAX_SUBFOLDERS_PER_FOLDER) return state;
+          }
+
+          const newFolder: Folder = {
+            id: generateId(),
+            name: name.slice(0, MAX_NAME_LENGTH),
+            parentId: finalParentId,
+            albums: [],
+            subfolders: [],
+            isExpanded: true,
+            viewMode: "grid",
+          };
+
           const newFolders = addFolderToTree(currentFolders, finalParentId, newFolder);
           if (newFolders === currentFolders) return state;
           if (state.sharedFolders) {
@@ -556,6 +587,19 @@ export const useFolderStore = create<FolderStore>()(
         const folder = findFolder(currentFolders, folderId);
         if (!folder) return;
 
+        // Security: Enforce maximum folder depth for the moved subtree
+        const subtreeDepth = getTreeDepth([folder]);
+        const parentDepth = newParentId ? getFolderDepth(currentFolders, newParentId) : 0;
+        if (parentDepth + subtreeDepth > MAX_FOLDER_DEPTH) return;
+
+        // Security: Enforce per-folder subfolder limit
+        if (newParentId) {
+          const parent = findFolder(currentFolders, newParentId);
+          if (parent && parent.subfolders.length >= MAX_SUBFOLDERS_PER_FOLDER) return;
+        } else {
+          if (currentFolders.length >= MAX_SUBFOLDERS_PER_FOLDER) return;
+        }
+
         // Remove folder from its current position
         let newFolders = deleteFolderFromTree(currentFolders, folderId);
 
@@ -578,7 +622,15 @@ export const useFolderStore = create<FolderStore>()(
       addAlbumToFolder: (folderId, album) => {
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
+          const context = countTreeItems(currentFolders);
+
+          // Security: Enforce global total album limit
+          if (context.totalAlbums >= MAX_TOTAL_ALBUMS) return state;
+
           const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
+            // Security: Enforce per-folder album limit
+            if (folder.albums.length >= MAX_ALBUMS_PER_FOLDER) return folder;
+
             // Check by id or spotifyId to prevent duplicates
             const isDuplicate = folder.albums.some((a) => {
               if (a.id === album.id) return true;
@@ -667,6 +719,9 @@ export const useFolderStore = create<FolderStore>()(
         const toFolder = findFolder(currentFolders, toFolderId);
         if (!fromFolder || !toFolder) return;
 
+        // Security: Enforce per-folder album limit for target
+        if (toFolder.albums.length >= MAX_ALBUMS_PER_FOLDER) return;
+
         const album = fromFolder.albums.find((a) => a.id === albumId);
         if (!album) return;
 
@@ -736,6 +791,9 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setAlbumPosition: (folderId, albumId, x, y) => {
+        // Defense-in-depth: Ensure coordinates are finite numbers
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
           const newFolders = updateFolderInTree(currentFolders, folderId, (folder) => {
@@ -786,11 +844,17 @@ export const useFolderStore = create<FolderStore>()(
         const state = get();
         if (!Array.isArray(importedFolders)) return;
 
+        // Security: Enforce global limits during import by passing current state context
+        const context = countTreeItems(state.folders);
         const processedImported = sanitizeFolderTree(
           importedFolders,
           true,
           normalizeAlbumPosition,
+          context
         );
+
+        if (processedImported.length === 0) return;
+
         const existingFolders = [...state.folders];
 
         const existingNames = new Set(existingFolders.map((f) => f.name));
