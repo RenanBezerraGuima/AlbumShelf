@@ -235,7 +235,7 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
     name: sanitizeText(album.name || 'Unknown Album', MAX_TEXT_LENGTH),
     artist: sanitizeText(album.artist || 'Unknown Artist', MAX_TEXT_LENGTH),
     imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
-    releaseDate: album.releaseDate ? String(album.releaseDate).slice(0, MAX_DATE_LENGTH) : undefined,
+    releaseDate: album.releaseDate ? sanitizeText(album.releaseDate, MAX_DATE_LENGTH) : undefined,
     totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
     spotifyUrl: sanitizeUrl(album.spotifyUrl),
     externalUrl: sanitizeUrl(album.externalUrl),
@@ -323,6 +323,30 @@ export function jsonp<T>(url: string): Promise<T> {
 }
 
 /**
+ * Recursively count albums and folders in a tree.
+ */
+export function countTreeItems(folders: Folder[]): SanitizationContext {
+  const context = { totalAlbums: 0, totalFolders: 0 };
+  const visit = (nodes: Folder[]) => {
+    for (const folder of nodes) {
+      context.totalFolders++;
+      context.totalAlbums += folder.albums.length;
+      visit(folder.subfolders);
+    }
+  };
+  visit(folders);
+  return context;
+}
+
+/**
+ * Calculate the maximum depth of a folder subtree.
+ */
+export function getTreeDepth(folders: Folder[]): number {
+  if (folders.length === 0) return 0;
+  return 1 + Math.max(0, ...folders.map(f => getTreeDepth(f.subfolders)));
+}
+
+/**
  * Recursively sanitize a Folder structure.
  * Supports optional ID regeneration for imports and a custom album mapper.
  * Enforces global limits on total albums and folders to prevent DoS.
@@ -382,9 +406,10 @@ export function sanitizeFolder(
 export function sanitizeFolderTree(
   rawFolders: any[],
   regenerateIds = false,
-  albumMapper?: (album: Album, index: number) => Album
+  albumMapper?: (album: Album, index: number) => Album,
+  initialContext?: SanitizationContext
 ): Folder[] {
-  const context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 };
+  const context: SanitizationContext = initialContext ? { ...initialContext } : { totalAlbums: 0, totalFolders: 0 };
   const sanitized: Folder[] = [];
 
   if (Array.isArray(rawFolders)) {
