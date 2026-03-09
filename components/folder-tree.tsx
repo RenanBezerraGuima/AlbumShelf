@@ -619,8 +619,10 @@ export function FolderTree() {
     [folders, searchQuery],
   );
   const filteredFolders = React.useMemo(
-    () => folders.filter((folder) => searchState.visibleFolderIds.has(folder.id)),
-    [folders, searchState.visibleFolderIds],
+    () => searchState.hasQuery
+      ? folders.filter((folder) => searchState.visibleFolderIds.has(folder.id))
+      : folders,
+    [folders, searchState.hasQuery, searchState.visibleFolderIds],
   );
 
   const handleCreateFolder = () => {

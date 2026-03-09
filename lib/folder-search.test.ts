@@ -37,15 +37,13 @@ const folders: Folder[] = [
 ];
 
 describe('getFolderSearchState', () => {
-  it('returns every folder when the query is empty', () => {
+  it('returns empty sets when the query is empty', () => {
     const result = getFolderSearchState(folders, '');
 
     expect(result.hasQuery).toBe(false);
-    expect(Array.from(result.visibleFolderIds)).toEqual([
-      'root-rock',
-      'root-jazz',
-      'child-fusion',
-    ]);
+    // Contract: UI components handle showing all folders when hasQuery is false
+    // to avoid O(N) work to populate the set.
+    expect(result.visibleFolderIds.size).toBe(0);
     expect(result.forcedExpandedFolderIds.size).toBe(0);
   });
 
@@ -65,5 +63,12 @@ describe('getFolderSearchState', () => {
 
     expect(Array.from(byFolderName.visibleFolderIds)).toEqual(['root-rock']);
     expect(Array.from(byAlbumName.visibleFolderIds)).toEqual(['root-rock']);
+  });
+
+  it('does not match across different albums due to separator', () => {
+    // If the albums were "Kind of Blue" and "Bitches Brew", a query like "Blue Bitches"
+    // should not match unless it's in a single album.
+    const result = getFolderSearchState(folders, 'Blue Bitches');
+    expect(result.visibleFolderIds.size).toBe(0);
   });
 });
