@@ -10,6 +10,7 @@ import {
   isValidViewMode,
   isValidStreamingProvider,
   isValidGeistFont,
+  sanitizeText,
   SAFE_ID_REGEXP,
   DISALLOWED_URL_CHARS_REGEXP,
   MAX_ID_LENGTH,
@@ -413,9 +414,11 @@ export const useFolderStore = create<FolderStore>()(
             if (currentFolders.length >= MAX_SUBFOLDERS_PER_FOLDER) return state;
           }
 
+          const sanitizedName = sanitizeText(name, MAX_NAME_LENGTH) || 'Untitled';
+
           const newFolder: Folder = {
             id: generateId(),
-            name: name.slice(0, MAX_NAME_LENGTH),
+            name: sanitizedName,
             parentId: finalParentId,
             albums: [],
             subfolders: [],
@@ -436,12 +439,12 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       renameFolder: (id, name) => {
-        const slicedName = name.slice(0, MAX_NAME_LENGTH);
+        const sanitizedName = sanitizeText(name, MAX_NAME_LENGTH);
         set((state) => {
           const currentFolders = state.sharedFolders ?? state.folders;
           const newFolders = updateFolderInTree(currentFolders, id, (folder) => {
-            if (folder.name === slicedName) return folder;
-            return { ...folder, name: slicedName };
+            if (folder.name === sanitizedName) return folder;
+            return { ...folder, name: sanitizedName };
           });
           if (newFolders === currentFolders) return state;
           if (state.sharedFolders) {
