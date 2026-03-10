@@ -41,3 +41,7 @@
 ## 2026-05-25 - [Accessibility and Metadata in Tracklists]
 **Learning:** Using semantic `<button>` elements for list items (like tracks in a tracklist) ensures they are keyboard-focusable and correctly identified by assistive technologies. Pairing these with `aria-live="polite"` on the global player status ensures that track changes (especially automatic ones) are communicated clearly to screen reader users. Additionally, providing track durations in a concise `font-mono` format adds professional metadata polish without cluttering the "industrial" UI.
 **Action:** Always use semantic interactive elements with descriptive ARIA labels for list items, and use `aria-live` regions for any background state changes that impact the user's focus or context.
+
+## 2026-05-26 - [Volume Control Accessibility and Safety]
+**Learning:** For continuous-value controls like volume sliders, providing both granular visual feedback (percentage in tooltips) and semantic feedback (`aria-valuetext`) ensures a consistent experience for all users. Furthermore, when implementing keyboard shortcuts for these controls, explicit clamping and rounding (e.g., to 1 decimal place) are essential to prevent floating-point precision issues and potential runtime errors from out-of-bounds values.
+**Action:** Always pair sliders with human-readable ARIA values and tooltips, and ensure all incremental adjustment logic includes robust clamping and rounding.
