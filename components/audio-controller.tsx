@@ -39,6 +39,18 @@ export function AudioController() {
     }
   }, []);
 
+  const handleVolumeUp = useCallback(() => {
+    const s = audioManager.getState();
+    const nextVolume = Math.min(1, Math.round((s.volume + 0.1) * 10) / 10);
+    audioManager.setVolume(nextVolume);
+  }, []);
+
+  const handleVolumeDown = useCallback(() => {
+    const s = audioManager.getState();
+    const nextVolume = Math.max(0, Math.round((s.volume - 0.1) * 10) / 10);
+    audioManager.setVolume(nextVolume);
+  }, []);
+
   const handleVolumeChange = (value: number[]) => audioManager.setVolume(value[0]);
 
   useEffect(() => {
@@ -56,11 +68,13 @@ export function AudioController() {
       else if (e.key === ']') { e.preventDefault(); handleNext(); }
       else if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMute(); }
       else if (e.key.toLowerCase() === 'x') { e.preventDefault(); handleStop(); }
+      else if (e.key === '=' || e.key === '+') { e.preventDefault(); handleVolumeUp(); }
+      else if (e.key === '-' || e.key === '_') { e.preventDefault(); handleVolumeDown(); }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleTogglePlay, handlePrev, handleNext, toggleMute]);
+  }, [handleTogglePlay, handlePrev, handleNext, toggleMute, handleVolumeUp, handleVolumeDown]);
 
   if (!state.currentUrl && state.playlist.length === 0) return null;
 
@@ -85,10 +99,17 @@ export function AudioController() {
             />
           )}
           <div className="min-w-0">
-            <h4 className="text-sm font-bold tracking-tighter truncate" style={{ fontFamily: 'var(--font-display)' }}>
+            <h4
+              className="text-sm font-bold tracking-tighter truncate"
+              style={{ fontFamily: 'var(--font-display)' }}
+              title={state.currentTrack?.title || undefined}
+            >
               {state.currentTrack?.title || "No track playing"}
             </h4>
-            <p className="text-[10px] text-muted-foreground font-mono truncate">
+            <p
+              className="text-[10px] text-muted-foreground font-mono truncate"
+              title={state.albumName || undefined}
+            >
               {state.albumName || "Unknown Album"}
             </p>
           </div>
@@ -198,15 +219,25 @@ export function AudioController() {
               {state.volume === 0 ? "Unmute [M]" : "Mute [M]"}
             </TooltipContent>
           </Tooltip>
-          <Slider
-            value={[state.volume]}
-            min={0}
-            max={1}
-            step={0.01}
-            onValueChange={handleVolumeChange}
-            className="w-full"
-            aria-label="Volume"
-          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex-1">
+                <Slider
+                  value={[state.volume]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onValueChange={handleVolumeChange}
+                  className="w-full"
+                  aria-label="Volume"
+                  aria-valuetext={`${Math.round(state.volume * 100)}%`}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Volume: {Math.round(state.volume * 100)}% [+/-]
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
