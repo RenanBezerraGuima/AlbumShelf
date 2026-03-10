@@ -23,6 +23,11 @@ export interface SanitizationContext {
   totalFolders: number;
 }
 
+// Performance: Caches for tree limit checks to avoid O(N) traversals on every store update.
+// Leveraging structural sharing, unmodified subtrees return O(1) cached results.
+const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
+const treeDepthCache = new WeakMap<Folder | Folder[], number>();
+
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F]/g;
@@ -324,26 +329,52 @@ export function jsonp<T>(url: string): Promise<T> {
 
 /**
  * Recursively count albums and folders in a tree.
+ * Performance: Uses WeakMap caching to skip O(N) traversals for stable subtrees.
  */
-export function countTreeItems(folders: Folder[]): SanitizationContext {
-  const context = { totalAlbums: 0, totalFolders: 0 };
-  const visit = (nodes: Folder[]) => {
-    for (const folder of nodes) {
-      context.totalFolders++;
-      context.totalAlbums += folder.albums.length;
-      visit(folder.subfolders);
+export function countTreeItems(target: Folder[] | Folder): SanitizationContext {
+  const cached = treeCountCache.get(target);
+  if (cached) return cached;
+
+  const result = { totalAlbums: 0, totalFolders: 0 };
+
+  if (Array.isArray(target)) {
+    for (const folder of target) {
+      const childContext = countTreeItems(folder);
+      result.totalFolders += childContext.totalFolders;
+      result.totalAlbums += childContext.totalAlbums;
     }
-  };
-  visit(folders);
-  return context;
+  } else {
+    result.totalFolders = 1;
+    result.totalAlbums = target.albums.length;
+    const subfoldersContext = countTreeItems(target.subfolders);
+    result.totalFolders += subfoldersContext.totalFolders;
+    result.totalAlbums += subfoldersContext.totalAlbums;
+  }
+
+  treeCountCache.set(target, result);
+  return result;
 }
 
 /**
  * Calculate the maximum depth of a folder subtree.
+ * Performance: Uses WeakMap caching to skip redundant O(depth) traversals for stable subtrees.
  */
-export function getTreeDepth(folders: Folder[]): number {
-  if (folders.length === 0) return 0;
-  return 1 + Math.max(0, ...folders.map(f => getTreeDepth(f.subfolders)));
+export function getTreeDepth(target: Folder[] | Folder): number {
+  const cached = treeDepthCache.get(target);
+  if (cached !== undefined) return cached;
+
+  let result = 0;
+
+  if (Array.isArray(target)) {
+    if (target.length > 0) {
+      result = Math.max(...target.map(f => getTreeDepth(f)));
+    }
+  } else {
+    result = 1 + getTreeDepth(target.subfolders);
+  }
+
+  treeDepthCache.set(target, result);
+  return result;
 }
 
 /**
