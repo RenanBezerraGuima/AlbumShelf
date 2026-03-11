@@ -180,6 +180,32 @@ export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
 }
 
 /**
+ * Sanitize a Track object by enforcing length limits, safe ID format,
+ * and sanitizing the preview URL.
+ */
+export function sanitizeTrack(track: any, index = 0): Track {
+  if (!track || typeof track !== 'object') {
+    return {
+      id: `track-${index}`,
+      title: 'Unknown Track',
+      preview: '',
+      duration: 0,
+    };
+  }
+
+  const rawId = String(track.id || index).slice(0, MAX_ID_LENGTH);
+  // Security: Enforce safe identifier format for track IDs
+  const id = SAFE_ID_REGEXP.test(rawId) ? rawId : `track-${index}`;
+
+  return {
+    id,
+    title: sanitizeText(track.title || 'Unknown Track', MAX_NAME_LENGTH),
+    preview: sanitizeUrl(track.preview) || '',
+    duration: Math.max(0, Math.min(3600, Number(track.duration) || 0)),
+  };
+}
+
+/**
  * Sanitize AlbumDetails object.
  * Truncates text fields, sanitizes track preview URLs, and enforces item limits.
  */
@@ -188,17 +214,7 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
   if (Array.isArray(details.tracks)) {
     // Limit to 100 tracks to prevent DoS from massive API responses
     for (let i = 0; i < details.tracks.length && tracks.length < 100; i++) {
-      const t = details.tracks[i];
-      const rawId = String(t.id || i).slice(0, MAX_ID_LENGTH);
-      // Security: Enforce safe identifier format for track IDs
-      const id = SAFE_ID_REGEXP.test(rawId) ? rawId : `track-${i}`;
-
-      tracks.push({
-        id,
-        title: sanitizeText(t.title || 'Unknown Track', MAX_NAME_LENGTH),
-        preview: sanitizeUrl(t.preview) || '',
-        duration: Math.max(0, Math.min(3600, Number(t.duration) || 0)),
-      });
+      tracks.push(sanitizeTrack(details.tracks[i], i));
     }
   }
 

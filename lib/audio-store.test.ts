@@ -130,6 +130,33 @@ describe('audioManager', () => {
       expect(state.albumImageUrl).toBeNull();
     });
 
+    it('should sanitize track and playlist in play()', () => {
+      const longTitle = 'T'.repeat(500);
+      const unsafePreview = 'javascript:alert(1)';
+      const track = { id: 'track-1', title: longTitle, preview: unsafePreview, duration: 30 };
+      const playlist = [
+        { id: 'p1', title: 'Normal', preview: 'https://example.com/1.mp3', duration: 30 },
+        { id: 'p2', title: longTitle, preview: unsafePreview, duration: 30 }
+      ];
+
+      audioManager.play('https://example.com/1.mp3', track, playlist);
+
+      const state = audioManager.getState();
+      expect(state.currentTrack?.title.length).toBe(100);
+      expect(state.currentTrack?.preview).toBe('');
+      expect(state.playlist[1].title.length).toBe(100);
+      expect(state.playlist[1].preview).toBe('');
+    });
+
+    it('should enforce playlist limit in play()', () => {
+      const largePlaylist = Array(200).fill({ id: 't', title: 'T', preview: 'https://e.com/t.mp3', duration: 30 });
+
+      audioManager.play('https://e.com/t.mp3', undefined, largePlaylist);
+
+      const state = audioManager.getState();
+      expect(state.playlist.length).toBe(100);
+    });
+
     it('should handle non-finite volume values', () => {
       audioManager.setVolume(Infinity);
       expect(audioManager.getState().volume).toBe(0.7);

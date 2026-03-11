@@ -4,7 +4,7 @@
  */
 
 import type { Track } from './types';
-import { sanitizeUrl, sanitizeImageUrl, sanitizeText } from './security';
+import { sanitizeUrl, sanitizeImageUrl, sanitizeText, sanitizeTrack } from './security';
 
 export interface AudioState {
   isPlaying: boolean;
@@ -74,6 +74,16 @@ export const audioManager = {
     const sanitizedUrl = sanitizeUrl(url);
     if (!sanitizedUrl) return;
 
+    // Sink-level sanitization for defense-in-depth
+    const sanitizedTrack = track ? sanitizeTrack(track) : null;
+    const sanitizedPlaylist: Track[] = [];
+    if (Array.isArray(playlist)) {
+      // Limit to 100 tracks to prevent DoS from massive unvalidated arrays
+      for (let i = 0; i < playlist.length && sanitizedPlaylist.length < 100; i++) {
+        sanitizedPlaylist.push(sanitizeTrack(playlist[i], i));
+      }
+    }
+
     if (state.currentUrl === sanitizedUrl && globalAudio) {
       if (globalAudio.paused) {
         globalAudio.play();
@@ -97,8 +107,8 @@ export const audioManager = {
     updateState({
       isPlaying: true,
       currentUrl: sanitizedUrl,
-      currentTrack: track || null,
-      playlist,
+      currentTrack: sanitizedTrack,
+      playlist: sanitizedPlaylist,
       currentIndex: index,
       albumName: albumName ? sanitizeText(albumName) : null,
       albumImageUrl: sanitizeImageUrl(albumImageUrl) || null
