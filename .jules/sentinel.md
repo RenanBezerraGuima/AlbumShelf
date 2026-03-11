@@ -139,3 +139,8 @@
 **Vulnerability:** Metadata text fields (album/artist names, track titles) were truncated but not stripped of non-printable control characters, potentially causing UI issues or exploitation in downstream sinks.
 **Learning:** React escapes HTML, but non-printable control characters (\x00-\x1F, \x7F) can still disrupt layout, terminal output, or clipboard operations. Defense-in-depth requires sanitizing these characters at the state boundary.
 **Prevention:** Implement a centralized `sanitizeText` utility that enforces length limits AND strips control characters. Distinguish between "Text" (allows spaces) and "URLs/Tokens" (blocks spaces) to maintain correct validation logic for different field types.
+
+## 2026-05-20 - [Sink-Level Defense-in-Depth for Audio State]
+**Vulnerability:** The global audio manager accepted unvalidated track objects and playlist arrays, posing a risk of XSS or DoS if malicious data bypassed earlier sanitization layers.
+**Learning:** Even if data is sanitized at the API and store boundaries, high-impact "sinks" (like an audio player that manages global state and renders metadata) should implement their own sanitization and resource limiting as a final line of defense.
+**Prevention:** Always sanitize complex objects and enforce array length limits at the final execution sink. Centralize object-specific sanitization (e.g., `sanitizeTrack`) to ensure consistency across the application's ingestion and execution layers.
