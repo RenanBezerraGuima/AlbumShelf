@@ -38,6 +38,7 @@ function getShareUrlInfo() {
 
 export const SettingsDialog = memo(function SettingsDialog() {
   const [isExported, setIsExported] = useState(false);
+  const [isImported, setIsImported] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [shareUrlInfo, setShareUrlInfo] = useState({ url: '', length: 0 });
 
@@ -172,6 +173,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
         }
 
         useFolderStore.getState().importFolders(json);
+
+        setIsImported(true);
+        setTimeout(() => setIsImported(false), 2000);
+
         toast.success('Data imported successfully!', {
           description: `${json.length} collections added to your shelf.`,
         });
@@ -182,6 +187,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
         }
       } catch (error) {
         console.error(error);
+        toast.error('Failed to import data');
       }
     };
     reader.readAsText(file);
@@ -336,11 +342,15 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   </p>
                   <Button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full justify-start gap-2 transition-all duration-300"
+                    className={cn(
+                      "w-full justify-start gap-2 transition-all duration-300",
+                      isImported && "border-green-600 text-green-600"
+                    )}
                     variant="outline"
+                    aria-label={isImported ? "Data imported!" : "Import Data"}
                   >
-                    <Upload className="h-4 w-4" />
-                    Import Data
+                    {isImported ? <Check className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                    {isImported ? "Data Imported!" : "Import Data"}
                   </Button>
                   <input
                     type="file"

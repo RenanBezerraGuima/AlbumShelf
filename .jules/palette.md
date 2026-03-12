@@ -45,3 +45,7 @@
 ## 2026-05-26 - [Volume Control Accessibility and Safety]
 **Learning:** For continuous-value controls like volume sliders, providing both granular visual feedback (percentage in tooltips) and semantic feedback (`aria-valuetext`) ensures a consistent experience for all users. Furthermore, when implementing keyboard shortcuts for these controls, explicit clamping and rounding (e.g., to 1 decimal place) are essential to prevent floating-point precision issues and potential runtime errors from out-of-bounds values.
 **Action:** Always pair sliders with human-readable ARIA values and tooltips, and ensure all incremental adjustment logic includes robust clamping and rounding.
+
+## 2026-05-27 - [Feedback for Data Import Actions]
+**Learning:** Extending the 'momentary success state' pattern to data import actions ensures a consistent user experience across all data management tasks. Providing immediate visual confirmation at the point of interaction (button transformation) complements toast notifications and reinforces the reliability of the action.
+**Action:** Apply the momentary success state pattern to both export and import buttons to provide a unified feedback loop for background data processes.
