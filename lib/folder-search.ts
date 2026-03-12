@@ -46,7 +46,8 @@ export function getFolderSearchState(
 
   // Performance: Return a stable EMPTY_STATE if the query is empty.
   // The UI (FolderTree) handles the empty query state by showing all folders.
-  // This avoids an O(N) tree traversal on every re-render when not searching.
+  // Using EMPTY_SET (via EMPTY_STATE) ensures that FolderItem components (React.memo)
+  // skip redundant re-renders when the store updates but search is inactive.
   if (!trimmedQuery) {
     return EMPTY_STATE;
   }

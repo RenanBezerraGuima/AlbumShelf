@@ -144,3 +144,8 @@
 **Vulnerability:** The global audio manager accepted unvalidated track objects and playlist arrays, posing a risk of XSS or DoS if malicious data bypassed earlier sanitization layers.
 **Learning:** Even if data is sanitized at the API and store boundaries, high-impact "sinks" (like an audio player that manages global state and renders metadata) should implement their own sanitization and resource limiting as a final line of defense.
 **Prevention:** Always sanitize complex objects and enforce array length limits at the final execution sink. Centralize object-specific sanitization (e.g., `sanitizeTrack`) to ensure consistency across the application's ingestion and execution layers.
+
+## 2026-05-25 - [Robustness in Sanitization Layer]
+**Vulnerability:** Sanitization utilities (`sanitizeAlbum`, `sanitizeFolder`) crashed when encountering `null` or `undefined` inputs, leading to application-level DoS when processing malformed persisted state or external API data.
+**Learning:** A sanitization layer must be robust against the very malformed data it is designed to clean. If the sanitizer itself throws a `TypeError` when it receives unexpected types (like `null` instead of an object), it becomes a point of failure rather than a defense.
+**Prevention:** Implement early defensive checks for `null`, `undefined`, and incorrect types at the start of all sanitization functions. Return safe, minimal default structures (e.g., empty arrays, placeholder strings, new UUIDs) to ensure the application state remains valid even if the input is completely invalid.

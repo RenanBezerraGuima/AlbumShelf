@@ -213,6 +213,12 @@ describe('Security Utilities', () => {
   });
 
   describe('sanitizeAlbumDetails', () => {
+    it('should not crash when details is null or undefined', () => {
+      expect(() => sanitizeAlbumDetails(null)).not.toThrow();
+      expect(() => sanitizeAlbumDetails(undefined)).not.toThrow();
+      expect(sanitizeAlbumDetails(null)).toEqual({ tracks: [] });
+    });
+
     it('should sanitize and truncate tracks, label and contributors', () => {
       const longText = 'A'.repeat(300);
       const details = {
@@ -276,6 +282,16 @@ describe('Security Utilities', () => {
   });
 
   describe('sanitizeAlbum', () => {
+    it('should not crash when album is null, undefined or not an object', () => {
+      expect(() => sanitizeAlbum(null)).not.toThrow();
+      expect(() => sanitizeAlbum(undefined)).not.toThrow();
+      expect(() => sanitizeAlbum('not an object')).not.toThrow();
+
+      const sanitized = sanitizeAlbum(null);
+      expect(sanitized.name).toBe('Unknown Album');
+      expect(sanitized.id).toBeDefined();
+    });
+
     it('should truncate id, name and artist to their respective limits', () => {
       const longText = 'A'.repeat(300);
       const album = {
@@ -388,6 +404,29 @@ describe('Security Utilities', () => {
   });
 
   describe('sanitizeFolder', () => {
+    it('should not crash when folder is null, undefined or not an object', () => {
+      expect(() => sanitizeFolder(null)).not.toThrow();
+      expect(() => sanitizeFolder(undefined)).not.toThrow();
+      expect(() => sanitizeFolder('not an object')).not.toThrow();
+
+      const sanitized = sanitizeFolder(null);
+      expect(sanitized.name).toBe('Untitled');
+      expect(sanitized.albums).toEqual([]);
+    });
+
+    it('should not crash when albums array contains null', () => {
+      const folder = {
+        id: 'f1',
+        name: 'Test',
+        albums: [null, { id: 'a1', name: 'Valid', artist: 'Artist' }, undefined],
+        subfolders: []
+      };
+      expect(() => sanitizeFolder(folder)).not.toThrow();
+      const sanitized = sanitizeFolder(folder);
+      expect(sanitized.albums.length).toBe(3);
+      expect(sanitized.albums[1].name).toBe('Valid');
+    });
+
     it('should recursively sanitize folder names and nested albums', () => {
       const longName = 'F'.repeat(200);
       const folder = {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, act } from '@testing-library/react';
 
 const {
   redirectToSpotifyAuthMock,
@@ -187,5 +187,51 @@ describe('SettingsDialog', () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalled();
     });
+  });
+
+  it('shows success state and handles error on import', async () => {
+    const originalFileReader = global.FileReader;
+
+    // Test success case
+    class SuccessFileReaderMock {
+      onload: ((ev: any) => void) | null = null;
+      readAsText() {
+        this.onload?.({ target: { result: JSON.stringify([{ id: 'imp-1', name: 'Imported' }]) } });
+      }
+    }
+    // @ts-expect-error test shim
+    global.FileReader = SuccessFileReaderMock;
+
+    render(<SettingsDialog />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    fireEvent.change(input, {
+      target: { files: [new File(['{}'], 'backup.json', { type: 'application/json' })] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Data imported!')).toBeInTheDocument();
+      expect(screen.getByText('Data Imported!')).toBeInTheDocument();
+    });
+
+    // Test failure case (invalid JSON)
+    class ErrorFileReaderMock {
+      onload: ((ev: any) => void) | null = null;
+      readAsText() {
+        this.onload?.({ target: { result: 'invalid json' } });
+      }
+    }
+    // @ts-expect-error test shim
+    global.FileReader = ErrorFileReaderMock;
+
+    fireEvent.change(input, {
+      target: { files: [new File(['{}'], 'error.json', { type: 'application/json' })] },
+    });
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Failed to import data');
+    });
+
+    global.FileReader = originalFileReader;
   });
 });
