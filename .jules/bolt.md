@@ -97,3 +97,7 @@
 ## 2024-05-24 - [Memoization of Tree Analysis via WeakMap]
 **Learning:** Security-critical tree analysis (like `countTreeItems` and `getTreeDepth`) is often called on every state mutation to enforce architectural limits. While O(N), these traversals become a bottleneck as trees grow. By implementing `WeakMap` caching that targets both individual `Folder` objects and the `Folder[]` children arrays, these traversals are reduced to O(depth) for modified paths and O(1) for stable subtrees, dramatically improving the performance of every store setter.
 **Action:** Use `WeakMap` to memoize recursive tree analysis functions. Cache both the leaf nodes and the collection arrays to maximize hits during structural sharing updates.
+
+## 2024-05-25 - [Search State Reference Stability and Cache Keying]
+**Learning:** Returning new `Set` instances from a `useMemo` or store selector (like `getFolderSearchState`) on every call triggers re-renders in all consumer components, even if the sets are empty. Using a stable `EMPTY_SET` constant for the "no-query" state allows `React.memo` components to skip reconciliation entirely. Additionally, keying search content caches by nested immutable data (like `folder.albums`) rather than the parent container (`folder`) ensures cache persistence across metadata-only updates like folder renames.
+**Action:** Return stable constant references for empty collections in selectors. Key `WeakMap` caches by the most granular stable data possible to maximize hit rate across structural sharing updates.
