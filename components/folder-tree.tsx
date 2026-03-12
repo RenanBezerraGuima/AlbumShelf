@@ -220,6 +220,9 @@ const FolderItem = React.memo(function FolderItem({
     if (draggedAlbum && draggedFolderId) {
       if (draggedFolderId !== folder.id) {
         moveAlbum(draggedFolderId, folder.id, draggedAlbum.id);
+        toast.success('Album moved', {
+          description: `"${draggedAlbum.name}" moved to "${folder.name}"`,
+        });
       }
       setDraggedAlbum(null, null, null);
       return;
@@ -234,12 +237,21 @@ const FolderItem = React.memo(function FolderItem({
       if (y < height * 0.25) {
         // Drop before this folder (same parent)
         moveFolder(draggedFolder.id, parentId, folder.id);
+        toast.success('Collection reordered', {
+          description: `"${draggedFolder.name}" moved.`,
+        });
       } else if (y > height * 0.75) {
         // Drop after this folder (same parent)
         moveFolder(draggedFolder.id, parentId, null);
+        toast.success('Collection reordered', {
+          description: `"${draggedFolder.name}" moved.`,
+        });
       } else {
         // Drop inside this folder
         moveFolder(draggedFolder.id, folder.id, null);
+        toast.success('Collection moved', {
+          description: `"${draggedFolder.name}" moved into "${folder.name}"`,
+        });
       }
       setDraggedFolder(null, null);
     }
@@ -651,6 +663,9 @@ export function FolderTree() {
     if (draggedFolder) {
       const { moveFolder, setDraggedFolder } = useFolderStore.getState();
       moveFolder(draggedFolder.id, null, null);
+      toast.success('Collection moved to root', {
+        description: `"${draggedFolder.name}" moved to the top level.`,
+      });
       setDraggedFolder(null, null);
     }
   };

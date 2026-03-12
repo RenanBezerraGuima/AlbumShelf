@@ -45,3 +45,7 @@
 ## 2026-05-26 - [Volume Control Accessibility and Safety]
 **Learning:** For continuous-value controls like volume sliders, providing both granular visual feedback (percentage in tooltips) and semantic feedback (`aria-valuetext`) ensures a consistent experience for all users. Furthermore, when implementing keyboard shortcuts for these controls, explicit clamping and rounding (e.g., to 1 decimal place) are essential to prevent floating-point precision issues and potential runtime errors from out-of-bounds values.
 **Action:** Always pair sliders with human-readable ARIA values and tooltips, and ensure all incremental adjustment logic includes robust clamping and rounding.
+
+## 2026-05-27 - [Closure Feedback for Spatial Actions]
+**Learning:** While drag-and-drop interactions provide transient visual feedback (like drop targets), the completion of the action (the "drop") can sometimes feel ambiguous in complex trees or large grids. Providing a success toast upon a successful move or reorder provides critical interaction closure, confirming the system has processed the change and explicitly stating the new state (e.g., where an item was moved).
+**Action:** Always provide explicit textual feedback (like toasts) for spatial reordering and movement actions to provide a clear sense of closure and system confirmation.
