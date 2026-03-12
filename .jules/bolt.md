@@ -97,3 +97,7 @@
 ## 2024-05-24 - [Memoization of Tree Analysis via WeakMap]
 **Learning:** Security-critical tree analysis (like `countTreeItems` and `getTreeDepth`) is often called on every state mutation to enforce architectural limits. While O(N), these traversals become a bottleneck as trees grow. By implementing `WeakMap` caching that targets both individual `Folder` objects and the `Folder[]` children arrays, these traversals are reduced to O(depth) for modified paths and O(1) for stable subtrees, dramatically improving the performance of every store setter.
 **Action:** Use `WeakMap` to memoize recursive tree analysis functions. Cache both the leaf nodes and the collection arrays to maximize hits during structural sharing updates.
+
+## 2026-03-12 - [Search Referential Stability and Cache Keying]
+**Learning:** Returning a new object/set for empty search queries on every call causes unnecessary re-renders in components subscribing to search state. Using a stable `EMPTY_STATE` constant bails out of these re-renders. Furthermore, keying content caches by sub-properties (like `folder.albums`) that are preserved via structural sharing during metadata-only updates (like folder renames) maximizes cache hits compared to keying by the parent object.
+**Action:** Always provide stable references for empty/default states in selectors. Use stable sub-array/object references as cache keys for expensive computations on immutable trees.

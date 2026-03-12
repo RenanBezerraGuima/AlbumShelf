@@ -1,4 +1,4 @@
-import type { Folder } from './types';
+import type { Folder, Album } from './types';
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -10,19 +10,30 @@ export interface FolderSearchState {
   forcedExpandedFolderIds: Set<string>;
 }
 
+// Performance: Constants for empty search state to provide referential stability.
+// This allows consumer components (e.g., FolderItem) to skip reconciliation
+// when search is inactive.
+const EMPTY_SET = new Set<string>();
+const EMPTY_STATE: FolderSearchState = {
+  hasQuery: false,
+  visibleFolderIds: EMPTY_SET,
+  forcedExpandedFolderIds: EMPTY_SET,
+};
+
 // Performance: Cache for concatenated album names and artists to avoid O(N) string operations
-// during every search keystroke. Since folders are immutable in the store,
-// we can use their references as keys in a WeakMap.
-const searchContentCache = new WeakMap<Folder, string>();
+// during every search keystroke. Since the albums array reference is stable in the store
+// across folder renames or metadata updates (due to structural sharing),
+// using it as the key ensures the cache remains valid even if the Folder object changes.
+const searchContentCache = new WeakMap<Album[], string>();
 
 function getFolderSearchContent(folder: Folder): string {
-  let content = searchContentCache.get(folder);
+  let content = searchContentCache.get(folder.albums);
   if (content === undefined) {
     // We use a null character as a separator to prevent queries from matching
     // across different albums or across the name/artist boundary incorrectly,
     // while still allowing a single fast RegExp.test() call for the entire folder.
     content = folder.albums.map(a => `${a.name}\0${a.artist}`).join('\0');
-    searchContentCache.set(folder, content);
+    searchContentCache.set(folder.albums, content);
   }
   return content;
 }
@@ -32,19 +43,16 @@ export function getFolderSearchState(
   query: string,
 ): FolderSearchState {
   const trimmedQuery = query.trim();
-  const visibleFolderIds = new Set<string>();
-  const forcedExpandedFolderIds = new Set<string>();
 
-  // Performance: Return early with empty sets if the query is empty.
+  // Performance: Return a stable EMPTY_STATE if the query is empty.
   // The UI (FolderTree) handles the empty query state by showing all folders.
   // This avoids an O(N) tree traversal on every re-render when not searching.
   if (!trimmedQuery) {
-    return {
-      hasQuery: false,
-      visibleFolderIds,
-      forcedExpandedFolderIds,
-    };
+    return EMPTY_STATE;
   }
+
+  const visibleFolderIds = new Set<string>();
+  const forcedExpandedFolderIds = new Set<string>();
 
   const queryRegex = new RegExp(escapeRegExp(trimmedQuery), 'i');
 
