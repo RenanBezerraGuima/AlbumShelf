@@ -210,6 +210,12 @@ export function sanitizeTrack(track: any, index = 0): Track {
  * Truncates text fields, sanitizes track preview URLs, and enforces item limits.
  */
 export function sanitizeAlbumDetails(details: any): AlbumDetails {
+  if (!details || typeof details !== 'object') {
+    return {
+      tracks: [],
+    };
+  }
+
   const tracks: Track[] = [];
   if (Array.isArray(details.tracks)) {
     // Limit to 100 tracks to prevent DoS from massive API responses
@@ -238,6 +244,16 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
  * Truncates text fields and sanitizes all URLs.
  */
 export function sanitizeAlbum(album: any, regenerateId = false): Album {
+  if (!album || typeof album !== 'object') {
+    return {
+      id: crypto.randomUUID(),
+      name: 'Unknown Album',
+      artist: 'Unknown Artist',
+      imageUrl: '/placeholder.svg',
+      totalTracks: 0,
+    };
+  }
+
   const rawId = album.id;
   const isProviderId = typeof rawId === 'string' && (rawId.startsWith('spotify-') || rawId.startsWith('deezer-') || rawId.startsWith('apple-'));
   let id = (regenerateId && !isProviderId) ? crypto.randomUUID() : String(rawId || crypto.randomUUID()).slice(0, MAX_ID_LENGTH);
@@ -401,7 +417,7 @@ export function getTreeDepth(target: Folder[] | Folder): number {
 export function sanitizeFolder(
   folder: any,
   regenerateIds = false,
-  parentId: string | null = (folder.parentId && typeof folder.parentId === 'string' && SAFE_ID_REGEXP.test(folder.parentId.slice(0, MAX_ID_LENGTH)))
+  parentId: string | null = (folder && folder.parentId && typeof folder.parentId === 'string' && SAFE_ID_REGEXP.test(folder.parentId.slice(0, MAX_ID_LENGTH)))
     ? folder.parentId.slice(0, MAX_ID_LENGTH)
     : null,
   albumMapper: (album: Album, index: number) => Album = (a) => a,
@@ -409,6 +425,19 @@ export function sanitizeFolder(
   context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 }
 ): Folder {
   context.totalFolders++;
+
+  if (!folder || typeof folder !== 'object') {
+    return {
+      id: crypto.randomUUID(),
+      name: 'Untitled',
+      parentId: parentId,
+      albums: [],
+      subfolders: [],
+      isExpanded: true,
+      viewMode: 'grid',
+    };
+  }
+
   let id = regenerateIds ? crypto.randomUUID() : String(folder.id || '').slice(0, MAX_ID_LENGTH);
 
   // Security: Enforce safe identifier format for folder IDs
@@ -421,7 +450,8 @@ export function sanitizeFolder(
   if (context.totalFolders <= MAX_TOTAL_FOLDERS) {
     if (Array.isArray(folder.albums)) {
       for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
-        albums.push(albumMapper(sanitizeAlbum(folder.albums[i], regenerateIds), i));
+        const sanitized = sanitizeAlbum(folder.albums[i], regenerateIds);
+        albums.push(albumMapper(sanitized, i));
         context.totalAlbums++;
       }
     }
