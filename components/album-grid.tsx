@@ -2,10 +2,17 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus } from 'lucide-react';
+import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus, Share2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
+import { generateShareUrl } from '@/lib/share-service';
 import { preloadAlbumImages, registerAlbumImageServiceWorker } from '@/lib/album-image-cache';
 import { AlbumCard } from './album-card';
 import type { Album } from '@/lib/types';
@@ -108,6 +115,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const folders = useFolderStore(state => state.sharedFolders ?? state.folders);
+  const streamingProvider = useFolderStore(state => state.streamingProvider);
   const selectedFolder = useFolderStore(useCallback(state =>
     state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
   , []));
@@ -121,6 +129,26 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const albumViewMode = selectedFolder?.viewMode || 'grid';
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [isShared, setIsShared] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    if (!selectedFolder) return;
+
+    try {
+      const url = generateShareUrl([selectedFolder], streamingProvider);
+      await navigator.clipboard.writeText(url);
+
+      setIsShared(true);
+      setTimeout(() => setIsShared(false), 2000);
+
+      toast.success('Collection link copied!', {
+        description: `Shared link for "${selectedFolder.name}" is now in your clipboard.`,
+      });
+    } catch (err) {
+      console.error('Failed to share collection:', err);
+      toast.error('Failed to copy share link');
+    }
+  }, [selectedFolder, streamingProvider]);
   const gridViewportRef = useRef<HTMLDivElement>(null);
   const [gridMetrics, setGridMetrics] = useState({
     viewportWidth: 0,
@@ -289,8 +317,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isInputActive = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
-      const isContentEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+      const activeElement = document.activeElement;
+      const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(activeElement?.tagName || '');
+      const isContentEditable = (activeElement as HTMLElement)?.isContentEditable;
 
       if (!isInputActive && !isContentEditable && !e.metaKey && !e.ctrlKey && !e.altKey && selectedFolderId) {
         if (e.key.toLowerCase() === 'g') {
@@ -299,13 +328,16 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         } else if (e.key.toLowerCase() === 'v') {
           e.preventDefault();
           useFolderStore.getState().setFolderViewMode(selectedFolderId, 'canvas');
+        } else if (e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          handleShare();
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFolderId]);
+  }, [selectedFolderId, handleShare]);
 
   // Performance: Handlers are stabilized with useCallback and use getState()
   // for store data to prevent re-rendering memoized DraggableAlbumItems.
@@ -424,6 +456,27 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           </div>
 
           <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={handleShare}
+                  className={cn(
+                    'h-auto py-0.5 px-2 rounded-none border border-border transition-all duration-300',
+                    isShared && 'bg-green-600 hover:bg-green-700 text-white border-green-700'
+                  )}
+                  aria-label="Share collection [C]"
+                  aria-keyshortcuts="c"
+                >
+                  {isShared ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                {isShared ? 'Link Copied!' : 'Share collection [C]'}
+              </TooltipContent>
+            </Tooltip>
+
             <button
               type="button"
               onClick={() => setFolderViewMode(selectedFolderId, 'grid')}
