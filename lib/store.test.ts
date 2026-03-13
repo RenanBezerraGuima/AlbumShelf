@@ -4,10 +4,18 @@ import { useFolderStore, getBreadcrumb, applySyncState, type SyncState } from '.
 describe('useFolderStore', () => {
   beforeEach(() => {
     // Reset the store before each test
-    // Since it's a singleton, we need a way to reset it or just clear folders
-    const { folders, deleteFolder } = useFolderStore.getState();
-    folders.forEach(f => deleteFolder(f.id));
-    useFolderStore.setState({ folders: [], selectedFolderId: null });
+    useFolderStore.setState({
+      folders: [],
+      selectedFolderId: null,
+      streamingProvider: 'deezer',
+      theme: 'industrial',
+      spotifyToken: null,
+      spotifyTokenExpiry: null,
+      spotifyTokenTimestamp: null,
+      hasSetPreference: false,
+      geistFont: 'mono',
+      lastUpdated: 0,
+    });
   });
 
   it('should add an album to a folder', () => {
@@ -515,6 +523,52 @@ describe('useFolderStore', () => {
     expect(stateAfter.selectedFolderId).toBe('synced');
     expect(stateAfter.streamingProvider).toBe('apple');
     expect(stateAfter.theme).toBe('mint');
+  });
+
+  it('Security: applySyncState should sanitize incoming state', () => {
+    const maliciousSyncState: any = {
+      folders: [
+        {
+          id: 'malicious-id&param=value',
+          name: 'Malicious\x00Folder',
+          albums: [{ id: 'a1', name: 'A1\x1F', artist: 'Art' }],
+          subfolders: [],
+          isExpanded: true
+        }
+      ],
+      selectedFolderId: 'malicious-id&param=value',
+      streamingProvider: 'malicious',
+      spotifyToken: 'token\nwith\nnewlines',
+      spotifyTokenExpiry: -100,
+      spotifyTokenTimestamp: NaN,
+      theme: 'malicious-theme',
+      lastUpdated: 'invalid'
+    };
+
+    applySyncState(maliciousSyncState);
+
+    const state = useFolderStore.getState();
+
+    // Folders should be sanitized
+    expect(state.folders[0].id).not.toBe('malicious-id&param=value');
+    expect(state.folders[0].name).toBe('MaliciousFolder');
+    expect(state.folders[0].albums[0].name).toBe('A1');
+
+    // selectedFolderId should be null because it was malicious
+    expect(state.selectedFolderId).toBeNull();
+
+    // Enum values should retain their previous valid values or defaults
+    expect(state.streamingProvider).toBe('deezer'); // Default
+    expect(state.theme).toBe('industrial'); // Default
+
+    // Sensitive fields should be sanitized/nullified
+    expect(state.spotifyToken).toBeNull();
+    expect(state.spotifyTokenExpiry).toBeNull();
+    expect(state.spotifyTokenTimestamp).toBeNull();
+
+    // Numeric values should be valid
+    expect(typeof state.lastUpdated).toBe('number');
+    expect(Number.isFinite(state.lastUpdated)).toBe(true);
   });
 
   describe('Security: Setter Hardening', () => {
