@@ -162,20 +162,22 @@ const getBreadcrumbSegment = (folder: Folder): { id: string; name: string } => {
   return segment;
 };
 
+const visitFolderTree = (nodes: Folder[], index: Map<string, Folder>) => {
+  for (let i = 0; i < nodes.length; i++) {
+    const folder = nodes[i];
+    index.set(folder.id, folder);
+    if (folder.subfolders.length > 0) {
+      visitFolderTree(folder.subfolders, index);
+    }
+  }
+};
+
 const getFolderTreeIndex = (folders: Folder[]): Map<string, Folder> => {
   let index = folderIndexCache.get(folders);
   if (index) return index;
 
   const foldersById = new Map<string, Folder>();
-
-  const visit = (nodes: Folder[]) => {
-    for (const folder of nodes) {
-      foldersById.set(folder.id, folder);
-      visit(folder.subfolders);
-    }
-  };
-
-  visit(folders);
+  visitFolderTree(folders, foldersById);
   folderIndexCache.set(folders, foldersById);
   return foldersById;
 };
@@ -206,13 +208,15 @@ export const getBreadcrumb = (
 
   // Performance: Lazily reconstruct breadcrumb by traversing up parentId chain.
   // This avoids O(N * depth) pre-calculation of all paths during indexing.
+  // Using push() and reverse() is O(depth) whereas unshift() would be O(depth^2).
   while (currentId) {
     const folder = foldersById.get(currentId);
     if (!folder) break;
-    path.unshift(getBreadcrumbSegment(folder));
+    path.push(getBreadcrumbSegment(folder));
     currentId = folder.parentId;
   }
 
+  path.reverse();
   cache.set(targetId, path);
   return path;
 };

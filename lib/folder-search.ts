@@ -69,7 +69,8 @@ export function getFolderSearchState(
 
     // 3. Check albums (expensive, only if needed)
     // We only need to check albums if the folder name and descendants didn't match.
-    const matchesAlbum = (!matchesFolder && !hasVisibleDescendant)
+    // Performance: Short-circuit if the folder has no albums to avoid cache lookup and regex test.
+    const matchesAlbum = (!matchesFolder && !hasVisibleDescendant && folder.albums.length > 0)
       ? queryRegex.test(getFolderSearchContent(folder))
       : false;
 
