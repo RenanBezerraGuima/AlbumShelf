@@ -10,6 +10,7 @@ import {
   isValidViewMode,
   isValidStreamingProvider,
   isValidGeistFont,
+  sanitizeSyncState,
   sanitizeText,
   SAFE_ID_REGEXP,
   DISALLOWED_URL_CHARS_REGEXP,
@@ -133,9 +134,10 @@ export const selectSyncState = (state: FolderStore): SyncState => ({
 });
 
 export const applySyncState = (incoming: SyncState) => {
+  if (!incoming || typeof incoming !== 'object') return;
   useFolderStore.setState((state) => ({
     ...state,
-    ...incoming,
+    ...sanitizeSyncState(incoming),
   }));
 };
 
@@ -961,39 +963,8 @@ export const useFolderStore = create<FolderStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           // Defense-in-depth: Validate rehydrated state from untrusted localStorage
-          if (Array.isArray(state.folders)) {
-            state.folders = sanitizeFolderTree(state.folders);
-          } else {
-            state.folders = [];
-          }
+          Object.assign(state, sanitizeSyncState(state));
 
-          state.selectedFolderId = typeof state.selectedFolderId === 'string' && SAFE_ID_REGEXP.test(state.selectedFolderId.slice(0, MAX_ID_LENGTH))
-            ? state.selectedFolderId.slice(0, MAX_ID_LENGTH)
-            : null;
-          state.hasSetPreference = Boolean(state.hasSetPreference);
-
-          // Defense-in-depth: Ensure numeric metadata is strictly positive
-          state.spotifyTokenExpiry = typeof state.spotifyTokenExpiry === 'number' && Number.isFinite(state.spotifyTokenExpiry) && state.spotifyTokenExpiry > 0 ? state.spotifyTokenExpiry : null;
-          state.spotifyTokenTimestamp = typeof state.spotifyTokenTimestamp === 'number' && Number.isFinite(state.spotifyTokenTimestamp) && state.spotifyTokenTimestamp > 0 ? state.spotifyTokenTimestamp : null;
-
-          if (!isValidTheme(state.theme)) state.theme = "industrial";
-          if (!isValidGeistFont(state.geistFont)) state.geistFont = "mono";
-          if (!isValidStreamingProvider(state.streamingProvider))
-            state.streamingProvider = "deezer";
-
-          // Defense-in-depth: Harden token validation during rehydration
-          if (state.spotifyToken) {
-            const token = String(state.spotifyToken).slice(0, MAX_TOKEN_LENGTH);
-            state.spotifyToken = (token && !DISALLOWED_URL_CHARS_REGEXP.test(token)) ? token : null;
-          } else {
-            state.spotifyToken = null;
-          }
-          if (
-            typeof state.lastUpdated !== "number" ||
-            !Number.isFinite(state.lastUpdated)
-          ) {
-            state.lastUpdated = Date.now();
-          }
           // Always reset sharedFolders and guest mode on rehydration
           state.sharedFolders = null;
           state.isGuestMode = false;

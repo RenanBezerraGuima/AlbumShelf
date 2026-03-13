@@ -240,6 +240,34 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
 }
 
 /**
+ * Sanitize a partial sync state object, enforcing types and security constraints.
+ * Centralized logic used for both applySyncState and onRehydrateStorage.
+ */
+export function sanitizeSyncState(incoming: any): any {
+  const s: any = {};
+  const isPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
+
+  if (incoming.folders !== undefined) s.folders = Array.isArray(incoming.folders) ? sanitizeFolderTree(incoming.folders) : [];
+  if (incoming.selectedFolderId !== undefined) {
+    s.selectedFolderId = typeof incoming.selectedFolderId === 'string' && SAFE_ID_REGEXP.test(incoming.selectedFolderId.slice(0, MAX_ID_LENGTH)) ? incoming.selectedFolderId.slice(0, MAX_ID_LENGTH) : null;
+  }
+  if (incoming.streamingProvider !== undefined) s.streamingProvider = isValidStreamingProvider(incoming.streamingProvider) ? incoming.streamingProvider : 'deezer';
+  if (incoming.hasSetPreference !== undefined) s.hasSetPreference = Boolean(incoming.hasSetPreference);
+  if (incoming.spotifyToken !== undefined) {
+    const t = incoming.spotifyToken ? String(incoming.spotifyToken).slice(0, MAX_TOKEN_LENGTH) : null;
+    s.spotifyToken = (t && !DISALLOWED_URL_CHARS_REGEXP.test(t)) ? t : null;
+  }
+  if (incoming.spotifyTokenExpiry !== undefined) s.spotifyTokenExpiry = isPosFinite(incoming.spotifyTokenExpiry) ? incoming.spotifyTokenExpiry : null;
+  if (incoming.spotifyTokenTimestamp !== undefined) s.spotifyTokenTimestamp = isPosFinite(incoming.spotifyTokenTimestamp) ? incoming.spotifyTokenTimestamp : null;
+  if (incoming.theme !== undefined) s.theme = isValidTheme(incoming.theme) ? incoming.theme : 'industrial';
+  if (incoming.geistFont !== undefined) s.geistFont = isValidGeistFont(incoming.geistFont) ? incoming.geistFont : 'mono';
+  if (incoming.lastUpdated !== undefined) {
+    s.lastUpdated = typeof incoming.lastUpdated === 'number' && Number.isFinite(incoming.lastUpdated) ? incoming.lastUpdated : Date.now();
+  }
+  return s;
+}
+
+/**
  * Centralized sanitization for Album objects.
  * Truncates text fields and sanitizes all URLs.
  */
