@@ -49,3 +49,7 @@
 ## 2026-05-27 - [Feedback for Data Import Actions]
 **Learning:** Extending the 'momentary success state' pattern to data import actions ensures a consistent user experience across all data management tasks. Providing immediate visual confirmation at the point of interaction (button transformation) complements toast notifications and reinforces the reliability of the action.
 **Action:** Apply the momentary success state pattern to both export and import buttons to provide a unified feedback loop for background data processes.
+
+## 2025-05-28 - [Undo Pattern for Accidental Data Mutations]
+**Learning:** In local-first applications where actions are often immediate and state-synchronized, adding an "Undo" action to success toasts provides a low-friction safety net for accidental deletions or additions. Using `useFolderStore.getState()` within the toast action allows for reliable, non-reactive access to store methods for reversing the operation.
+**Action:** Always include an "Undo" action in success toasts for primary data mutations (like adding or removing items) to enhance user confidence and mitigate accidental data loss.
