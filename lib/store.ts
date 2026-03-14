@@ -144,15 +144,21 @@ export const applySyncState = (incoming: SyncState) => {
 
 // Caches for tree traversal to avoid O(N) operations during re-renders or state updates.
 // WeakMap uses the 'folders' array reference as a key, ensuring cache is invalidated when tree changes.
+// Performance: Result-level cache keyed by the 'folders' array and targetId.
 const breadcrumbCache = new WeakMap<
   Folder[],
   Map<string, { id: string; name: string }[]>
 >();
 
-// Performance: Cache for individual breadcrumb segment objects to ensure stable references across re-renders.
-// Since the store uses structural sharing, unmodified folders retain their references.
-// Caching the {id, name} objects allows useShallow to skip re-renders for unchanged paths.
+// Performance: Segment-level cache keyed by the Folder object.
+// This preserves stable references for {id, name} objects across structural sharing updates,
+// allowing useShallow to skip re-renders even if the containing array is new.
 const segmentCache = new WeakMap<Folder, { id: string; name: string }>();
+
+// Performance: Recursive path cache keyed by the Folder object.
+// By caching the full path from root to this folder, we turn O(depth) reconstructions
+// into O(1) lookups for stable subtrees.
+const recursivePathCache = new WeakMap<Folder, { id: string; name: string }[]>();
 
 const folderIndexCache = new WeakMap<Folder[], Map<string, Folder>>();
 
@@ -196,30 +202,39 @@ export const getBreadcrumb = (
 ): { id: string; name: string }[] => {
   if (folders.length === 0) return [];
 
+  // Result-level cache for the current state version
   let cache = breadcrumbCache.get(folders);
   if (!cache) {
     cache = new Map();
     breadcrumbCache.set(folders, cache);
   }
 
-  const cached = cache.get(targetId);
-  if (cached) return cached;
+  const cachedResult = cache.get(targetId);
+  if (cachedResult) return cachedResult;
 
   const foldersById = getFolderTreeIndex(folders);
-  const path: { id: string; name: string }[] = [];
-  let currentId: string | null = targetId;
+  const targetFolder = foldersById.get(targetId);
+  if (!targetFolder) return [];
 
-  // Performance: Lazily reconstruct breadcrumb by traversing up parentId chain.
-  // This avoids O(N * depth) pre-calculation of all paths during indexing.
-  // Using push() and reverse() is O(depth) whereas unshift() would be O(depth^2).
-  while (currentId) {
-    const folder = foldersById.get(currentId);
-    if (!folder) break;
-    path.push(getBreadcrumbSegment(folder));
-    currentId = folder.parentId;
-  }
+  /**
+   * Performance: Recursive breadcrumb construction with WeakMap caching.
+   * By calling itself recursively, this function populates the cache for all ancestors
+   * of the target in a single pass. Subsequent lookups for any stable ancestor
+   * (even across state changes via structural sharing) become O(1).
+   */
+  const constructPath = (folder: Folder): { id: string; name: string }[] => {
+    const cachedPath = recursivePathCache.get(folder);
+    if (cachedPath) return cachedPath;
 
-  path.reverse();
+    const segment = getBreadcrumbSegment(folder);
+    const parent = folder.parentId ? foldersById.get(folder.parentId) : null;
+    const path = parent ? [...constructPath(parent), segment] : [segment];
+
+    recursivePathCache.set(folder, path);
+    return path;
+  };
+
+  const path = constructPath(targetFolder);
   cache.set(targetId, path);
   return path;
 };
@@ -233,41 +248,67 @@ const updateFolderInTree = (
   id: string,
   updater: (folder: Folder) => Folder,
 ): Folder[] => {
-  for (let i = 0; i < folders.length; i++) {
-    const folder = folders[i];
-    if (folder.id === id) {
-      const updated = updater(folder);
-      // Performance: If the updater returns the same folder reference, bail early
-      // to preserve array reference stability for structural sharing.
-      if (updated === folder) return folders;
-      const result = [...folders];
-      result[i] = updated;
-      return result;
+  // Performance: Use the folder path (breadcrumb) to target the update,
+  // avoiding O(N) recursive scans of the entire tree.
+  const path = getBreadcrumb(folders, id);
+  if (path.length === 0) return folders;
+
+  const updateNode = (nodes: Folder[], pathIndex: number): Folder[] => {
+    const targetSegment = path[pathIndex];
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.id === targetSegment.id) {
+        if (pathIndex === path.length - 1) {
+          // Found the target node
+          const updated = updater(node);
+          if (updated === node) return nodes;
+          const result = [...nodes];
+          result[i] = updated;
+          return result;
+        } else {
+          // Traverse deeper
+          const newSubfolders = updateNode(node.subfolders, pathIndex + 1);
+          if (newSubfolders === node.subfolders) return nodes;
+          const result = [...nodes];
+          result[i] = { ...node, subfolders: newSubfolders };
+          return result;
+        }
+      }
     }
-    const newSubfolders = updateFolderInTree(folder.subfolders, id, updater);
-    if (newSubfolders !== folder.subfolders) {
-      const result = [...folders];
-      result[i] = { ...folder, subfolders: newSubfolders };
-      return result;
-    }
-  }
-  return folders;
+    return nodes;
+  };
+
+  return updateNode(folders, 0);
 };
 
 const deleteFolderFromTree = (folders: Folder[], id: string): Folder[] => {
-  for (let i = 0; i < folders.length; i++) {
-    const folder = folders[i];
-    if (folder.id === id) {
-      return folders.filter((_, index) => index !== i);
+  // Performance: Use the folder path (breadcrumb) to target the deletion,
+  // avoiding O(N) recursive scans of the entire tree.
+  const path = getBreadcrumb(folders, id);
+  if (path.length === 0) return folders;
+
+  const deleteNode = (nodes: Folder[], pathIndex: number): Folder[] => {
+    const targetSegment = path[pathIndex];
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.id === targetSegment.id) {
+        if (pathIndex === path.length - 1) {
+          // Found the node to delete
+          return nodes.filter((_, index) => index !== i);
+        } else {
+          // Traverse deeper
+          const newSubfolders = deleteNode(node.subfolders, pathIndex + 1);
+          if (newSubfolders === node.subfolders) return nodes;
+          const result = [...nodes];
+          result[i] = { ...node, subfolders: newSubfolders };
+          return result;
+        }
+      }
     }
-    const newSubfolders = deleteFolderFromTree(folder.subfolders, id);
-    if (newSubfolders !== folder.subfolders) {
-      const result = [...folders];
-      result[i] = { ...folder, subfolders: newSubfolders };
-      return result;
-    }
-  }
-  return folders;
+    return nodes;
+  };
+
+  return deleteNode(folders, 0);
 };
 
 const addFolderToTree = (
