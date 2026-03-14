@@ -14,6 +14,7 @@ import {
   sanitizeText,
   SAFE_ID_REGEXP,
   DISALLOWED_URL_CHARS_REGEXP,
+  ENCODED_CONTROL_CHARS_REGEXP,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   MAX_TOKEN_LENGTH,
@@ -914,7 +915,7 @@ export const useFolderStore = create<FolderStore>()(
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
         const sanitizedToken = token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null;
-        const finalToken = (sanitizedToken && !DISALLOWED_URL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
+        const finalToken = (sanitizedToken && !DISALLOWED_URL_CHARS_REGEXP.test(sanitizedToken) && !ENCODED_CONTROL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
 
         set({
           spotifyToken: finalToken,

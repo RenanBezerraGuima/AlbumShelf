@@ -34,7 +34,7 @@ export default function RootLayout({
       <head>
         <meta
           httpEquiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' 'unsafe-inline' api.deezer.com itunes.apple.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.deezer.com *.dzcdn.net *.mzstatic.com *.scdn.co *.spotifycdn.com i.scdn.co; connect-src 'self' api.spotify.com accounts.spotify.com api.deezer.com itunes.apple.com; media-src 'self' blob: *.dzcdn.net; base-uri 'self'; form-action 'self';"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' api.deezer.com itunes.apple.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.deezer.com *.dzcdn.net *.mzstatic.com *.scdn.co *.spotifycdn.com i.scdn.co; connect-src 'self' api.spotify.com accounts.spotify.com api.deezer.com itunes.apple.com; media-src 'self' blob: *.dzcdn.net; object-src 'none'; base-uri 'self'; form-action 'self';"
         />
       </head>
       <body className="antialiased">

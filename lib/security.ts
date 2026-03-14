@@ -31,7 +31,7 @@ const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
 const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F]/g;
-const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
+export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
@@ -255,7 +255,7 @@ export function sanitizeSyncState(incoming: any): any {
   if (incoming.hasSetPreference !== undefined) s.hasSetPreference = Boolean(incoming.hasSetPreference);
   if (incoming.spotifyToken !== undefined) {
     const t = incoming.spotifyToken ? String(incoming.spotifyToken).slice(0, MAX_TOKEN_LENGTH) : null;
-    s.spotifyToken = (t && !DISALLOWED_URL_CHARS_REGEXP.test(t)) ? t : null;
+    s.spotifyToken = (t && !DISALLOWED_URL_CHARS_REGEXP.test(t) && !ENCODED_CONTROL_CHARS_REGEXP.test(t)) ? t : null;
   }
   if (incoming.spotifyTokenExpiry !== undefined) s.spotifyTokenExpiry = isPosFinite(incoming.spotifyTokenExpiry) ? incoming.spotifyTokenExpiry : null;
   if (incoming.spotifyTokenTimestamp !== undefined) s.spotifyTokenTimestamp = isPosFinite(incoming.spotifyTokenTimestamp) ? incoming.spotifyTokenTimestamp : null;
