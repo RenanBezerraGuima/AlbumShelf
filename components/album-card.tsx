@@ -265,6 +265,13 @@ export const AlbumCard = React.memo(function AlbumCard({
     useFolderStore.getState().removeAlbumFromFolder(folderId, album.id);
     toast.success('Removed from collection', {
       description: `${album.name} by ${album.artist}`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const currentStore = useFolderStore.getState();
+          currentStore.addAlbumToFolder(folderId, album);
+        },
+      },
     });
     setIsDeleteDialogOpen(false);
   };

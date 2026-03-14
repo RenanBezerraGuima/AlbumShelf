@@ -353,14 +353,29 @@ export function AlbumSearch({ isMobile, onMenuClick }: AlbumSearchProps) {
     );
 
     if (existingAlbums.length > 0) {
-      removeAlbumsFromFolder(selectedFolderId, existingAlbums.map((existingAlbum) => existingAlbum.id));
+      const albumIds = existingAlbums.map((existingAlbum) => existingAlbum.id);
+      removeAlbumsFromFolder(selectedFolderId, albumIds);
       toast.success('Removed from collection', {
         description: `${album.name} by ${album.artist}`,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            const currentStore = useFolderStore.getState();
+            currentStore.addAlbumToFolder(selectedFolderId, album);
+          },
+        },
       });
     } else {
       addAlbumToFolder(selectedFolderId, album);
       toast.success('Added to collection', {
         description: `${album.name} by ${album.artist}`,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            const currentStore = useFolderStore.getState();
+            currentStore.removeAlbumsFromFolder(selectedFolderId, [album.id]);
+          },
+        },
       });
     }
   }, []); // Stable handler reference
