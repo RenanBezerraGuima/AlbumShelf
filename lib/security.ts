@@ -29,9 +29,10 @@ const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
 const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\s]/;
-const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F]/g;
-export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F)/i;
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\s]/;
+const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F]/g;
+const STRIP_BIDI_CHARS_REGEXP = /[\u202A-\u202E\u2066-\u2069]/g;
+export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F])/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
@@ -175,8 +176,11 @@ export function isValidGeistFont(font: any): font is GeistFont {
 export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
   if (text === null || text === undefined) return '';
   const str = String(text);
-  // Security: Slice first to minimize work for DoS payloads, then strip control chars.
-  return str.slice(0, maxLength).replace(STRIP_CONTROL_CHARS_REGEXP, '');
+  // Security: Slice first to minimize work for DoS payloads, then strip control and Bidi chars.
+  return str
+    .slice(0, maxLength)
+    .replace(STRIP_CONTROL_CHARS_REGEXP, '')
+    .replace(STRIP_BIDI_CHARS_REGEXP, '');
 }
 
 /**
