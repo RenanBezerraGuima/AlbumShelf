@@ -19,6 +19,13 @@ const EMPTY_SET = new Set<string>();
 // rather than the Folder object itself, so the cache persists across folder renames.
 const searchContentCache = new WeakMap<Album[], string>();
 
+/**
+ * Performance: Result-level cache for the current state version and query.
+ * This allows skipping the entire recursive traversal if the exact same query
+ * is performed on the exact same folders tree (e.g. during rapid re-renders).
+ */
+const searchResultCache = new WeakMap<Folder[], Map<string, FolderSearchState>>();
+
 function getFolderSearchContent(folder: Folder): string {
   let content = searchContentCache.get(folder.albums);
   if (content === undefined) {
@@ -48,6 +55,15 @@ export function getFolderSearchState(
       forcedExpandedFolderIds: EMPTY_SET,
     };
   }
+
+  // Performance: Check result-level cache for the current state version and query.
+  let cache = searchResultCache.get(folders);
+  if (!cache) {
+    cache = new Map();
+    searchResultCache.set(folders, cache);
+  }
+  const cached = cache.get(trimmedQuery);
+  if (cached) return cached;
 
   const visibleFolderIds = new Set<string>();
   const forcedExpandedFolderIds = new Set<string>();
@@ -89,9 +105,12 @@ export function getFolderSearchState(
     visit(folder);
   }
 
-  return {
+  const result = {
     hasQuery: true,
     visibleFolderIds,
     forcedExpandedFolderIds,
   };
+
+  cache.set(trimmedQuery, result);
+  return result;
 }
