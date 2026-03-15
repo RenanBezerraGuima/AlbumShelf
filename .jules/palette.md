@@ -53,3 +53,7 @@
 ## 2025-05-28 - [Undo Pattern for Accidental Data Mutations]
 **Learning:** In local-first applications where actions are often immediate and state-synchronized, adding an "Undo" action to success toasts provides a low-friction safety net for accidental deletions or additions. Using `useFolderStore.getState()` within the toast action allows for reliable, non-reactive access to store methods for reversing the operation.
 **Action:** Always include an "Undo" action in success toasts for primary data mutations (like adding or removing items) to enhance user confidence and mitigate accidental data loss.
+
+## 2026-05-29 - [Centralized Shortcut Reference and Accessibility State]
+**Learning:** For apps with extensive keyboard shortcuts, providing a centralized reference (legend) within the settings or help menu significantly lowers the barrier for entry for power-user features. Furthermore, ensuring that multi-choice button groups (like provider selection) use 'aria-pressed' provides critical semantic feedback for assistive technologies that visual-only cues (like colors or icons) cannot convey alone.
+**Action:** Always provide a discoverable keyboard shortcut legend and use 'aria-pressed' for any button-based toggle or selection states.

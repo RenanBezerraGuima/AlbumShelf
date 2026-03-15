@@ -239,6 +239,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     variant={streamingProvider === 'deezer' ? 'default' : 'outline'}
                     className="justify-start gap-2 rounded-none"
                     onClick={() => useFolderStore.getState().setStreamingProvider('deezer')}
+                    aria-pressed={streamingProvider === 'deezer'}
                   >
                     <Radio className="h-4 w-4" />
                     Deezer
@@ -247,6 +248,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     variant={streamingProvider === 'apple' ? 'default' : 'outline'}
                     className="justify-start gap-2 rounded-none"
                     onClick={() => useFolderStore.getState().setStreamingProvider('apple')}
+                    aria-pressed={streamingProvider === 'apple'}
                   >
                     <Music className="h-4 w-4" />
                     Apple Music
@@ -257,6 +259,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     variant={streamingProvider === 'spotify' ? 'default' : 'outline'}
                     className="w-full justify-start gap-2 rounded-none"
                     onClick={() => useFolderStore.getState().setStreamingProvider('spotify')}
+                    aria-pressed={streamingProvider === 'spotify'}
                   >
                     <div className="flex items-center gap-2 flex-1">
                       <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg">
@@ -359,6 +362,54 @@ export const SettingsDialog = memo(function SettingsDialog() {
                     accept=".json"
                     className="hidden"
                   />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium tracking-tight border-b-2 border-border pb-1">
+                Keyboard shortcuts
+              </h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-mono uppercase tracking-tighter">
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Search</span>
+                  <span className="bg-muted px-1 border border-border">/</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">New Collection</span>
+                  <span className="bg-muted px-1 border border-border">N</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Toggle Settings</span>
+                  <span className="bg-muted px-1 border border-border">S</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Toggle Theme</span>
+                  <span className="bg-muted px-1 border border-border">T</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Share</span>
+                  <span className="bg-muted px-1 border border-border">C</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Play / Pause</span>
+                  <span className="bg-muted px-1 border border-border">Space</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Prev / Next</span>
+                  <span className="bg-muted px-1 border border-border">[ / ]</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Stop / Mute</span>
+                  <span className="bg-muted px-1 border border-border">X / M</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Grid / Canvas</span>
+                  <span className="bg-muted px-1 border border-border">G / V</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/30 pb-1">
+                  <span className="text-muted-foreground">Volume</span>
+                  <span className="bg-muted px-1 border border-border">+ / -</span>
                 </div>
               </div>
             </div>
