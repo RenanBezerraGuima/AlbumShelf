@@ -320,29 +320,12 @@ const addFolderToTree = (
     return [...folders, newFolder];
   }
 
-  for (let i = 0; i < folders.length; i++) {
-    const folder = folders[i];
-    if (folder.id === parentId) {
-      const result = [...folders];
-      result[i] = {
-        ...folder,
-        subfolders: [...folder.subfolders, newFolder],
-      };
-      return result;
-    }
-    const newSubfolders = addFolderToTree(
-      folder.subfolders,
-      parentId,
-      newFolder,
-    );
-    if (newSubfolders !== folder.subfolders) {
-      const result = [...folders];
-      result[i] = { ...folder, subfolders: newSubfolders };
-      return result;
-    }
-  }
-
-  return folders;
+  // Performance: Use path-based targeting via breadcrumbs to find the parent,
+  // avoiding O(N) recursive scans of the entire tree.
+  return updateFolderInTree(folders, parentId, (folder) => ({
+    ...folder,
+    subfolders: [...folder.subfolders, newFolder],
+  }));
 };
 
 const isDescendant = (
@@ -380,38 +363,22 @@ const insertFolderAtPosition = (
     return newFolders;
   }
 
-  for (let i = 0; i < folders.length; i++) {
-    const f = folders[i];
-    if (f.id === parentId) {
-      const result = [...folders];
-      if (targetId === null) {
-        result[i] = { ...f, subfolders: [...f.subfolders, folder] };
+  // Performance: Use path-based targeting via breadcrumbs to find the parent,
+  // avoiding O(N) recursive scans of the entire tree.
+  return updateFolderInTree(folders, parentId, (f) => {
+    const newSubfolders = [...f.subfolders];
+    if (targetId === null) {
+      newSubfolders.push(folder);
+    } else {
+      const targetIndex = newSubfolders.findIndex((sf) => sf.id === targetId);
+      if (targetIndex === -1) {
+        newSubfolders.push(folder);
       } else {
-        const targetIndex = f.subfolders.findIndex((sf) => sf.id === targetId);
-        const newSubfolders = [...f.subfolders];
-        if (targetIndex === -1) {
-          newSubfolders.push(folder);
-        } else {
-          newSubfolders.splice(targetIndex, 0, folder);
-        }
-        result[i] = { ...f, subfolders: newSubfolders };
+        newSubfolders.splice(targetIndex, 0, folder);
       }
-      return result;
     }
-    const newSubfolders = insertFolderAtPosition(
-      f.subfolders,
-      parentId,
-      folder,
-      targetId,
-    );
-    if (newSubfolders !== f.subfolders) {
-      const result = [...folders];
-      result[i] = { ...f, subfolders: newSubfolders };
-      return result;
-    }
-  }
-
-  return folders;
+    return { ...f, subfolders: newSubfolders };
+  });
 };
 
 export const useFolderStore = create<FolderStore>()(

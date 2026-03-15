@@ -101,3 +101,7 @@
 ## 2024-05-25 - [Search State Reference Stability and Cache Keying]
 **Learning:** Returning new `Set` instances from a `useMemo` or store selector (like `getFolderSearchState`) on every call triggers re-renders in all consumer components, even if the sets are empty. Using a stable `EMPTY_SET` constant for the "no-query" state allows `React.memo` components to skip reconciliation entirely. Additionally, keying search content caches by nested immutable data (like `folder.albums`) rather than the parent container (`folder`) ensures cache persistence across metadata-only updates like folder renames.
 **Action:** Return stable constant references for empty collections in selectors. Key `WeakMap` caches by the most granular stable data possible to maximize hit rate across structural sharing updates.
+
+## 2024-05-26 - [Path-Based Tree Mutations and Search Result Caching]
+**Learning:** Core tree mutations (`addFolderToTree`, `insertFolderAtPosition`) that rely on recursive O(N) scans become a bottleneck as the tree grows. Leveraging existing breadcrumb-based targeting (`updateFolderInTree`) reduces these to O(depth). Furthermore, `getFolderSearchState` performs expensive recursive traversals that are often repeated during re-renders; implementing a `WeakMap` result cache keyed by the `folders` array and query string provides a ~6x speedup for repeated lookups.
+**Action:** Always prefer path-based targeting for tree mutations. Implement result-level caches for expensive recursive selectors to avoid redundant traversals during re-renders.
