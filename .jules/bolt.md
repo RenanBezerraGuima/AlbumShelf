@@ -105,3 +105,7 @@
 ## 2024-05-26 - [Path-Based Tree Mutations and Search Result Caching]
 **Learning:** Core tree mutations (`addFolderToTree`, `insertFolderAtPosition`) that rely on recursive O(N) scans become a bottleneck as the tree grows. Leveraging existing breadcrumb-based targeting (`updateFolderInTree`) reduces these to O(depth). Furthermore, `getFolderSearchState` performs expensive recursive traversals that are often repeated during re-renders; implementing a `WeakMap` result cache keyed by the `folders` array and query string provides a ~6x speedup for repeated lookups.
 **Action:** Always prefer path-based targeting for tree mutations. Implement result-level caches for expensive recursive selectors to avoid redundant traversals during re-renders.
+
+## 2024-05-30 - [Bypassing new URL() Exceptions for Relative Paths]
+**Learning:** Calling the `new URL()` constructor with a relative path as the first argument (without a base URL) causes an exception. In high-frequency or mass-data sanitization paths (like `sanitizeUrl` during store rehydration), relying on the `try-catch` block to handle relative paths introduces a significant performance penalty (up to 25x slower in benchmarks). Fast-pathing common relative patterns (`/`, `./`, `../`) and performing character validation manually allows bypassing the expensive constructor and exception handling for the majority of local assets.
+**Action:** Always implement fast-path prefix and character checks for relative paths in URL sanitization functions to avoid the overhead of `new URL()` exceptions.

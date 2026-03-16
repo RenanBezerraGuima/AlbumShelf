@@ -65,18 +65,16 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
     }
   }
 
-  try {
-    const parsed = new URL(trimmedUrl);
-    if (allowedProtocols.includes(parsed.protocol)) {
-      // Security: Reject URLs with credentials (username/password) to prevent phishing
-      // and certain SSRF/XSS bypasses.
-      if (parsed.username || parsed.password) {
-        return undefined;
-      }
-      return trimmedUrl;
+  // Performance: Fast-path for relative paths to avoid 'new URL()' which throws.
+  if (trimmedUrl.startsWith('/') ||
+      trimmedUrl.startsWith('./') ||
+      trimmedUrl.startsWith('../')) {
+
+    // Explicitly exclude protocol-relative URLs (starting with // or encoded variants) for security.
+    if (PROTOCOL_RELATIVE_REGEXP.test(trimmedUrl)) {
+      return undefined;
     }
-  } catch (e) {
-    // If it's not a valid absolute URL, check if it's a safe relative path.
+
     // We explicitly exclude URLs with colons (to prevent protocol bypasses)
     // and backslashes (to prevent path normalization bypasses).
     if (trimmedUrl.includes(':') || trimmedUrl.includes('\\')) {
@@ -89,16 +87,21 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
       return undefined;
     }
 
-    // We explicitly exclude protocol-relative URLs (starting with // or encoded variants) for security.
-    if (PROTOCOL_RELATIVE_REGEXP.test(trimmedUrl)) {
-      return undefined;
-    }
+    return trimmedUrl;
+  }
 
-    if (trimmedUrl.startsWith('/') ||
-        trimmedUrl.startsWith('./') ||
-        trimmedUrl.startsWith('../')) {
+  try {
+    const parsed = new URL(trimmedUrl);
+    if (allowedProtocols.includes(parsed.protocol)) {
+      // Security: Reject URLs with credentials (username/password) to prevent phishing
+      // and certain SSRF/XSS bypasses.
+      if (parsed.username || parsed.password) {
+        return undefined;
+      }
       return trimmedUrl;
     }
+  } catch (e) {
+    // try/catch fallback is now only for absolute URLs that might be invalid or other cases
   }
 
   return undefined;
