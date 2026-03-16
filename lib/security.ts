@@ -45,7 +45,9 @@ export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
 export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
-  const trimmedUrl = url.trim();
+  // Security: Slice FIRST before trimming or regex tests to prevent DoS from massive whitespace strings
+  const slicedUrl = url.slice(0, MAX_URL_LENGTH + 100);
+  const trimmedUrl = slicedUrl.trim();
 
   // Enforce maximum length and block control characters/internal whitespace (including encoded ones)
   if (trimmedUrl.length > MAX_URL_LENGTH ||
@@ -108,7 +110,10 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
 export function sanitizeImageUrl(url: string | undefined): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
-  const trimmedUrl = url.trim();
+  // Security: Slice FIRST before trimming to prevent DoS from massive whitespace strings.
+  // We use a slightly larger slice to account for data URLs which have a higher limit.
+  const slicedUrl = url.slice(0, 256 * 1024 + 100);
+  const trimmedUrl = slicedUrl.trim();
 
   // Performance: Avoid toLowerCase() unless potentially a data: URL.
   // Most URLs in the app are https:// which are handled by sanitizeUrl.
@@ -249,24 +254,42 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
  */
 export function sanitizeSyncState(incoming: any): any {
   const s: any = {};
-  const isPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
+
+  // Security: Harden numeric state validation against future-dated injections or overflow.
+  const isStrictPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
+  const isSaneTimestamp = (n: any) => isStrictPosFinite(n) && n < Date.now() + (365 * 24 * 60 * 60 * 1000);
+  const isSaneExpiry = (n: any) => isStrictPosFinite(n) && n <= 365 * 24 * 60 * 60; // Max 1 year expiry
 
   if (incoming.folders !== undefined) s.folders = Array.isArray(incoming.folders) ? sanitizeFolderTree(incoming.folders) : [];
+
   if (incoming.selectedFolderId !== undefined) {
-    s.selectedFolderId = typeof incoming.selectedFolderId === 'string' && SAFE_ID_REGEXP.test(incoming.selectedFolderId.slice(0, MAX_ID_LENGTH)) ? incoming.selectedFolderId.slice(0, MAX_ID_LENGTH) : null;
+    if (typeof incoming.selectedFolderId === 'string') {
+      const sliced = incoming.selectedFolderId.slice(0, MAX_ID_LENGTH);
+      s.selectedFolderId = SAFE_ID_REGEXP.test(sliced) ? sliced : null;
+    } else {
+      s.selectedFolderId = null;
+    }
   }
+
   if (incoming.streamingProvider !== undefined) s.streamingProvider = isValidStreamingProvider(incoming.streamingProvider) ? incoming.streamingProvider : 'deezer';
   if (incoming.hasSetPreference !== undefined) s.hasSetPreference = Boolean(incoming.hasSetPreference);
+
   if (incoming.spotifyToken !== undefined) {
-    const t = incoming.spotifyToken ? String(incoming.spotifyToken).slice(0, MAX_TOKEN_LENGTH) : null;
-    s.spotifyToken = (t && !DISALLOWED_URL_CHARS_REGEXP.test(t) && !ENCODED_CONTROL_CHARS_REGEXP.test(t)) ? t : null;
+    if (typeof incoming.spotifyToken === 'string' && incoming.spotifyToken.length > 0) {
+      const t = incoming.spotifyToken.slice(0, MAX_TOKEN_LENGTH);
+      s.spotifyToken = (!DISALLOWED_URL_CHARS_REGEXP.test(t) && !ENCODED_CONTROL_CHARS_REGEXP.test(t)) ? t : null;
+    } else {
+      s.spotifyToken = null;
+    }
   }
-  if (incoming.spotifyTokenExpiry !== undefined) s.spotifyTokenExpiry = isPosFinite(incoming.spotifyTokenExpiry) ? incoming.spotifyTokenExpiry : null;
-  if (incoming.spotifyTokenTimestamp !== undefined) s.spotifyTokenTimestamp = isPosFinite(incoming.spotifyTokenTimestamp) ? incoming.spotifyTokenTimestamp : null;
+
+  if (incoming.spotifyTokenExpiry !== undefined) s.spotifyTokenExpiry = isSaneExpiry(incoming.spotifyTokenExpiry) ? incoming.spotifyTokenExpiry : null;
+  if (incoming.spotifyTokenTimestamp !== undefined) s.spotifyTokenTimestamp = isSaneTimestamp(incoming.spotifyTokenTimestamp) ? incoming.spotifyTokenTimestamp : null;
   if (incoming.theme !== undefined) s.theme = isValidTheme(incoming.theme) ? incoming.theme : 'industrial';
   if (incoming.geistFont !== undefined) s.geistFont = isValidGeistFont(incoming.geistFont) ? incoming.geistFont : 'mono';
+
   if (incoming.lastUpdated !== undefined) {
-    s.lastUpdated = typeof incoming.lastUpdated === 'number' && Number.isFinite(incoming.lastUpdated) ? incoming.lastUpdated : Date.now();
+    s.lastUpdated = isSaneTimestamp(incoming.lastUpdated) ? incoming.lastUpdated : Date.now();
   }
   return s;
 }
