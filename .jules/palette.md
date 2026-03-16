@@ -57,3 +57,7 @@
 ## 2026-05-29 - [Centralized Shortcut Reference and Accessibility State]
 **Learning:** For apps with extensive keyboard shortcuts, providing a centralized reference (legend) within the settings or help menu significantly lowers the barrier for entry for power-user features. Furthermore, ensuring that multi-choice button groups (like provider selection) use 'aria-pressed' provides critical semantic feedback for assistive technologies that visual-only cues (like colors or icons) cannot convey alone.
 **Action:** Always provide a discoverable keyboard shortcut legend and use 'aria-pressed' for any button-based toggle or selection states.
+
+## 2025-05-30 - [Dynamic Feedback for Continuous Controls]
+**Learning:** For continuous-value controls like volume, static icons fail to communicate the current state magnitude. Providing a progression of icons (e.g., Volume, Volume1, Volume2) alongside granular tooltips creates a more responsive and intuitive interface. Furthermore, ensuring that the toggle action (Mute/Unmute) has a dynamic ARIA label is critical for screen reader users to understand the current context.
+**Action:** Always pair continuous-value sliders with magnitude-aware dynamic icons and ensure associated toggle buttons have state-reflective ARIA labels.
