@@ -149,3 +149,8 @@
 **Vulnerability:** Sanitization utilities (`sanitizeAlbum`, `sanitizeFolder`) crashed when encountering `null` or `undefined` inputs, leading to application-level DoS when processing malformed persisted state or external API data.
 **Learning:** A sanitization layer must be robust against the very malformed data it is designed to clean. If the sanitizer itself throws a `TypeError` when it receives unexpected types (like `null` instead of an object), it becomes a point of failure rather than a defense.
 **Prevention:** Implement early defensive checks for `null`, `undefined`, and incorrect types at the start of all sanitization functions. Return safe, minimal default structures (e.g., empty arrays, placeholder strings, new UUIDs) to ensure the application state remains valid even if the input is completely invalid.
+
+## 2026-03-16 - [Trimming DoS & State Boundary Hardening]
+**Vulnerability:** String operations like `.trim()` and regex tests were performed on unconstrained raw inputs. Persisted state timestamps lacked sane upper bounds.
+**Learning:** In client-side apps, large payloads can be used to cause thread-blocking DoS. Truncation must be the *first* operation. Symmetrically, numeric state fields must be validated for "sanity" (e.g. not in the far future) to prevent logical bypasses or persistent state corruption.
+**Prevention:** Always `.slice()` untrusted strings to a safe maximum plus a small buffer before trimming. Implement "sane bound" checks for all numeric state metadata during rehydration.
