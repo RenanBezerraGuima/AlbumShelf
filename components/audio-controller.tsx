@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Play, Pause, SkipForward, SkipBack, Square, Volume2, VolumeX } from 'lucide-react';
+import { Pause, Play, SkipBack, SkipForward, Square, Volume, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -210,6 +210,10 @@ export function AudioController() {
               >
                 {state.volume === 0 ? (
                   <VolumeX className="h-4 w-4 text-muted-foreground" />
+                ) : state.volume < 0.33 ? (
+                  <Volume className="h-4 w-4 text-muted-foreground" />
+                ) : state.volume < 0.66 ? (
+                  <Volume1 className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <Volume2 className="h-4 w-4 text-muted-foreground" />
                 )}
