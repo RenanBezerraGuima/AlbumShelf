@@ -60,8 +60,9 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
   // Performance: Fast-path for common https:// URLs to avoid expensive 'new URL()' calls.
   // If it starts with https:// and passes the character checks above, it's safe for our default protocol.
   if (allowedProtocols === ALLOWED_PROTOCOLS && trimmedUrl.startsWith('https://')) {
-    // Ensure no additional colons (potential protocol bypasses), backslashes, or credentials (@)
-    if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\') && !trimmedUrl.includes('@')) {
+    // Ensure no additional colons (potential protocol bypasses), backslashes,
+    // percent signs (potential encoded bypasses), or credentials (@)
+    if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\') && !trimmedUrl.includes('@') && !trimmedUrl.includes('%')) {
       return trimmedUrl;
     }
   }

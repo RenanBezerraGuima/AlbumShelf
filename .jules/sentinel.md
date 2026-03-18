@@ -159,3 +159,8 @@
 **Vulnerability:** Invisible Unicode characters (e.g., Zero Width Space, Soft Hyphen) were preserved in text and URLs, allowing for name spoofing and filter obfuscation.
 **Learning:** Standard control character filters (\x00-\x1F) do not cover modern Unicode "invisible" formatting characters. These can be used to create visually identical but logically different names for collections or albums, leading to UI-based spoofing.
 **Prevention:** Explicitly strip or block invisible characters (U+AD, U+200B-U+200F, U+2060, U+FEFF) in both text and URL sanitization layers. Ensure URL-encoded variants (like %AD) are also blocked in security-sensitive regexes.
+
+## 2026-03-23 - [Encoded Credential Bypass in URL Fast-Path]
+**Vulnerability:** The `sanitizeUrl` fast-path for `https://` URLs only checked for a literal `@` symbol to reject credentials, allowing a bypass via the percent-encoded `%40` variant.
+**Learning:** Performance optimizations (fast-paths) that attempt to replicate complex parsing logic (like credential detection in URLs) are prone to security regressions if they don't account for encoding or browser normalization quirks.
+**Prevention:** When implementing fast-paths for security-sensitive parsers, either account for all encoded variants of dangerous characters or fallback to the robust, native parser (e.g., `new URL()`) if any encoding characters (like `%`) are detected.
