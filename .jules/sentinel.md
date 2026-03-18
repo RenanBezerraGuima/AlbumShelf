@@ -154,3 +154,8 @@
 **Vulnerability:** String operations like `.trim()` and regex tests were performed on unconstrained raw inputs. Persisted state timestamps lacked sane upper bounds.
 **Learning:** In client-side apps, large payloads can be used to cause thread-blocking DoS. Truncation must be the *first* operation. Symmetrically, numeric state fields must be validated for "sanity" (e.g. not in the far future) to prevent logical bypasses or persistent state corruption.
 **Prevention:** Always `.slice()` untrusted strings to a safe maximum plus a small buffer before trimming. Implement "sane bound" checks for all numeric state metadata during rehydration.
+
+## 2026-03-22 - [Invisible Character Spoofing]
+**Vulnerability:** Invisible Unicode characters (e.g., Zero Width Space, Soft Hyphen) were preserved in text and URLs, allowing for name spoofing and filter obfuscation.
+**Learning:** Standard control character filters (\x00-\x1F) do not cover modern Unicode "invisible" formatting characters. These can be used to create visually identical but logically different names for collections or albums, leading to UI-based spoofing.
+**Prevention:** Explicitly strip or block invisible characters (U+AD, U+200B-U+200F, U+2060, U+FEFF) in both text and URL sanitization layers. Ensure URL-encoded variants (like %AD) are also blocked in security-sensitive regexes.
