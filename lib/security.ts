@@ -30,9 +30,8 @@ const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
 export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\u00AD\u200B-\u200F\u2060\uFEFF\s]/;
-const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F]/g;
-const STRIP_BIDI_CHARS_REGEXP = /[\u202A-\u202E\u2066-\u2069]/g;
-const STRIP_INVISIBLE_CHARS_REGEXP = /[\u00AD\u200B-\u200F\u2060\uFEFF]/g;
+const STRIP_INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\u00AD\u200B-\u200F\u2060\uFEFF]/g;
+const UNSAFE_TEXT_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\u00AD\u200B-\u200F\u2060\uFEFF]/;
 export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F]|AD)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
@@ -184,13 +183,20 @@ export function isValidGeistFont(font: any): font is GeistFont {
  */
 export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
   if (text === null || text === undefined) return '';
-  const str = String(text);
+  // Performance: Avoid String() constructor if input is already a string
+  const str = typeof text === 'string' ? text : String(text);
+
+  // Performance: Fast-path for strings that are already safe and within length limits.
+  // This avoids slicing and regex replacement overhead for the majority of inputs.
+  if (str.length <= maxLength && !UNSAFE_TEXT_CHARS_REGEXP.test(str)) {
+    return str;
+  }
+
   // Security: Slice first to minimize work for DoS payloads, then strip control, Bidi, and invisible chars.
+  // Consolidated regex replacement reduces string traversal overhead.
   return str
     .slice(0, maxLength)
-    .replace(STRIP_CONTROL_CHARS_REGEXP, '')
-    .replace(STRIP_BIDI_CHARS_REGEXP, '')
-    .replace(STRIP_INVISIBLE_CHARS_REGEXP, '');
+    .replace(STRIP_INVALID_CHARS_REGEXP, '');
 }
 
 /**
