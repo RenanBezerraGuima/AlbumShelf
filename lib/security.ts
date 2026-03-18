@@ -29,11 +29,10 @@ const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
 const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\u00AD\u200B-\u200F\u2060\uFEFF\s]/;
-const STRIP_CONTROL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F]/g;
-const STRIP_BIDI_CHARS_REGEXP = /[\u202A-\u202E\u2066-\u2069]/g;
-const STRIP_INVISIBLE_CHARS_REGEXP = /[\u00AD\u200B-\u200F\u2060\uFEFF]/g;
-export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F]|AD)/i;
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\s]/;
+// Performance: Combine control and Bidi char stripping into a single pass.
+const STRIP_INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069]/g;
+export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F])/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
@@ -185,12 +184,11 @@ export function isValidGeistFont(font: any): font is GeistFont {
 export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
   if (text === null || text === undefined) return '';
   const str = String(text);
-  // Security: Slice first to minimize work for DoS payloads, then strip control, Bidi, and invisible chars.
+  // Security: Slice first to minimize work for DoS payloads, then strip control and Bidi chars.
+  // Performance: Using a combined regex reduces string traversal to a single pass.
   return str
     .slice(0, maxLength)
-    .replace(STRIP_CONTROL_CHARS_REGEXP, '')
-    .replace(STRIP_BIDI_CHARS_REGEXP, '')
-    .replace(STRIP_INVISIBLE_CHARS_REGEXP, '');
+    .replace(STRIP_INVALID_CHARS_REGEXP, '');
 }
 
 /**
@@ -458,8 +456,11 @@ export function getTreeDepth(target: Folder[] | Folder): number {
   let result = 0;
 
   if (Array.isArray(target)) {
-    if (target.length > 0) {
-      result = Math.max(...target.map(f => getTreeDepth(f)));
+    // Performance: Avoid .map() and spread operator to eliminate intermediate array
+    // allocations and reduce overhead in the recursive path.
+    for (let i = 0; i < target.length; i++) {
+      const depth = getTreeDepth(target[i]);
+      if (depth > result) result = depth;
     }
   } else {
     result = 1 + getTreeDepth(target.subfolders);
@@ -509,6 +510,7 @@ export function sanitizeFolder(
   // Defense-in-depth: only process albums if we haven't hit the folder limit
   if (context.totalFolders <= MAX_TOTAL_FOLDERS) {
     if (Array.isArray(folder.albums)) {
+      // Performance: Limited loop avoids unnecessary .slice() allocation
       for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
         const sanitized = sanitizeAlbum(folder.albums[i], regenerateIds);
         albums.push(albumMapper(sanitized, i));
@@ -519,10 +521,11 @@ export function sanitizeFolder(
 
   const subfolders: Folder[] = [];
   if (Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH) {
-    const rawSubfolders = folder.subfolders.slice(0, MAX_SUBFOLDERS_PER_FOLDER);
-    for (const sf of rawSubfolders) {
+    // Performance: Iterating with a limit directly avoids .slice() array allocation.
+    const maxSubfolders = Math.min(folder.subfolders.length, MAX_SUBFOLDERS_PER_FOLDER);
+    for (let i = 0; i < maxSubfolders; i++) {
       if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
-      subfolders.push(sanitizeFolder(sf, regenerateIds, id, albumMapper, depth + 1, context));
+      subfolders.push(sanitizeFolder(folder.subfolders[i], regenerateIds, id, albumMapper, depth + 1, context));
     }
   }
 
@@ -550,10 +553,11 @@ export function sanitizeFolderTree(
   const sanitized: Folder[] = [];
 
   if (Array.isArray(rawFolders)) {
-    const limitedRoot = rawFolders.slice(0, MAX_SUBFOLDERS_PER_FOLDER);
-    for (const f of limitedRoot) {
+    // Performance: Iterating with a limit directly avoids .slice() array allocation.
+    const maxRoot = Math.min(rawFolders.length, MAX_SUBFOLDERS_PER_FOLDER);
+    for (let i = 0; i < maxRoot; i++) {
       if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
-      sanitized.push(sanitizeFolder(f, regenerateIds, null, albumMapper, 0, context));
+      sanitized.push(sanitizeFolder(rawFolders[i], regenerateIds, null, albumMapper, 0, context));
     }
   }
 

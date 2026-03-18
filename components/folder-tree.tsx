@@ -11,7 +11,6 @@ import {
   Trash2,
   Check,
   X,
-  Share2,
   Search as SearchIcon,
   GripVertical,
   Settings,
@@ -48,7 +47,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { useFolderStore } from "@/lib/store";
-import { generateShareUrl } from "@/lib/share-service";
 import { getFolderSearchState } from "@/lib/folder-search";
 import type { Folder as FolderType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -73,7 +71,6 @@ const FolderItem = React.memo(function FolderItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
   const [isCreatingSubfolder, setIsCreatingSubfolder] = useState(false);
-  const [isShared, setIsShared] = useState(false);
 
   const subfolderInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -142,20 +139,6 @@ const FolderItem = React.memo(function FolderItem({
         .createFolder(newSubfolderName.trim(), folder.id);
       setNewSubfolderName("");
       setIsCreatingSubfolder(false);
-    }
-  };
-
-  const handleShare = async (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    try {
-      const { streamingProvider } = useFolderStore.getState();
-      const url = generateShareUrl([folder], streamingProvider);
-      await navigator.clipboard.writeText(url);
-      setIsShared(true);
-      setTimeout(() => setIsShared(false), 2000);
-      toast.success('Link copied!', { description: `Share link for "${folder.name}" is ready.` });
-    } catch (err) {
-      toast.error('Failed to copy share link');
     }
   };
 
@@ -422,10 +405,6 @@ const FolderItem = React.memo(function FolderItem({
                       <FolderPlus className="h-4 w-4 mr-2" />
                       Create Subfolder
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShare} className={cn(isShared && "text-green-600")}>
-                      {isShared ? <Check className="h-4 w-4 mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
-                      {isShared ? "Copied!" : "Share Collection"}
-                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -464,10 +443,6 @@ const FolderItem = React.memo(function FolderItem({
           >
             <FolderPlus className="h-4 w-4 mr-2" />
             Create Subfolder
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleShare} className={cn(isShared && "text-green-600")}>
-            {isShared ? <Check className="h-4 w-4 mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
-            {isShared ? "Copied!" : "Share Collection"}
           </ContextMenuItem>
           <ContextMenuItem
             onClick={(e) => {
@@ -713,7 +688,8 @@ export function FolderTree() {
                 variant="ghost"
                 className="rounded-none hover:bg-primary hover:text-primary-foreground border-border"
                 onClick={() => setIsCreating(true)}
-                aria-label="Create collection [N]"
+                aria-label="Create collection"
+                title="Create collection"
                 aria-keyshortcuts="n"
               >
                 <FolderPlus className="h-4 w-4" aria-hidden="true" />
@@ -785,8 +761,8 @@ export function FolderTree() {
                 variant="ghost"
                 className="h-6 w-6 shrink-0"
                 onClick={handleCreateFolder}
-                aria-label="Create collection"
-                title="Create collection"
+                aria-label="Confirm creation"
+                title="Confirm creation"
               >
                 <Check className="h-3 w-3" />
               </Button>

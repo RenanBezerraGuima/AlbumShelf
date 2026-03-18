@@ -23,8 +23,8 @@ test('add and then remove album from search results', async ({ page }) => {
   await page.click(`text=${albumText}`);
 
   // Verify it's in the grid
-  const grid = page.locator('.grid').first();
-  await expect(grid.getByText(albumText)).toBeVisible();
+  const grid = page.getByTestId('album-grid-viewport');
+  await expect(grid.getByText(albumText).first()).toBeVisible();
 
   // The search bar should still be open or we reopen it
   // Actually handleAddAlbum doesn't close the dropdown if results are still there?

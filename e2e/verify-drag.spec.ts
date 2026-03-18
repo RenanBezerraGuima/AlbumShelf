@@ -29,7 +29,7 @@ test('verify album drag improvements', async ({ page }) => {
   await page.click('text=Abbey Road');
 
   // Check AlbumCard image
-  const albumCardImg = page.locator('.grid img').first();
+  const albumCardImg = page.getByTestId('album-grid-viewport').locator('img').first();
   await expect(albumCardImg).toHaveAttribute('draggable', 'false');
 
   // 2. Verify folder highlighting during drag

@@ -383,7 +383,8 @@ const insertFolderAtPosition = (
 
 export const useFolderStore = create<FolderStore>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      const state: FolderStore = {
       folders: [],
       sharedFolders: null,
       selectedFolderId: null,
@@ -970,7 +971,17 @@ export const useFolderStore = create<FolderStore>()(
           };
         });
       },
-    }),
+    };
+
+    if (typeof window !== 'undefined') {
+      (window as any).useFolderStore = {
+        getState: get,
+        setState: set,
+      };
+    }
+
+    return state;
+    },
     {
       name: "album-shelf-storage",
       onRehydrateStorage: () => (state) => {
