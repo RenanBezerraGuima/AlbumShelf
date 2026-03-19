@@ -29,26 +29,20 @@ const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
 const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\s]/;
-// Performance: Combine control and Bidi char stripping into a single pass.
-const STRIP_INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069]/g;
+// Includes control, Bidi, and invisible characters (U+AD, U+200B-U+200F, U+2060, U+FEFF).
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF\s]/;
+// Performance: Single-pass regex for both detection (fast-path) and stripping.
+const INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/;
+const INVALID_CHARS_GLOBAL_REGEXP = new RegExp(INVALID_CHARS_REGEXP.source, 'g');
 export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F])/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
 
 /**
- * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
- * Allows only https: and relative paths by default.
- * Enforces a maximum length and blocks control characters to prevent potential DoS or XSS.
+ * Internal helper for URL sanitization that skips slicing and trimming if already performed.
  */
-export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
-  if (!url || typeof url !== 'string') return undefined;
-
-  // Security: Slice FIRST before trimming or regex tests to prevent DoS from massive whitespace strings
-  const slicedUrl = url.slice(0, MAX_URL_LENGTH + 100);
-  const trimmedUrl = slicedUrl.trim();
-
+function sanitizeUrlInternal(trimmedUrl: string, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
   // Enforce maximum length and block control characters/internal whitespace (including encoded ones)
   if (trimmedUrl.length > MAX_URL_LENGTH ||
       DISALLOWED_URL_CHARS_REGEXP.test(trimmedUrl) ||
@@ -57,32 +51,25 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
   }
 
   // Performance: Fast-path for common https:// URLs to avoid expensive 'new URL()' calls.
-  // If it starts with https:// and passes the character checks above, it's safe for our default protocol.
   if (allowedProtocols === ALLOWED_PROTOCOLS && trimmedUrl.startsWith('https://')) {
-    // Ensure no additional colons (potential protocol bypasses), backslashes, or credentials (@)
     if (!trimmedUrl.includes(':', 8) && !trimmedUrl.includes('\\') && !trimmedUrl.includes('@')) {
       return trimmedUrl;
     }
   }
 
-  // Performance: Fast-path for relative paths to avoid 'new URL()' which throws.
+  // Performance: Fast-path for relative paths
   if (trimmedUrl.startsWith('/') ||
       trimmedUrl.startsWith('./') ||
       trimmedUrl.startsWith('../')) {
 
-    // Explicitly exclude protocol-relative URLs (starting with // or encoded variants) for security.
     if (PROTOCOL_RELATIVE_REGEXP.test(trimmedUrl)) {
       return undefined;
     }
 
-    // We explicitly exclude URLs with colons (to prevent protocol bypasses)
-    // and backslashes (to prevent path normalization bypasses).
     if (trimmedUrl.includes(':') || trimmedUrl.includes('\\')) {
       return undefined;
     }
 
-    // Performance: Avoid redundant string allocation and copy from toLowerCase()
-    // by using a case-insensitive regex for encoded characters.
     if (ENCODED_COLON_OR_BACKSLASH_REGEXP.test(trimmedUrl)) {
       return undefined;
     }
@@ -93,18 +80,28 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
   try {
     const parsed = new URL(trimmedUrl);
     if (allowedProtocols.includes(parsed.protocol)) {
-      // Security: Reject URLs with credentials (username/password) to prevent phishing
-      // and certain SSRF/XSS bypasses.
       if (parsed.username || parsed.password) {
         return undefined;
       }
       return trimmedUrl;
     }
-  } catch (e) {
-    // try/catch fallback is now only for absolute URLs that might be invalid or other cases
-  }
+  } catch (e) {}
 
   return undefined;
+}
+
+/**
+ * Sanitize a URL to prevent XSS via javascript: or other dangerous protocols.
+ * Allows only https: and relative paths by default.
+ */
+export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_PROTOCOLS): string | undefined {
+  if (!url || typeof url !== 'string') return undefined;
+
+  // Security: Slice FIRST before trimming or regex tests to prevent DoS from massive whitespace strings
+  const slicedUrl = url.slice(0, MAX_URL_LENGTH + 100);
+  const trimmedUrl = slicedUrl.trim();
+
+  return sanitizeUrlInternal(trimmedUrl, allowedProtocols);
 }
 
 /**
@@ -113,38 +110,32 @@ export function sanitizeUrl(url: string | undefined, allowedProtocols = ALLOWED_
 export function sanitizeImageUrl(url: string | undefined): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
-  // Security: Slice FIRST before trimming to prevent DoS from massive whitespace strings.
-  // We use a slightly larger slice to account for data URLs which have a higher limit.
+  // Security: Slice FIRST before trimming.
   const slicedUrl = url.slice(0, 256 * 1024 + 100);
   const trimmedUrl = slicedUrl.trim();
 
   // Performance: Avoid toLowerCase() unless potentially a data: URL.
-  // Most URLs in the app are https:// which are handled by sanitizeUrl.
   if (trimmedUrl.length > 5 && trimmedUrl.slice(0, 5).toLowerCase() === 'data:') {
     const commaIndex = trimmedUrl.indexOf(',');
     if (commaIndex === -1) return undefined;
 
-    // Performance: Only lowercase the mime part, not the entire data string (which can be 256KB)
     const mimePart = trimmedUrl.slice(0, commaIndex).toLowerCase();
     let decodedMimePart;
     try {
-      // Decode to handle percent-encoding bypasses (e.g. svg%2Bxml)
       decodedMimePart = decodeURIComponent(mimePart);
     } catch (e) {
       return undefined;
     }
 
-    // Only allow safe data:image/ protocols (excluding SVG to prevent potential XSS)
     if (decodedMimePart.startsWith('data:image/') && !decodedMimePart.includes('svg+xml')) {
-      // Data URLs can be long, but we apply a strict limit to prevent localStorage exhaustion.
-      // 256KB is sufficient for high-quality album covers while protecting storage quota.
       if (trimmedUrl.length > 256 * 1024) return undefined;
       return trimmedUrl;
     }
     return undefined;
   }
 
-  return sanitizeUrl(trimmedUrl, ALLOWED_PROTOCOLS);
+  // Performance: Directly call internal helper to avoid redundant slicing and trimming.
+  return sanitizeUrlInternal(trimmedUrl, ALLOWED_PROTOCOLS);
 }
 
 /**
@@ -178,17 +169,23 @@ export function isValidGeistFont(font: any): font is GeistFont {
 
 /**
  * Sanitize a text field by enforcing length limits and stripping control characters.
- * Preserves valid whitespace and international characters while protecting
- * against injection or storage-based DoS.
+ * Performance: Fast-path .test() avoids .replace() allocations for safe strings.
  */
 export function sanitizeText(text: any, maxLength = MAX_TEXT_LENGTH): string {
   if (text === null || text === undefined) return '';
-  const str = String(text);
-  // Security: Slice first to minimize work for DoS payloads, then strip control and Bidi chars.
-  // Performance: Using a combined regex reduces string traversal to a single pass.
-  return str
-    .slice(0, maxLength)
-    .replace(STRIP_INVALID_CHARS_REGEXP, '');
+
+  // Performance: Skip String() conversion if already a string
+  const str = typeof text === 'string' ? text : String(text);
+
+  // Security: Slice first to minimize work for DoS payloads.
+  const sliced = str.length > maxLength ? str.slice(0, maxLength) : str;
+
+  // Performance: Use non-global .test() to skip .replace() for safe strings.
+  if (!INVALID_CHARS_REGEXP.test(sliced)) {
+    return sliced;
+  }
+
+  return sliced.replace(INVALID_CHARS_GLOBAL_REGEXP, '');
 }
 
 /**
@@ -211,7 +208,7 @@ export function sanitizeTrack(track: any, index = 0): Track {
 
   return {
     id,
-    title: sanitizeText(track.title || 'Unknown Track', MAX_NAME_LENGTH),
+    title: track.title ? sanitizeText(track.title, MAX_NAME_LENGTH) : 'Unknown Track',
     preview: sanitizeUrl(track.preview) || '',
     duration: Math.max(0, Math.min(3600, Number(track.duration) || 0)),
   };
@@ -327,8 +324,8 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
   const sanitized: Album = {
     id,
     spotifyId: sanitizedSpotifyId,
-    name: sanitizeText(album.name || 'Unknown Album', MAX_TEXT_LENGTH),
-    artist: sanitizeText(album.artist || 'Unknown Artist', MAX_TEXT_LENGTH),
+    name: album.name ? sanitizeText(album.name, MAX_TEXT_LENGTH) : 'Unknown Album',
+    artist: album.artist ? sanitizeText(album.artist, MAX_TEXT_LENGTH) : 'Unknown Artist',
     imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
     releaseDate: album.releaseDate ? sanitizeText(album.releaseDate, MAX_DATE_LENGTH) : undefined,
     totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
@@ -531,7 +528,7 @@ export function sanitizeFolder(
 
   return {
     id,
-    name: sanitizeText(folder.name || 'Untitled', MAX_NAME_LENGTH),
+    name: folder.name ? sanitizeText(folder.name, MAX_NAME_LENGTH) : 'Untitled',
     parentId,
     albums,
     subfolders,
