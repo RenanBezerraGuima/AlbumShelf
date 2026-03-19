@@ -29,10 +29,11 @@ const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
 const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069\s]/;
-// Performance: Combine control and Bidi char stripping into a single pass.
-const STRIP_INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\u202A-\u202E\u2066-\u2069]/g;
-export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F])/i;
+// Blocks control, Bidi, and invisible characters (Soft Hyphen, Zero Width, BOM).
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF\s]/;
+// Performance: Combine control, Bidi, and invisible char stripping into a single pass.
+const STRIP_INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
+export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F]|AD)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
