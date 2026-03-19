@@ -275,32 +275,44 @@ const FolderItem = React.memo(function FolderItem({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <span
-              title="Drag to reorder"
-              aria-label="Drag to reorder"
-              className="opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
-            >
-              <GripVertical className="h-3 w-3" />
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  aria-label="Drag to reorder"
+                  className="opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
+                >
+                  <GripVertical className="h-3 w-3" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                Drag to reorder
+              </TooltipContent>
+            </Tooltip>
 
-            <button
-              onClick={handleToggle}
-              className={cn(
-                "p-0.5 rounded-none hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0",
-                !hasSubfolders && "invisible",
-              )}
-              tabIndex={!hasSubfolders ? -1 : undefined}
-              aria-label={
-                isExpanded ? "Collapse collection" : "Expand collection"
-              }
-              title={isExpanded ? "Collapse" : "Expand"}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleToggle}
+                  className={cn(
+                    "p-0.5 rounded-none hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0",
+                    !hasSubfolders && "invisible",
+                  )}
+                  tabIndex={!hasSubfolders ? -1 : undefined}
+                  aria-label={
+                    isExpanded ? "Collapse collection" : "Expand collection"
+                  }
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                {isExpanded ? "Collapse" : "Expand"}
+              </TooltipContent>
+            </Tooltip>
 
             {isExpanded ? (
               <FolderOpen className="h-4 w-4 shrink-0" />
@@ -332,26 +344,38 @@ const FolderItem = React.memo(function FolderItem({
                     {editName.length}/100
                   </div>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6 shrink-0"
-                  onClick={handleRename}
-                  aria-label="Confirm rename"
-                  title="Confirm rename"
-                >
-                  <Check className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6 shrink-0"
-                  onClick={() => setIsEditing(false)}
-                  aria-label="Cancel rename"
-                  title="Cancel rename"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 shrink-0"
+                      onClick={handleRename}
+                      aria-label="Confirm rename"
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                    Confirm rename
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => setIsEditing(false)}
+                      aria-label="Cancel rename"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                    Cancel rename
+                  </TooltipContent>
+                </Tooltip>
               </div>
             ) : (
               <>
@@ -520,29 +544,41 @@ const FolderItem = React.memo(function FolderItem({
                   {newSubfolderName.length}/100
                 </div>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0"
-                onClick={handleCreateSubfolder}
-                aria-label="Create sub-collection"
-                title="Create sub-collection"
-              >
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0"
-                onClick={() => {
-                  setIsCreatingSubfolder(false);
-                  setNewSubfolderName("");
-                }}
-                aria-label="Cancel sub-collection creation"
-                title="Cancel sub-collection creation"
-              >
-                <X className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={handleCreateSubfolder}
+                    aria-label="Create sub-collection"
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Create sub-collection
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => {
+                      setIsCreatingSubfolder(false);
+                      setNewSubfolderName("");
+                    }}
+                    aria-label="Cancel sub-collection creation"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Cancel sub-collection creation
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
           {visibleSubfolders.map((subfolder) => (
@@ -689,7 +725,6 @@ export function FolderTree() {
                 className="rounded-none hover:bg-primary hover:text-primary-foreground border-border"
                 onClick={() => setIsCreating(true)}
                 aria-label="Create collection"
-                title="Create collection"
                 aria-keyshortcuts="n"
               >
                 <FolderPlus className="h-4 w-4" aria-hidden="true" />
@@ -709,16 +744,28 @@ export function FolderTree() {
             placeholder="Search collections..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearchQuery("");
+              }
+            }}
             className="pl-9 pr-9 h-9 text-sm rounded-none border-2 border-border focus:border-primary transition-all bg-background"
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:text-primary transition-colors"
-              aria-label="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:text-primary transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                Clear search [Esc]
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -756,29 +803,41 @@ export function FolderTree() {
                   {newFolderName.length}/100
                 </div>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0"
-                onClick={handleCreateFolder}
-                aria-label="Confirm creation"
-                title="Confirm creation"
-              >
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0"
-                onClick={() => {
-                  setIsCreating(false);
-                  setNewFolderName("");
-                }}
-                aria-label="Cancel collection creation"
-                title="Cancel collection creation"
-              >
-                <X className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={handleCreateFolder}
+                    aria-label="Confirm creation"
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Confirm creation
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => {
+                      setIsCreating(false);
+                      setNewFolderName("");
+                    }}
+                    aria-label="Cancel collection creation"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Cancel collection creation
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
 
