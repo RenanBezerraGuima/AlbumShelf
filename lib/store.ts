@@ -155,11 +155,6 @@ const breadcrumbCache = new WeakMap<
 // allowing useShallow to skip re-renders even if the containing array is new.
 const segmentCache = new WeakMap<Folder, { id: string; name: string }>();
 
-// Performance: Recursive path cache keyed by the Folder object.
-// By caching the full path from root to this folder, we turn O(depth) reconstructions
-// into O(1) lookups for stable subtrees.
-const recursivePathCache = new WeakMap<Folder, { id: string; name: string }[]>();
-
 const folderIndexCache = new WeakMap<Folder[], Map<string, Folder>>();
 
 const getBreadcrumbSegment = (folder: Folder): { id: string; name: string } => {
@@ -217,21 +212,13 @@ export const getBreadcrumb = (
   if (!targetFolder) return [];
 
   /**
-   * Performance: Recursive breadcrumb construction with WeakMap caching.
-   * By calling itself recursively, this function populates the cache for all ancestors
-   * of the target in a single pass. Subsequent lookups for any stable ancestor
-   * (even across state changes via structural sharing) become O(1).
+   * Performance: Recursive breadcrumb construction.
+   * While recursive, this remains O(depth) as it traverses directly to the root.
    */
   const constructPath = (folder: Folder): { id: string; name: string }[] => {
-    const cachedPath = recursivePathCache.get(folder);
-    if (cachedPath) return cachedPath;
-
     const segment = getBreadcrumbSegment(folder);
     const parent = folder.parentId ? foldersById.get(folder.parentId) : null;
-    const path = parent ? [...constructPath(parent), segment] : [segment];
-
-    recursivePathCache.set(folder, path);
-    return path;
+    return parent ? [...constructPath(parent), segment] : [segment];
   };
 
   const path = constructPath(targetFolder);

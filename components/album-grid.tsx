@@ -68,7 +68,9 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDragLeave,
   onDrop,
   onDragEnd,
-  style,
+  top,
+  left,
+  width,
   imageLoading,
   imageFetchPriority,
 }: {
@@ -82,10 +84,19 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
   onDragLeave: () => void;
   onDrop: (index: number) => void;
   onDragEnd: () => void;
-  style?: React.CSSProperties;
+  top: number;
+  left: number;
+  width: number;
   imageLoading: 'lazy' | 'eager';
   imageFetchPriority: 'auto' | 'high' | 'low';
 }) {
+  const style = useMemo(() => ({
+    position: 'absolute' as const,
+    top,
+    left,
+    width,
+  }), [top, left, width]);
+
   return (
     <div
       draggable
@@ -114,7 +125,7 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
 export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
-  const folders = useFolderStore(state => state.sharedFolders ?? state.folders);
+  const hasFolders = useFolderStore(state => (state.sharedFolders ?? state.folders).length > 0);
   const streamingProvider = useFolderStore(state => state.streamingProvider);
   const selectedFolder = useFolderStore(useCallback(state =>
     state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
@@ -260,7 +271,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     if (albums.length === 0) {
       return {
         totalHeight: 0,
-        visibleAlbums: [] as Array<{ album: Album; index: number; style: React.CSSProperties }>,
+        visibleAlbums: [] as Array<{ album: Album; index: number; top: number; left: number; width: number }>,
       };
     }
 
@@ -299,12 +310,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         visibleAlbums.push({
           album,
           index,
-          style: {
-            position: 'absolute' as const,
-            top: padding + row * rowStride,
-            left: padding + column * (itemWidth + gap),
-            width: itemWidth,
-          },
+          top: padding + row * rowStride,
+          left: padding + column * (itemWidth + gap),
+          width: itemWidth,
         });
       }
     }
@@ -384,7 +392,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         <p className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)' }}>No collection selected</p>
         <p className="text-xs mt-1 mb-4" style={{ fontFamily: 'var(--font-mono)' }}>Select a catalog entry to begin</p>
 
-        {folders.length === 0 ? (
+        {!hasFolders ? (
           <Button
             variant="outline"
             size="sm"
@@ -575,7 +583,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             className="relative"
             style={{ height: Math.max(virtualGrid.totalHeight, gridMetrics.viewportHeight || GRID_DEFAULT_HEIGHT) }}
           >
-            {virtualGrid.visibleAlbums.map(({ album, index, style }, visibleIndex) => (
+            {virtualGrid.visibleAlbums.map(({ album, index, top, left, width }, visibleIndex) => (
               <DraggableAlbumItem
                 key={album.id}
                 album={album}
@@ -588,7 +596,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                style={style}
+                top={top}
+                left={left}
+                width={width}
                 imageLoading={visibleIndex < eagerImageCount ? 'eager' : 'lazy'}
                 imageFetchPriority={visibleIndex < eagerImageCount ? 'high' : 'auto'}
               />
