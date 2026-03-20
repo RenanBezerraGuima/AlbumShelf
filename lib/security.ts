@@ -29,12 +29,13 @@ const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
 const treeDepthCache = new WeakMap<Folder | Folder[], number>();
 
 // Performance: Pre-compile regexes to avoid re-creation on every sanitization call.
-// Includes control, Bidi, and invisible characters (U+AD, U+200B-U+200F, U+2060, U+FEFF).
-export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF\s]/;
+// Includes control, Bidi, and invisible characters (U+AD, U+A0, U+200B-U+200F, U+202A-U+202E, U+2060, U+2066-U+2069, U+FEFF).
+export const DISALLOWED_URL_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u00A0\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF\s]/;
 // Performance: Single-pass regex for both detection (fast-path) and stripping.
-const INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/;
+const INVALID_CHARS_REGEXP = /[\x00-\x1F\x7F\x80-\x9F\xAD\u00A0\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/;
 const INVALID_CHARS_GLOBAL_REGEXP = new RegExp(INVALID_CHARS_REGEXP.source, 'g');
-export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F])/i;
+// Security: Block encoded control characters, Soft Hyphens (%AD), and NBSP (%A0).
+export const ENCODED_CONTROL_CHARS_REGEXP = /%(0[0-9A-F]|1[0-9A-F]|7F|[89][0-9A-F]|AD|A0)/i;
 const ENCODED_COLON_OR_BACKSLASH_REGEXP = /%(3A|5C)/i;
 const PROTOCOL_RELATIVE_REGEXP = /^\/(?:\/|%2f)/i;
 export const SAFE_ID_REGEXP = /^[a-zA-Z0-9\-_]+$/;
@@ -257,7 +258,8 @@ export function sanitizeSyncState(incoming: any): any {
 
   // Security: Harden numeric state validation against future-dated injections or overflow.
   const isStrictPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
-  const isSaneTimestamp = (n: any) => isStrictPosFinite(n) && n < Date.now() + (365 * 24 * 60 * 60 * 1000);
+  // Security: Restrict timestamps to a max of 5 minutes in the future to allow for clock skew while preventing injection.
+  const isSaneTimestamp = (n: any) => isStrictPosFinite(n) && n < Date.now() + (5 * 60 * 1000);
   const isSaneExpiry = (n: any) => isStrictPosFinite(n) && n <= 365 * 24 * 60 * 60; // Max 1 year expiry
 
   if (incoming.folders !== undefined) s.folders = Array.isArray(incoming.folders) ? sanitizeFolderTree(incoming.folders) : [];
