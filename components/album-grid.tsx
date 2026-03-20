@@ -477,26 +477,38 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
               </TooltipContent>
             </Tooltip>
 
-            <button
-              type="button"
-              onClick={() => setFolderViewMode(selectedFolderId, 'grid')}
-              className={cn('border border-border px-2 py-0.5', albumViewMode === 'grid' && 'bg-primary text-primary-foreground')}
-              aria-label="Switch to grid view [G]"
-              title="Grid view [G]"
-              aria-keyshortcuts="g"
-            >
-              <Grid2X2 className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setFolderViewMode(selectedFolderId, 'canvas')}
-              className={cn('border border-border px-2 py-0.5', albumViewMode === 'canvas' && 'bg-primary text-primary-foreground')}
-              aria-label="Switch to canvas view [V]"
-              title="Canvas view [V]"
-              aria-keyshortcuts="v"
-            >
-              <Orbit className="h-3 w-3" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setFolderViewMode(selectedFolderId, 'grid')}
+                  className={cn('border border-border px-2 py-0.5', albumViewMode === 'grid' && 'bg-primary text-primary-foreground')}
+                  aria-label="Switch to grid view [G]"
+                  aria-keyshortcuts="g"
+                >
+                  <Grid2X2 className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                Grid view [G]
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setFolderViewMode(selectedFolderId, 'canvas')}
+                  className={cn('border border-border px-2 py-0.5', albumViewMode === 'canvas' && 'bg-primary text-primary-foreground')}
+                  aria-label="Switch to canvas view [V]"
+                  aria-keyshortcuts="v"
+                >
+                  <Orbit className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                Canvas view [V]
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
         <p className="text-[10px] tracking-widest text-primary font-medium" style={{ fontFamily: 'var(--font-body)' }}>
