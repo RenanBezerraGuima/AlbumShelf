@@ -154,3 +154,8 @@
 **Vulnerability:** String operations like `.trim()` and regex tests were performed on unconstrained raw inputs. Persisted state timestamps lacked sane upper bounds.
 **Learning:** In client-side apps, large payloads can be used to cause thread-blocking DoS. Truncation must be the *first* operation. Symmetrically, numeric state fields must be validated for "sanity" (e.g. not in the far future) to prevent logical bypasses or persistent state corruption.
 **Prevention:** Always `.slice()` untrusted strings to a safe maximum plus a small buffer before trimming. Implement "sane bound" checks for all numeric state metadata during rehydration.
+
+## 2026-05-26 - [Advanced Obfuscation and Clock-Skew Hardening]
+**Vulnerability:** Sanitization bypassed via literal or encoded Non-Breaking Spaces (NBSP) and Soft Hyphens. Overly permissive timestamp bounds allowed far-future state injection.
+**Learning:** Defense-in-depth requires blocking all "invisible" whitespace, not just standard ASCII control characters or Bidi marks. NBSP (U+A0) and Soft Hyphens (U+AD) are common vectors for UI-spoofing and filter bypasses. Furthermore, while timestamps need a buffer for clock skew, a 1-year window is too permissive for session or update metadata.
+**Prevention:** Include `\u00A0` and `%A0`/`%AD` in all sanitization regexes. Restrict "sane" timestamps to a tight window (e.g., 5 minutes) to maintain synchronization integrity while allowing for minor drift.
