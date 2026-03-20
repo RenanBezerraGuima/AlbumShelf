@@ -117,3 +117,11 @@
 ## 2026-12-10 - [Fast-Path Sanitization and Redundant String Operations]
 **Learning:** In high-traffic sanitization paths, even simple operations like `.slice()` and `.trim()` add up. When `sanitizeImageUrl` calls `sanitizeUrl`, repeating these operations on the same string is wasteful. Implementing an internal helper (`sanitizeUrlInternal`) that accepts pre-processed strings eliminates this redundancy. Furthermore, using a non-global `.test()` before `.replace()` in `sanitizeText` allows "clean" strings to bypass expensive regex replacements entirely, significantly reducing allocations in common scenarios.
 **Action:** Use internal helpers to avoid redundant string pre-processing in nested sanitization calls. Always fast-path regex stripping with `.test()` to skip work for valid inputs.
+
+## 2027-02-15 - [Prop Stability in Virtualized Grids]
+**Learning:** Passing object literals (like `style`) as props to memoized components (e.g., `DraggableAlbumItem`) in a virtualized grid causes `React.memo` to fail on every parent render, such as during scroll or drag events. Breaking down these objects into primitive props (`top`, `left`, `width`) and reconstructing the object via `useMemo` inside the child ensures referential stability and enables efficient bail-outs.
+**Action:** Always prefer primitive props for memoized items in high-frequency render paths (grids, lists). Use `useMemo` internally to manage object-based props like `style`.
+
+## 2027-02-15 - [Stale Data in Reference-Keyed Caches]
+**Learning:** Using a `WeakMap` to cache recursive path constructions (like breadcrumbs) keyed by individual folder objects is fundamentally incompatible with structural sharing if segments (like names) can change. A child folder's reference might remain stable even if its parent is renamed, leading to the cache returning stale breadcrumb segments. Removing the cache and relying on O(depth) recursion ensures correctness with negligible performance impact for typical UI depths.
+**Action:** Avoid caching derived data that depends on ancestors using only the leaf node as a key in immutable trees. Rely on O(depth) traversals for correctness unless a bottleneck is proven.
