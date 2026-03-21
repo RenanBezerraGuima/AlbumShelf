@@ -23,6 +23,12 @@ export interface SanitizationContext {
   totalFolders: number;
 }
 
+// Security: Harden numeric state validation against future-dated injections or overflow.
+export const isStrictPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
+// Security: Restrict timestamps to a max of 5 minutes in the future to allow for clock skew while preventing injection.
+export const isSaneTimestamp = (n: any) => isStrictPosFinite(n) && n < Date.now() + (5 * 60 * 1000);
+export const isSaneExpiry = (n: any) => isStrictPosFinite(n) && n <= 365 * 24 * 60 * 60; // Max 1 year expiry
+
 // Performance: Caches for tree limit checks to avoid O(N) traversals on every store update.
 // Leveraging structural sharing, unmodified subtrees return O(1) cached results.
 const treeCountCache = new WeakMap<Folder | Folder[], SanitizationContext>();
@@ -169,6 +175,15 @@ export function isValidGeistFont(font: any): font is GeistFont {
 }
 
 /**
+ * Sanitize a token string by enforcing length limits and blocking disallowed characters.
+ */
+export function sanitizeToken(token: any): string | null {
+  if (typeof token !== 'string' || token.length === 0) return null;
+  const t = token.slice(0, MAX_TOKEN_LENGTH);
+  return (!DISALLOWED_URL_CHARS_REGEXP.test(t) && !ENCODED_CONTROL_CHARS_REGEXP.test(t)) ? t : null;
+}
+
+/**
  * Sanitize a text field by enforcing length limits and stripping control characters.
  * Performance: Fast-path .test() avoids .replace() allocations for safe strings.
  */
@@ -256,12 +271,6 @@ export function sanitizeAlbumDetails(details: any): AlbumDetails {
 export function sanitizeSyncState(incoming: any): any {
   const s: any = {};
 
-  // Security: Harden numeric state validation against future-dated injections or overflow.
-  const isStrictPosFinite = (n: any) => typeof n === 'number' && Number.isFinite(n) && n > 0;
-  // Security: Restrict timestamps to a max of 5 minutes in the future to allow for clock skew while preventing injection.
-  const isSaneTimestamp = (n: any) => isStrictPosFinite(n) && n < Date.now() + (5 * 60 * 1000);
-  const isSaneExpiry = (n: any) => isStrictPosFinite(n) && n <= 365 * 24 * 60 * 60; // Max 1 year expiry
-
   if (incoming.folders !== undefined) s.folders = Array.isArray(incoming.folders) ? sanitizeFolderTree(incoming.folders) : [];
 
   if (incoming.selectedFolderId !== undefined) {
@@ -277,12 +286,7 @@ export function sanitizeSyncState(incoming: any): any {
   if (incoming.hasSetPreference !== undefined) s.hasSetPreference = Boolean(incoming.hasSetPreference);
 
   if (incoming.spotifyToken !== undefined) {
-    if (typeof incoming.spotifyToken === 'string' && incoming.spotifyToken.length > 0) {
-      const t = incoming.spotifyToken.slice(0, MAX_TOKEN_LENGTH);
-      s.spotifyToken = (!DISALLOWED_URL_CHARS_REGEXP.test(t) && !ENCODED_CONTROL_CHARS_REGEXP.test(t)) ? t : null;
-    } else {
-      s.spotifyToken = null;
-    }
+    s.spotifyToken = sanitizeToken(incoming.spotifyToken);
   }
 
   if (incoming.spotifyTokenExpiry !== undefined) s.spotifyTokenExpiry = isSaneExpiry(incoming.spotifyTokenExpiry) ? incoming.spotifyTokenExpiry : null;

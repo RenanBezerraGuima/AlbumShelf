@@ -10,6 +10,9 @@ import {
   isValidViewMode,
   isValidStreamingProvider,
   isValidGeistFont,
+  isSaneTimestamp,
+  isSaneExpiry,
+  sanitizeToken,
   sanitizeSyncState,
   sanitizeText,
   SAFE_ID_REGEXP,
@@ -910,13 +913,10 @@ export const useFolderStore = create<FolderStore>()(
       },
 
       setSpotifyToken: (token, expiresIn, timestamp) => {
-        const sanitizedToken = token ? String(token).slice(0, MAX_TOKEN_LENGTH) : null;
-        const finalToken = (sanitizedToken && !DISALLOWED_URL_CHARS_REGEXP.test(sanitizedToken) && !ENCODED_CONTROL_CHARS_REGEXP.test(sanitizedToken)) ? sanitizedToken : null;
-
         set({
-          spotifyToken: finalToken,
-          spotifyTokenExpiry: typeof expiresIn === 'number' && Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : null,
-          spotifyTokenTimestamp: typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null,
+          spotifyToken: sanitizeToken(token),
+          spotifyTokenExpiry: isSaneExpiry(expiresIn) ? expiresIn : null,
+          spotifyTokenTimestamp: isSaneTimestamp(timestamp) ? timestamp : null,
           lastUpdated: Date.now(),
         });
       },
