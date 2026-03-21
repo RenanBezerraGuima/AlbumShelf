@@ -15,6 +15,7 @@ import {
   GripVertical,
   Settings,
   MoreVertical,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import {
 } from "@/components/ui/context-menu";
 import { useFolderStore } from "@/lib/store";
 import { getFolderSearchState } from "@/lib/folder-search";
+import { generateShareUrl } from "@/lib/share-service";
 import type { Folder as FolderType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +96,7 @@ const FolderItem = React.memo(function FolderItem({
   }, [isEditing]);
   const [newSubfolderName, setNewSubfolderName] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isShared, setIsShared] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropPosition, setDropPosition] = useState<
     "before" | "inside" | "after" | null
@@ -139,6 +142,25 @@ const FolderItem = React.memo(function FolderItem({
         .createFolder(newSubfolderName.trim(), folder.id);
       setNewSubfolderName("");
       setIsCreatingSubfolder(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { streamingProvider } = useFolderStore.getState();
+      const url = generateShareUrl([folder], streamingProvider);
+      await navigator.clipboard.writeText(url);
+
+      setIsShared(true);
+      setTimeout(() => setIsShared(false), 2000);
+
+      toast.success('Link copied!', {
+        description: `Shared link for "${folder.name}" is now in your clipboard.`,
+      });
+    } catch (err) {
+      console.error('Failed to share collection:', err);
+      toast.error('Failed to copy share link');
     }
   };
 
@@ -406,6 +428,17 @@ const FolderItem = React.memo(function FolderItem({
                   </Tooltip>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
+                      onClick={handleShare}
+                      className={cn(isShared && "text-green-600 focus:text-green-600")}
+                    >
+                      {isShared ? (
+                        <Check className="h-4 w-4 mr-2" />
+                      ) : (
+                        <Share2 className="h-4 w-4 mr-2" />
+                      )}
+                      Share Collection
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsEditing(true);
@@ -446,6 +479,17 @@ const FolderItem = React.memo(function FolderItem({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem
+            onClick={handleShare}
+            className={cn(isShared && "text-green-600 focus:text-green-600")}
+          >
+            {isShared ? (
+              <Check className="h-4 w-4 mr-2" />
+            ) : (
+              <Share2 className="h-4 w-4 mr-2" />
+            )}
+            Share Collection
+          </ContextMenuItem>
           <ContextMenuItem
             onClick={(e) => {
               e.stopPropagation();
@@ -862,15 +906,24 @@ export function FolderTree() {
               <p className="text-sm text-muted-foreground font-mono mb-4">
                 No collections found.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCreating(true)}
-                className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
-              >
-                <FolderPlus className="h-4 w-4" />
-                Create your first collection
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCreating(true)}
+                    className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+                    aria-label="Create collection [N]"
+                    aria-keyshortcuts="n"
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    Create your first collection [N]
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Create collection [N]
+                </TooltipContent>
+              </Tooltip>
             </div>
           )}
 
