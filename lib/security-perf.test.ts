@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { sanitizeText, getTreeDepth, sanitizeFolder } from './security';
 import type { Folder } from './types';
 
@@ -32,7 +32,7 @@ describe('security.ts micro-benchmarks', () => {
   });
 
   it('measures getTreeDepth performance', () => {
-    const tree = makeLargeTree(5, 3); // 3^0 + 3^1 + 3^2 + 3^3 + 3^4 + 3^5 = 364 folders
+    const tree = makeLargeTree(5, 3); // 364 folders
     const start = performance.now();
     for (let i = 0; i < 1000; i++) {
       getTreeDepth(tree);
@@ -49,5 +49,25 @@ describe('security.ts micro-benchmarks', () => {
     }
     const duration = performance.now() - start;
     console.log(`sanitizeFolder (100 iterations): ${duration.toFixed(2)}ms`);
+  });
+
+  it('measures idempotent sanitizeFolder performance and reference stability', () => {
+    const rawFolder = makeLargeTree(3, 4);
+    const sanitizedOnce = sanitizeFolder(rawFolder);
+
+    // Warm up
+    sanitizeFolder(sanitizedOnce);
+
+    const start = performance.now();
+    const iterations = 100;
+    for (let i = 0; i < iterations; i++) {
+      sanitizeFolder(sanitizedOnce);
+    }
+    const duration = performance.now() - start;
+    console.log(`Idempotent sanitizeFolder (100 iterations): ${duration.toFixed(2)}ms`);
+
+    const sanitizedTwice = sanitizeFolder(sanitizedOnce);
+    expect(sanitizedTwice).toBe(sanitizedOnce);
+    console.log('Reference stability: PASSED');
   });
 });
