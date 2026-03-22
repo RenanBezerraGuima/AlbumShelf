@@ -427,17 +427,16 @@ export function countTreeItems(target: Folder[] | Folder): SanitizationContext {
   const result = { totalAlbums: 0, totalFolders: 0 };
 
   if (Array.isArray(target)) {
-    for (const folder of target) {
+    for (let i = 0; i < target.length; i++) {
+      const folder = target[i];
       const childContext = countTreeItems(folder);
       result.totalFolders += childContext.totalFolders;
       result.totalAlbums += childContext.totalAlbums;
     }
   } else {
-    result.totalFolders = 1;
-    result.totalAlbums = target.albums.length;
     const subfoldersContext = countTreeItems(target.subfolders);
-    result.totalFolders += subfoldersContext.totalFolders;
-    result.totalAlbums += subfoldersContext.totalAlbums;
+    result.totalFolders = 1 + subfoldersContext.totalFolders;
+    result.totalAlbums = target.albums.length + subfoldersContext.totalAlbums;
   }
 
   treeCountCache.set(target, result);
@@ -462,7 +461,8 @@ export function getTreeDepth(target: Folder[] | Folder): number {
       if (depth > result) result = depth;
     }
   } else {
-    result = 1 + getTreeDepth(target.subfolders);
+    const subfoldersDepth = getTreeDepth(target.subfolders);
+    result = 1 + subfoldersDepth;
   }
 
   treeDepthCache.set(target, result);
