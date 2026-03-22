@@ -159,3 +159,8 @@
 **Vulnerability:** Sanitization bypassed via literal or encoded Non-Breaking Spaces (NBSP) and Soft Hyphens. Overly permissive timestamp bounds allowed far-future state injection.
 **Learning:** Defense-in-depth requires blocking all "invisible" whitespace, not just standard ASCII control characters or Bidi marks. NBSP (U+A0) and Soft Hyphens (U+AD) are common vectors for UI-spoofing and filter bypasses. Furthermore, while timestamps need a buffer for clock skew, a 1-year window is too permissive for session or update metadata.
 **Prevention:** Include `\u00A0` and `%A0`/`%AD` in all sanitization regexes. Restrict "sane" timestamps to a tight window (e.g., 5 minutes) to maintain synchronization integrity while allowing for minor drift.
+
+## 2026-06-01 - [Global DoS Protection in Recursive Decompression]
+**Vulnerability:** The sharing service's `fromCompact` function lacked global item limits, allowing for memory exhaustion DoS via payloads with massive numbers of total folders or albums, even if individual folders were within limits.
+**Learning:** Enforcing limits only at the final sanitization stage (e.g., `sanitizeFolderTree`) is insufficient if the intermediate decompression phase can still create an unbounded number of objects. Security must be enforced as early as possible in the data processing pipeline.
+**Prevention:** Pass a shared `SanitizationContext` through recursive decompression logic to track and enforce cumulative item limits across the entire structure, preventing intermediate object explosion.

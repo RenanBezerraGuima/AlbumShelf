@@ -5,7 +5,10 @@ import {
   isValidStreamingProvider,
   MAX_FOLDER_DEPTH,
   MAX_SUBFOLDERS_PER_FOLDER,
-  MAX_ALBUMS_PER_FOLDER
+  MAX_ALBUMS_PER_FOLDER,
+  MAX_TOTAL_ALBUMS,
+  MAX_TOTAL_FOLDERS,
+  type SanitizationContext
 } from './security';
 
 interface SharePayload {
@@ -60,32 +63,58 @@ function toCompact(folders: Folder[], depth = 0): any[] {
 /**
  * Maps a compact format back to a Folder array.
  * Albums will be missing metadata if they are provider-linked.
+ * Enforces global limits across the entire structure to prevent DoS.
  */
-function fromCompact(compact: any[], depth = 0): any[] {
+function fromCompact(
+  compact: any[],
+  depth = 0,
+  context: SanitizationContext = { totalAlbums: 0, totalFolders: 0 }
+): any[] {
   if (depth > MAX_FOLDER_DEPTH) return [];
 
-  // Defense-in-depth: slice to prevent processing massive arrays
-  return compact.slice(0, MAX_SUBFOLDERS_PER_FOLDER).map(f => ({
-    id: f.i,
-    name: f.n,
-    parentId: f.p,
-    isExpanded: !!f.e,
-    viewMode: f.v === 1 ? 'canvas' : 'grid',
-    albums: (f.a || []).slice(0, MAX_ALBUMS_PER_FOLDER).map((a: any) => ({
-      id: a.i,
-      spotifyId: a.s,
-      name: a.n || 'Loading...', // Placeholder
-      artist: a.r || '',
-      imageUrl: a.u || '',
-      releaseDate: a.d,
-      totalTracks: a.t || 0,
-      spotifyUrl: a.o,
-      externalUrl: a.x,
-      position: a.p ? { x: a.p.x, y: a.p.y } : undefined,
-      _needsHydration: !a.n // Internal flag for hydration
-    })),
-    subfolders: fromCompact(f.s || [], depth + 1)
-  }));
+  const folders: any[] = [];
+  const maxFolders = Math.min(compact.length, MAX_SUBFOLDERS_PER_FOLDER);
+
+  for (let i = 0; i < maxFolders; i++) {
+    if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
+    const f = compact[i];
+    context.totalFolders++;
+
+    const albums: any[] = [];
+    const rawAlbums = Array.isArray(f.a) ? f.a : [];
+    const maxAlbums = Math.min(rawAlbums.length, MAX_ALBUMS_PER_FOLDER);
+
+    for (let j = 0; j < maxAlbums; j++) {
+      if (context.totalAlbums >= MAX_TOTAL_ALBUMS) break;
+      const a = rawAlbums[j];
+      albums.push({
+        id: a.i,
+        spotifyId: a.s,
+        name: a.n || 'Loading...', // Placeholder
+        artist: a.r || '',
+        imageUrl: a.u || '',
+        releaseDate: a.d,
+        totalTracks: a.t || 0,
+        spotifyUrl: a.o,
+        externalUrl: a.x,
+        position: a.p ? { x: a.p.x, y: a.p.y } : undefined,
+        _needsHydration: !a.n // Internal flag for hydration
+      });
+      context.totalAlbums++;
+    }
+
+    folders.push({
+      id: f.i,
+      name: f.n,
+      parentId: f.p,
+      isExpanded: !!f.e,
+      viewMode: f.v === 1 ? 'canvas' : 'grid',
+      albums,
+      subfolders: fromCompact(f.s || [], depth + 1, context)
+    });
+  }
+
+  return folders;
 }
 
 /**
