@@ -207,11 +207,27 @@ export function sanitizeTrack(track: any, index = 0): Track {
   // Security: Enforce safe identifier format for track IDs
   const id = SAFE_ID_REGEXP.test(rawId) ? rawId : `track-${index}`;
 
+  const title = track.title
+    ? (track.title === 'Unknown Track' ? 'Unknown Track' : sanitizeText(track.title, MAX_NAME_LENGTH))
+    : 'Unknown Track';
+  const preview = sanitizeUrl(track.preview) || '';
+  const duration = Math.max(0, Math.min(3600, Number(track.duration) || 0));
+
+  // Performance: Return original reference if no changes were made to preserve structural sharing.
+  if (
+    track.id === id &&
+    track.title === title &&
+    track.preview === preview &&
+    track.duration === duration
+  ) {
+    return track as Track;
+  }
+
   return {
     id,
-    title: track.title ? sanitizeText(track.title, MAX_NAME_LENGTH) : 'Unknown Track',
-    preview: sanitizeUrl(track.preview) || '',
-    duration: Math.max(0, Math.min(3600, Number(track.duration) || 0)),
+    title,
+    preview,
+    duration,
   };
 }
 
@@ -323,16 +339,46 @@ export function sanitizeAlbum(album: any, regenerateId = false): Album {
   const spotifyId = album.spotifyId ? String(album.spotifyId).slice(0, MAX_ID_LENGTH) : undefined;
   const sanitizedSpotifyId = (spotifyId && SAFE_ID_REGEXP.test(spotifyId)) ? spotifyId : undefined;
 
+  // Performance: Bypass sanitizeText for default strings to avoid unnecessary regex checks.
+  const name = album.name
+    ? (album.name === 'Unknown Album' ? 'Unknown Album' : sanitizeText(album.name, MAX_TEXT_LENGTH))
+    : 'Unknown Album';
+  const artist = album.artist
+    ? (album.artist === 'Unknown Artist' ? 'Unknown Artist' : sanitizeText(album.artist, MAX_TEXT_LENGTH))
+    : 'Unknown Artist';
+  const imageUrl = album.imageUrl === '/placeholder.svg' ? '/placeholder.svg' : (sanitizeImageUrl(album.imageUrl) || '/placeholder.svg');
+  const releaseDate = album.releaseDate ? sanitizeText(album.releaseDate, MAX_DATE_LENGTH) : undefined;
+  const totalTracks = Math.max(0, Math.min(1000, Number(album.totalTracks) || 0));
+  const spotifyUrl = sanitizeUrl(album.spotifyUrl);
+  const externalUrl = sanitizeUrl(album.externalUrl);
+
+  // Performance: Return original reference if no changes were made to preserve structural sharing.
+  if (
+    !regenerateId &&
+    album.id === id &&
+    album.spotifyId === sanitizedSpotifyId &&
+    album.name === name &&
+    album.artist === artist &&
+    album.imageUrl === imageUrl &&
+    album.releaseDate === releaseDate &&
+    album.totalTracks === totalTracks &&
+    album.spotifyUrl === spotifyUrl &&
+    album.externalUrl === externalUrl &&
+    !album._needsHydration
+  ) {
+    return album as Album;
+  }
+
   const sanitized: Album = {
     id,
     spotifyId: sanitizedSpotifyId,
-    name: album.name ? sanitizeText(album.name, MAX_TEXT_LENGTH) : 'Unknown Album',
-    artist: album.artist ? sanitizeText(album.artist, MAX_TEXT_LENGTH) : 'Unknown Artist',
-    imageUrl: sanitizeImageUrl(album.imageUrl) || '/placeholder.svg',
-    releaseDate: album.releaseDate ? sanitizeText(album.releaseDate, MAX_DATE_LENGTH) : undefined,
-    totalTracks: Math.max(0, Math.min(1000, Number(album.totalTracks) || 0)),
-    spotifyUrl: sanitizeUrl(album.spotifyUrl),
-    externalUrl: sanitizeUrl(album.externalUrl),
+    name,
+    artist,
+    imageUrl,
+    releaseDate,
+    totalTracks,
+    spotifyUrl,
+    externalUrl,
   };
 
   if (album._needsHydration) {
@@ -505,37 +551,73 @@ export function sanitizeFolder(
     id = crypto.randomUUID();
   }
 
+  const name = folder.name ? (folder.name === 'Untitled' ? 'Untitled' : sanitizeText(folder.name, MAX_NAME_LENGTH)) : 'Untitled';
+  const isExpanded = Boolean(folder.isExpanded);
+  const viewMode = isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid';
+
+  let changed = false;
   const albums: Album[] = [];
+  const rawAlbums = Array.isArray(folder.albums) ? folder.albums : [];
+  if (!Array.isArray(folder.albums)) changed = true;
+
   // Defense-in-depth: only process albums if we haven't hit the folder limit
   if (context.totalFolders <= MAX_TOTAL_FOLDERS) {
-    if (Array.isArray(folder.albums)) {
-      // Performance: Limited loop avoids unnecessary .slice() allocation
-      for (let i = 0; i < folder.albums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
-        const sanitized = sanitizeAlbum(folder.albums[i], regenerateIds);
-        albums.push(albumMapper(sanitized, i));
-        context.totalAlbums++;
+    // Performance: Limited loop avoids unnecessary .slice() allocation
+    for (let i = 0; i < rawAlbums.length && albums.length < MAX_ALBUMS_PER_FOLDER && context.totalAlbums < MAX_TOTAL_ALBUMS; i++) {
+      const original = rawAlbums[i];
+      const sanitized = sanitizeAlbum(original, regenerateIds);
+      const mapped = albumMapper(sanitized, i);
+      if (mapped !== original) {
+        changed = true;
       }
+      albums.push(mapped);
+      context.totalAlbums++;
     }
   }
+  if (albums.length !== rawAlbums.length) changed = true;
 
   const subfolders: Folder[] = [];
-  if (Array.isArray(folder.subfolders) && depth < MAX_FOLDER_DEPTH) {
+  const rawSubfolders = Array.isArray(folder.subfolders) ? folder.subfolders : [];
+  if (!Array.isArray(folder.subfolders)) changed = true;
+
+  if (depth < MAX_FOLDER_DEPTH) {
     // Performance: Iterating with a limit directly avoids .slice() array allocation.
-    const maxSubfolders = Math.min(folder.subfolders.length, MAX_SUBFOLDERS_PER_FOLDER);
+    const maxSubfolders = Math.min(rawSubfolders.length, MAX_SUBFOLDERS_PER_FOLDER);
     for (let i = 0; i < maxSubfolders; i++) {
-      if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
-      subfolders.push(sanitizeFolder(folder.subfolders[i], regenerateIds, id, albumMapper, depth + 1, context));
+      if (context.totalFolders >= MAX_TOTAL_FOLDERS) {
+        break;
+      }
+      const original = rawSubfolders[i];
+      const sanitized = sanitizeFolder(original, regenerateIds, id, albumMapper, depth + 1, context);
+      if (sanitized !== original) {
+        changed = true;
+      }
+      subfolders.push(sanitized);
     }
+  }
+  if (subfolders.length !== rawSubfolders.length) changed = true;
+
+  // Performance: Return original reference if no changes were made to preserve structural sharing.
+  if (
+    !regenerateIds &&
+    !changed &&
+    folder.id === id &&
+    folder.name === name &&
+    folder.parentId === parentId &&
+    folder.isExpanded === isExpanded &&
+    folder.viewMode === viewMode
+  ) {
+    return folder as Folder;
   }
 
   return {
     id,
-    name: folder.name ? sanitizeText(folder.name, MAX_NAME_LENGTH) : 'Untitled',
+    name,
     parentId,
     albums,
     subfolders,
-    isExpanded: Boolean(folder.isExpanded),
-    viewMode: isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid',
+    isExpanded,
+    viewMode,
   };
 }
 
@@ -551,13 +633,27 @@ export function sanitizeFolderTree(
   const context: SanitizationContext = initialContext ? { ...initialContext } : { totalAlbums: 0, totalFolders: 0 };
   const sanitized: Folder[] = [];
 
+  let changed = false;
   if (Array.isArray(rawFolders)) {
     // Performance: Iterating with a limit directly avoids .slice() array allocation.
     const maxRoot = Math.min(rawFolders.length, MAX_SUBFOLDERS_PER_FOLDER);
     for (let i = 0; i < maxRoot; i++) {
       if (context.totalFolders >= MAX_TOTAL_FOLDERS) break;
-      sanitized.push(sanitizeFolder(rawFolders[i], regenerateIds, null, albumMapper, 0, context));
+      const original = rawFolders[i];
+      const result = sanitizeFolder(original, regenerateIds, null, albumMapper, 0, context);
+      if (result !== original) {
+        changed = true;
+      }
+      sanitized.push(result);
     }
+    if (sanitized.length !== rawFolders.length) changed = true;
+  } else {
+    changed = true;
+  }
+
+  // Performance: Return original reference if no changes were made to preserve structural sharing.
+  if (!regenerateIds && !changed && Array.isArray(rawFolders)) {
+    return rawFolders as Folder[];
   }
 
   return sanitized;
