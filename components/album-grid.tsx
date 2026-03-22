@@ -393,30 +393,42 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         <p className="text-xs mt-1 mb-4" style={{ fontFamily: 'var(--font-mono)' }}>Select a catalog entry to begin</p>
 
         {!hasFolders ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:create-collection'))}
-            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
-            title="Create your first collection [N]"
-            aria-label="Create your first collection [N]"
-            aria-keyshortcuts="n"
-          >
-            <FolderPlus className="h-4 w-4" />
-            Create your first collection [N]
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:create-collection'))}
+                className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+                aria-label="Create your first collection [N]"
+                aria-keyshortcuts="n"
+              >
+                <FolderPlus className="h-4 w-4" />
+                Create your first collection [N]
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Create your first collection [N]
+            </TooltipContent>
+          </Tooltip>
         ) : isMobile ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:open-menu'))}
-            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
-            title="Open collections menu"
-            aria-label="Open collections menu"
-          >
-            <Menu className="h-4 w-4" />
-            Open collections menu
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:open-menu'))}
+                className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+                aria-label="Open collections menu"
+              >
+                <Menu className="h-4 w-4" />
+                Open collections menu
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Open collections menu
+            </TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
     );
@@ -449,15 +461,21 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
                     {item.name}
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => useFolderStore.getState().setSelectedFolder(item.id)}
-                    className="hover:text-primary hover:underline transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary px-0.5 rounded-sm cursor-pointer"
-                    aria-label={`Go back to ${item.name}`}
-                    title={`Go back to ${item.name}`}
-                  >
-                    {item.name}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => useFolderStore.getState().setSelectedFolder(item.id)}
+                        className="hover:text-primary hover:underline transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary px-0.5 rounded-sm cursor-pointer"
+                        aria-label={`Go back to ${item.name}`}
+                      >
+                        {item.name}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                      Go back to {item.name}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </span>
             ))}
@@ -529,18 +547,24 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           <Music className="h-12 w-12 mb-3 opacity-20" />
           <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-display)' }}>Collection empty</p>
           <p className="text-[10px] mt-1 mb-4" style={{ fontFamily: 'var(--font-mono)' }}>Add albums via search interface</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:focus-search'))}
-            className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
-            title="Find your first album [/]"
-            aria-label="Find your first album [/]"
-            aria-keyshortcuts="/"
-          >
-            <Search className="h-4 w-4" />
-            Find your first album [/]
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.dispatchEvent(new CustomEvent('albumshelf:focus-search'))}
+                className="gap-2 rounded-none border-2 border-dashed border-muted-foreground/50 hover:border-primary hover:text-primary transition-all tracking-tighter font-medium h-auto py-3 px-4"
+                aria-label="Find your first album [/]"
+                aria-keyshortcuts="/"
+              >
+                <Search className="h-4 w-4" />
+                Find your first album [/]
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+              Find your first album [/]
+            </TooltipContent>
+          </Tooltip>
         </div>
       ) : isWarmingAlbumArt ? (
         <div
