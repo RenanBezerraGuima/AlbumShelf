@@ -44,6 +44,11 @@ const WARMUP_COPY_BY_MODE = {
 } as const;
 
 function getGridColumnCount(width: number) {
+  if (width >= 3840) return 20;
+  if (width >= 3440) return 18;
+  if (width >= 2560) return 14;
+  if (width >= 1920) return 10;
+  if (width >= 1536) return 8;
   if (width >= 1280) return 6;
   if (width >= 1024) return 5;
   if (width >= 768) return 4;
