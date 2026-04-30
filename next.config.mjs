@@ -11,7 +11,8 @@ export function resolveBasePath(env = process.env) {
   }
 
   const isNetlify = env.NETLIFY === 'true'
-  if (isNetlify) {
+  const isVercel = env.VERCEL === '1'
+  if (isNetlify || isVercel) {
     return ''
   }
 
@@ -26,7 +27,6 @@ export function resolveBasePath(env = process.env) {
 const resolvedBasePath = resolveBasePath()
 
 const nextConfig = {
-  output: 'export',
   ...(resolvedBasePath ? { basePath: resolvedBasePath } : {}),
   typescript: {
     ignoreBuildErrors: false,

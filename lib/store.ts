@@ -119,6 +119,19 @@ export type SyncState = Pick<
   | "lastUpdated"
 >;
 
+export const defaultSyncState: SyncState = {
+  folders: [],
+  selectedFolderId: null,
+  streamingProvider: "deezer",
+  hasSetPreference: false,
+  spotifyToken: null,
+  spotifyTokenExpiry: null,
+  spotifyTokenTimestamp: null,
+  theme: "industrial",
+  geistFont: "mono",
+  lastUpdated: 0,
+};
+
 const generateId = () => crypto.randomUUID();
 
 export const selectSyncState = (state: FolderStore): SyncState => ({
@@ -140,6 +153,16 @@ export const applySyncState = (incoming: SyncState) => {
     ...state,
     ...sanitizeSyncState(incoming),
   }));
+};
+
+export const resetSyncState = () => {
+  const preservedTheme = useFolderStore.getState().theme;
+  const preservedGeistFont = useFolderStore.getState().geistFont;
+  applySyncState({
+    ...defaultSyncState,
+    theme: preservedTheme,
+    geistFont: preservedGeistFont,
+  });
 };
 
 // Caches for tree traversal to avoid O(N) operations during re-renders or state updates.
@@ -372,7 +395,7 @@ export const useFolderStore = create<FolderStore>()(
   persist(
     (set, get) => {
       const state: FolderStore = {
-      folders: [],
+      folders: defaultSyncState.folders,
       sharedFolders: null,
       selectedFolderId: null,
       draggedAlbum: null,
@@ -380,17 +403,17 @@ export const useFolderStore = create<FolderStore>()(
       draggedAlbumIndex: null,
       draggedFolder: null,
       draggedFolderParentId: null,
-      streamingProvider: "deezer",
-      hasSetPreference: false,
-      spotifyToken: null,
-      spotifyTokenExpiry: null,
-      spotifyTokenTimestamp: null,
-      theme: "industrial",
-      geistFont: "mono",
+      streamingProvider: defaultSyncState.streamingProvider,
+      hasSetPreference: defaultSyncState.hasSetPreference,
+      spotifyToken: defaultSyncState.spotifyToken,
+      spotifyTokenExpiry: defaultSyncState.spotifyTokenExpiry,
+      spotifyTokenTimestamp: defaultSyncState.spotifyTokenTimestamp,
+      theme: defaultSyncState.theme,
+      geistFont: defaultSyncState.geistFont,
       isSettingsOpen: false,
       isGuestMode: false,
       hydrationProgress: null,
-      lastUpdated: 0,
+      lastUpdated: defaultSyncState.lastUpdated,
 
       createFolder: (name, parentId) => {
         const sanitizedParentId = parentId ? String(parentId).slice(0, MAX_ID_LENGTH) : null;

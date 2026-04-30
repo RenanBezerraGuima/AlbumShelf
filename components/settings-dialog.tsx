@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, memo, useState, useCallback, useEffect } from 'react';
-import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check, AlertTriangle } from 'lucide-react';
+import { Download, Upload, Settings, Music, Radio, CheckCircle2, Share2, Check, AlertTriangle, LogOut, Link2, Unlink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { redirectToSpotifyAuth } from '@/lib/spotify-auth';
@@ -15,7 +15,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useFolderStore } from '@/lib/store';
+import { Input } from '@/components/ui/input';
+import { findFolder, useFolderStore } from '@/lib/store';
 import { Theme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -36,11 +37,44 @@ function getShareUrlInfo() {
   }
 }
 
-export const SettingsDialog = memo(function SettingsDialog() {
+interface SettingsDialogProps {
+  userEmail?: string | null;
+  accessToken?: string | null;
+  onSignOut?: () => Promise<void> | void;
+}
+
+interface DeezerConnectionStatus {
+  connected: boolean;
+  status: 'connected' | 'expired' | 'invalid' | 'not_connected';
+  arlHint: string | null;
+  deezerUserId: string | null;
+  lastVerifiedAt: string | null;
+  updatedAt: string | null;
+}
+
+const defaultDeezerStatus: DeezerConnectionStatus = {
+  connected: false,
+  status: 'not_connected',
+  arlHint: null,
+  deezerUserId: null,
+  lastVerifiedAt: null,
+  updatedAt: null,
+};
+
+export const SettingsDialog = memo(function SettingsDialog({
+  userEmail,
+  accessToken,
+  onSignOut,
+}: SettingsDialogProps) {
   const [isExported, setIsExported] = useState(false);
   const [isImported, setIsImported] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [shareUrlInfo, setShareUrlInfo] = useState({ url: '', length: 0 });
+  const [deezerArl, setDeezerArl] = useState('');
+  const [deezerStatus, setDeezerStatus] = useState<DeezerConnectionStatus>(defaultDeezerStatus);
+  const [isDeezerBusy, setIsDeezerBusy] = useState(false);
+  const [deezerPlaylistName, setDeezerPlaylistName] = useState('');
+  const [isDeezerExporting, setIsDeezerExporting] = useState(false);
 
   /**
    * Performance: Granular subscriptions and useShallow prevent the SettingsDialog
@@ -53,7 +87,9 @@ export const SettingsDialog = memo(function SettingsDialog() {
     geistFont,
     spotifyToken,
     spotifyTokenExpiry,
-    spotifyTokenTimestamp
+    spotifyTokenTimestamp,
+    selectedFolderId,
+    selectedFolder,
   } = useFolderStore(useShallow((state) => ({
     isOpen: state.isSettingsOpen,
     streamingProvider: state.streamingProvider,
@@ -62,6 +98,10 @@ export const SettingsDialog = memo(function SettingsDialog() {
     spotifyToken: state.spotifyToken,
     spotifyTokenExpiry: state.spotifyTokenExpiry,
     spotifyTokenTimestamp: state.spotifyTokenTimestamp,
+    selectedFolderId: state.selectedFolderId,
+    selectedFolder: state.selectedFolderId
+      ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId)
+      : null,
   })));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +148,159 @@ export const SettingsDialog = memo(function SettingsDialog() {
     const timeoutId = window.setTimeout(compute, 0);
     return () => window.clearTimeout(timeoutId);
   }, [isOpen]);
+
+  const fetchDeezerStatus = useCallback(async () => {
+    if (!accessToken) return;
+
+    setIsDeezerBusy(true);
+    try {
+      const response = await fetch('/api/deezer/connection', {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to load Deezer connection');
+      }
+      setDeezerStatus(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load Deezer connection');
+    } finally {
+      setIsDeezerBusy(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!isOpen || !accessToken) return;
+    fetchDeezerStatus();
+  }, [fetchDeezerStatus, isOpen, accessToken]);
+
+  useEffect(() => {
+    if (!selectedFolder) return;
+    setDeezerPlaylistName((currentName) => currentName || `AlbumShelf - ${selectedFolder.name}`);
+  }, [selectedFolder]);
+
+  const handleConnectDeezer = useCallback(async () => {
+    const arl = deezerArl.trim();
+    if (!accessToken || !arl || isDeezerBusy) return;
+
+    setIsDeezerBusy(true);
+    try {
+      const response = await fetch('/api/deezer/connection', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ arl }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to connect Deezer');
+      }
+
+      setDeezerStatus(data);
+      setDeezerArl('');
+      toast.success('Deezer connected');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to connect Deezer', {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsDeezerBusy(false);
+    }
+  }, [accessToken, deezerArl, isDeezerBusy]);
+
+  const handleDisconnectDeezer = useCallback(async () => {
+    if (!accessToken || isDeezerBusy) return;
+
+    setIsDeezerBusy(true);
+    try {
+      const response = await fetch('/api/deezer/connection', {
+        method: 'DELETE',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to disconnect Deezer');
+      }
+
+      setDeezerStatus(data);
+      toast.success('Deezer disconnected');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to disconnect Deezer');
+    } finally {
+      setIsDeezerBusy(false);
+    }
+  }, [accessToken, isDeezerBusy]);
+
+  const deezerExportAlbums = React.useMemo(
+    () => selectedFolder?.albums.filter((album) => album.id.startsWith('deezer-')) ?? [],
+    [selectedFolder],
+  );
+
+  const handleExportDeezerPlaylist = useCallback(async () => {
+    if (
+      !accessToken ||
+      !selectedFolder ||
+      !deezerStatus.connected ||
+      deezerExportAlbums.length === 0 ||
+      isDeezerExporting
+    ) {
+      return;
+    }
+
+    setIsDeezerExporting(true);
+    try {
+      const response = await fetch('/api/deezer/export-playlist', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          playlistName: deezerPlaylistName.trim() || `AlbumShelf - ${selectedFolder.name}`,
+          albums: selectedFolder.albums.map((album) => ({
+            id: album.id,
+            name: album.name,
+            artist: album.artist,
+          })),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to export Deezer playlist');
+      }
+
+      toast.success('Deezer playlist created', {
+        description: `${data.trackCount} tracks exported from ${data.deezerAlbumCount} albums.`,
+      });
+
+      if (typeof data.playlistUrl === 'string') {
+        window.open(data.playlistUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to export Deezer playlist', {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsDeezerExporting(false);
+    }
+  }, [
+    accessToken,
+    deezerExportAlbums.length,
+    deezerPlaylistName,
+    deezerStatus.connected,
+    isDeezerExporting,
+    selectedFolder,
+  ]);
 
   /**
    * Performance: Accessing large state slices (like 'folders') only inside event handlers
@@ -276,6 +469,144 @@ export const SettingsDialog = memo(function SettingsDialog() {
                   )}
                 </div>
               </div>
+
+              <div className="space-y-2 border-t border-border/60 pt-3">
+                <div className="flex items-center justify-between gap-3 text-xs font-mono">
+                  <span className="text-muted-foreground">Selected collection</span>
+                  <span className="max-w-[220px] truncate">
+                    {selectedFolder?.name ?? 'None'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-[10px] font-mono text-muted-foreground">
+                  <span>Deezer albums</span>
+                  <span>
+                    {deezerExportAlbums.length}
+                    {selectedFolder ? ` / ${selectedFolder.albums.length}` : ''}
+                  </span>
+                </div>
+                <Input
+                  value={deezerPlaylistName}
+                  onChange={(event) => setDeezerPlaylistName(event.target.value)}
+                  placeholder="Playlist name"
+                  className="rounded-none font-mono text-xs"
+                  disabled={!deezerStatus.connected || isDeezerExporting}
+                />
+                <Button
+                  type="button"
+                  onClick={handleExportDeezerPlaylist}
+                  className="w-full justify-start gap-2 rounded-none"
+                  variant="outline"
+                  disabled={
+                    !accessToken ||
+                    !selectedFolderId ||
+                    !deezerStatus.connected ||
+                    deezerExportAlbums.length === 0 ||
+                    isDeezerExporting
+                  }
+                >
+                  <Upload className="h-4 w-4" />
+                  {isDeezerExporting ? 'Exporting playlist...' : 'Export Collection to Deezer Playlist'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-border pb-1">
+                <h4 className="text-sm font-medium tracking-tight">
+                  Deezer account sync
+                </h4>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 rounded-none"
+                  onClick={fetchDeezerStatus}
+                  disabled={!accessToken || isDeezerBusy}
+                  aria-label="Refresh Deezer status"
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", isDeezerBusy && "animate-spin")} />
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 text-xs font-mono">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className={cn(
+                    "uppercase",
+                    deezerStatus.connected ? "text-lime-500" : "text-muted-foreground"
+                  )}>
+                    {deezerStatus.status.replace('_', ' ')}
+                  </span>
+                </div>
+                {deezerStatus.connected && (
+                  <div className="grid gap-1 text-[10px] font-mono text-muted-foreground">
+                    <div className="flex justify-between gap-3">
+                      <span>ARL</span>
+                      <span>{deezerStatus.arlHint}</span>
+                    </div>
+                    {deezerStatus.deezerUserId && (
+                      <div className="flex justify-between gap-3">
+                        <span>Deezer ID</span>
+                        <span>{deezerStatus.deezerUserId}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Input
+                  value={deezerArl}
+                  onChange={(event) => setDeezerArl(event.target.value)}
+                  placeholder="Paste Deezer ARL"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="rounded-none font-mono text-xs"
+                  disabled={!accessToken || isDeezerBusy}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleConnectDeezer}
+                    className="justify-start gap-2 rounded-none"
+                    disabled={!accessToken || !deezerArl.trim() || isDeezerBusy}
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Connect
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleDisconnectDeezer}
+                    className="justify-start gap-2 rounded-none"
+                    variant="outline"
+                    disabled={!accessToken || !deezerStatus.connected || isDeezerBusy}
+                  >
+                    <Unlink className="h-4 w-4" />
+                    Disconnect
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium tracking-tight border-b-2 border-border pb-1">
+                Account
+              </h4>
+              <div className="space-y-2">
+                <p className="text-xs font-mono text-muted-foreground">
+                  Signed in as {userEmail || 'unknown user'}.
+                </p>
+                <Button
+                  onClick={() => onSignOut?.()}
+                  className="w-full justify-start gap-2 rounded-none"
+                  variant="outline"
+                  disabled={!onSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -421,7 +752,7 @@ export const SettingsDialog = memo(function SettingsDialog() {
               <p className="text-[10px] font-mono">
                 AlbumShelf v0.1.0
                 <br />
-                Local-first storage
+                Supabase account sync
               </p>
             </div>
           </div>

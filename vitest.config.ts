@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+(process.env as Record<string, string>).NODE_ENV = 'test';
+
 export default defineConfig({
   plugins: [react()],
   test: {

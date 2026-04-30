@@ -57,7 +57,7 @@ export function FirstTimeSetup() {
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold tracking-tighter">Welcome to AlbumShelf</DialogTitle>
           <DialogDescription className="text-base font-mono pt-2">
-            Your local-first music album organizer. Search for albums, organize them into collections, and keep everything in your browser.
+            Your synced music album organizer. Search for albums, organize them into collections, and keep everything tied to your account.
           </DialogDescription>
         </DialogHeader>
 
@@ -103,7 +103,7 @@ export function FirstTimeSetup() {
 
         <DialogFooter className="sm:justify-start">
           <p className="text-[10px] font-mono text-muted-foreground">
-            No account required. All data stays on your device.
+            Your shelf syncs to your signed-in account.
           </p>
         </DialogFooter>
       </DialogContent>

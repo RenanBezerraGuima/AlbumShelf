@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, act } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const {
   redirectToSpotifyAuthMock,
@@ -23,6 +23,19 @@ const { state, actions, useFolderStoreMock } = vi.hoisted(() => {
     spotifyToken: null as string | null,
     spotifyTokenExpiry: null as number | null,
     spotifyTokenTimestamp: null as number | null,
+    selectedFolderId: 'folder-1',
+    folders: [{
+      id: 'folder-1',
+      name: 'Favorites',
+      parentId: null,
+      albums: [
+        { id: 'deezer-10', name: 'Album A', artist: 'Artist A', imageUrl: 'https://e.test/a.jpg', totalTracks: 2 },
+        { id: 'spotify-20', name: 'Album B', artist: 'Artist B', imageUrl: 'https://e.test/b.jpg', totalTracks: 2 },
+      ],
+      subfolders: [],
+      isExpanded: true,
+    }],
+    sharedFolders: null,
   };
 
   const a = {
@@ -36,7 +49,7 @@ const { state, actions, useFolderStoreMock } = vi.hoisted(() => {
   hook.getState = () => ({
     ...s,
     ...a,
-    folders: [{ id: 'f1', name: 'A', albums: [], subfolders: [], isExpanded: true, parentId: null }],
+    folders: s.folders,
     streamingProvider: s.streamingProvider,
   });
 
@@ -49,6 +62,15 @@ vi.mock('zustand/react/shallow', () => ({
 
 vi.mock('@/lib/store', () => ({
   useFolderStore: useFolderStoreMock,
+  findFolder: (folders: any[], id: string) => {
+    const stack = [...folders];
+    while (stack.length > 0) {
+      const folder = stack.shift();
+      if (folder.id === id) return folder;
+      stack.push(...(folder.subfolders ?? []));
+    }
+    return null;
+  },
 }));
 
 vi.mock('@/lib/spotify-auth', () => ({
@@ -90,7 +112,21 @@ describe('SettingsDialog', () => {
     state.spotifyTokenExpiry = null;
     state.spotifyTokenTimestamp = null;
     state.theme = 'industrial';
+    state.selectedFolderId = 'folder-1';
 
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          connected: false,
+          status: 'not_connected',
+          arlHint: null,
+          deezerUserId: null,
+          lastVerifiedAt: null,
+          updatedAt: null,
+        }),
+        { status: 200 },
+      ),
+    ));
     generateShareUrlMock.mockReturnValue('https://example.com/share');
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -233,5 +269,158 @@ describe('SettingsDialog', () => {
     });
 
     global.FileReader = originalFileReader;
+  });
+
+  it('loads Deezer connection status with the Supabase token', async () => {
+    render(<SettingsDialog accessToken="supabase-token" />);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/deezer/connection', {
+        headers: {
+          authorization: 'Bearer supabase-token',
+        },
+      });
+    });
+    expect(await screen.findByText('not connected')).toBeInTheDocument();
+  });
+
+  it('connects Deezer with a pasted ARL', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: false,
+        status: 'not_connected',
+        arlHint: null,
+        deezerUserId: null,
+        lastVerifiedAt: null,
+        updatedAt: null,
+      }), { status: 200 }),
+    ).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: true,
+        status: 'connected',
+        arlHint: '...abcd',
+        deezerUserId: '123',
+        lastVerifiedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.000Z',
+      }), { status: 200 }),
+    );
+
+    render(<SettingsDialog accessToken="supabase-token" />);
+
+    fireEvent.change(screen.getByPlaceholderText('Paste Deezer ARL'), {
+      target: { value: 'arl-token' },
+    });
+    const connectButton = screen.getByRole('button', { name: /^Connect$/i });
+    await waitFor(() => expect(connectButton).toBeEnabled());
+    fireEvent.click(connectButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenLastCalledWith('/api/deezer/connection', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: 'Bearer supabase-token',
+        },
+        body: JSON.stringify({ arl: 'arl-token' }),
+      });
+      expect(toastSuccessMock).toHaveBeenCalledWith('Deezer connected');
+    });
+    expect(await screen.findByText('connected')).toBeInTheDocument();
+    expect(screen.getByText('...abcd')).toBeInTheDocument();
+  });
+
+  it('disconnects Deezer from settings', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: true,
+        status: 'connected',
+        arlHint: '...abcd',
+        deezerUserId: '123',
+        lastVerifiedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.000Z',
+      }), { status: 200 }),
+    ).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: false,
+        status: 'not_connected',
+        arlHint: null,
+        deezerUserId: null,
+        lastVerifiedAt: null,
+        updatedAt: null,
+      }), { status: 200 }),
+    );
+
+    render(<SettingsDialog accessToken="supabase-token" />);
+
+    const disconnectButton = await screen.findByRole('button', { name: /^Disconnect$/i });
+    await waitFor(() => expect(disconnectButton).toBeEnabled());
+    fireEvent.click(disconnectButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenLastCalledWith('/api/deezer/connection', {
+        method: 'DELETE',
+        headers: {
+          authorization: 'Bearer supabase-token',
+        },
+      });
+      expect(toastSuccessMock).toHaveBeenCalledWith('Deezer disconnected');
+    });
+  });
+
+  it('exports the selected collection to a Deezer playlist', async () => {
+    vi.stubGlobal('open', vi.fn());
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: true,
+        status: 'connected',
+        arlHint: '...abcd',
+        deezerUserId: '123',
+        lastVerifiedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.000Z',
+      }), { status: 200 }),
+    ).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        playlistId: '999',
+        playlistUrl: 'https://www.deezer.com/playlist/999',
+        playlistName: 'AlbumShelf - Favorites',
+        albumCount: 2,
+        deezerAlbumCount: 1,
+        trackCount: 2,
+        skippedAlbumCount: 1,
+      }), { status: 200 }),
+    );
+
+    render(<SettingsDialog accessToken="supabase-token" />);
+
+    const exportButton = await screen.findByRole('button', {
+      name: /Export Collection to Deezer Playlist/i,
+    });
+    await waitFor(() => expect(exportButton).toBeEnabled());
+    fireEvent.click(exportButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenLastCalledWith('/api/deezer/export-playlist', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: 'Bearer supabase-token',
+        },
+        body: JSON.stringify({
+          playlistName: 'AlbumShelf - Favorites',
+          albums: [
+            { id: 'deezer-10', name: 'Album A', artist: 'Artist A' },
+            { id: 'spotify-20', name: 'Album B', artist: 'Artist B' },
+          ],
+        }),
+      });
+      expect(toastSuccessMock).toHaveBeenCalledWith('Deezer playlist created', {
+        description: '2 tracks exported from 1 albums.',
+      });
+      expect(window.open).toHaveBeenCalledWith(
+        'https://www.deezer.com/playlist/999',
+        '_blank',
+        'noopener,noreferrer',
+      );
+    });
   });
 });
