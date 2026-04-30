@@ -66,6 +66,36 @@ export async function deezerGatewayRequest<T>(
   return response.json();
 }
 
+export async function deezerPublicApiRequest<T>(
+  arl: string,
+  path: string,
+  params: Record<string, string> = {},
+  fetchImpl: typeof fetch = fetch,
+): Promise<T> {
+  const normalizedArl = normalizeArl(arl);
+  const url = new URL(`https://api.deezer.com${path}`);
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  const response = await fetchImpl(url.toString(), {
+    method: 'GET',
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      cookie: `arl=${normalizedArl}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new DeezerArlValidationError('Deezer public API request failed.');
+  }
+
+  return response.json();
+}
+
 export async function verifyDeezerArl(
   arl: string,
   fetchImpl: typeof fetch = fetch,

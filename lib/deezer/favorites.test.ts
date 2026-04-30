@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getFavoriteAlbums, getAllFavoriteAlbums } from './favorites';
-import { deezerGatewayRequest } from './web-client';
+import { deezerGatewayRequest, deezerPublicApiRequest, DeezerArlValidationError } from './web-client';
 
 vi.mock('./web-client', () => ({
   deezerGatewayRequest: vi.fn(),
+  deezerPublicApiRequest: vi.fn(),
   DeezerArlValidationError: class extends Error {
     constructor(message: string) {
       super(message);
@@ -128,6 +129,44 @@ describe('Deezer favorites', () => {
       );
       expect(result.albums[0].name).toBe('Fallback Album');
     });
+
+    it('falls back to public API if internal gateway methods fail', async () => {
+      const mockPublicPayload = {
+        data: [
+          {
+            id: '789',
+            title: 'Public API Album',
+            artist: { name: 'Public Artist' },
+            cover_medium: 'https://example.com/public.jpg',
+            release_date: '2021-05-05',
+            nb_tracks: 15,
+          },
+        ],
+        total: 1,
+      };
+
+      vi.mocked(deezerGatewayRequest).mockRejectedValue(new Error('Gateway failed'));
+      vi.mocked(deezerPublicApiRequest).mockResolvedValue(mockPublicPayload);
+
+      const result = await getFavoriteAlbums('fake-arl', 'fake-token', '12345');
+
+      expect(deezerGatewayRequest).toHaveBeenCalledTimes(2);
+      expect(deezerPublicApiRequest).toHaveBeenCalledWith(
+        'fake-arl',
+        '/user/12345/albums',
+        { index: '0', limit: '100' }
+      );
+
+      expect(result.albums).toHaveLength(1);
+      expect(result.albums[0]).toMatchObject({
+        id: 'deezer-789',
+        name: 'Public API Album',
+        artist: 'Public Artist',
+        imageUrl: 'https://example.com/public.jpg',
+        releaseDate: '2021-05-05',
+        totalTracks: 15,
+      });
+    });
   });
 
   describe('getAllFavoriteAlbums', () => {
@@ -185,6 +224,9 @@ describe('Deezer favorites', () => {
       vi.mocked(deezerGatewayRequest).mockResolvedValue({
         error: { code: 500, message: 'Object error' },
       });
+      vi.mocked(deezerPublicApiRequest).mockRejectedValue(
+        new DeezerArlValidationError('Deezer favorite albums lookup failed: {"code":500,"message":"Object error"}')
+      );
 
       await expect(getFavoriteAlbums('arl', 'token', '123')).rejects.toThrow(
         /Deezer favorite albums lookup failed: {"code":500,"message":"Object error"}/
