@@ -9,8 +9,9 @@ export interface DeezerFavoriteAlbumsResult {
 
 function assertNoDeezerError(payload: any, action: string) {
   const error = payload?.error;
-  if (error && ((Array.isArray(error) && error.length > 0) || !Array.isArray(error))) {
-    throw new DeezerArlValidationError(`Deezer ${action} failed.`);
+  if (error && (typeof error === 'string' || (Array.isArray(error) && error.length > 0) || (typeof error === 'object' && Object.keys(error).length > 0))) {
+    const detail = typeof error === 'string' ? error : JSON.stringify(error);
+    throw new DeezerArlValidationError(`Deezer ${action} failed: ${detail}`);
   }
 }
 
@@ -19,13 +20,16 @@ export async function getFavoriteAlbums(
   apiToken: string,
   deezerUserId: string,
   start = 0,
-  nb = 500,
+  nb = 100,
 ): Promise<DeezerFavoriteAlbumsResult> {
+  // Use user_id as number if it looks like one, but keep as string if not
+  const userIdParam = /^\d+$/.test(deezerUserId) ? parseInt(deezerUserId, 10) : deezerUserId;
+
   const payload = await deezerGatewayRequest<any>(
     arl,
     'album.getUserFavorites',
     {
-      user_id: deezerUserId,
+      user_id: userIdParam,
       start,
       nb,
     },
@@ -63,7 +67,7 @@ export async function getAllFavoriteAlbums(
 ): Promise<Album[]> {
   const allAlbums: Album[] = [];
   let start = 0;
-  const nb = 500;
+  const nb = 100;
   let hasMore = true;
 
   while (hasMore) {
