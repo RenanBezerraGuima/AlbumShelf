@@ -4,10 +4,9 @@ import {
   getEncryptedConnectionArl,
   DeezerConnectionAuthError,
 } from '@/lib/deezer/connection-store';
-import { decryptArl } from '@/lib/deezer/arl-crypto';
+import { decryptArl, DeezerArlCryptoError } from '@/lib/deezer/arl-crypto';
 import { verifyDeezerArl, DeezerArlValidationError } from '@/lib/deezer/web-client';
 import { getAllFavoriteAlbums } from '@/lib/deezer/favorites';
-import { DeezerArlCryptoError } from '@/lib/deezer/arl-crypto';
 
 export const runtime = 'nodejs';
 

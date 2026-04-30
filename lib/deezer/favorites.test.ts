@@ -41,7 +41,7 @@ describe('Deezer favorites', () => {
 
       expect(deezerGatewayRequest).toHaveBeenCalledWith(
         'fake-arl',
-        'album.getUserFavorites',
+        'user.getAlbums',
         { user_id: 12345, start: 0, nb: 100 },
         'fake-token'
       );
@@ -96,6 +96,38 @@ describe('Deezer favorites', () => {
       expect(result.albums).toEqual([]);
       expect(result.total).toBe(0);
     });
+
+    it('falls back to album.getUserFavorites if user.getAlbums fails', async () => {
+      const mockPayload = {
+        results: {
+          data: [{ ALB_ID: '123', ALB_TITLE: 'Fallback Album' }],
+          total: 1,
+        },
+      };
+
+      vi.mocked(deezerGatewayRequest)
+        .mockRejectedValueOnce(new Error('user.getAlbums failed'))
+        .mockResolvedValueOnce(mockPayload);
+
+      const result = await getFavoriteAlbums('fake-arl', 'fake-token', '12345');
+
+      expect(deezerGatewayRequest).toHaveBeenCalledTimes(2);
+      expect(deezerGatewayRequest).toHaveBeenNthCalledWith(
+        1,
+        'fake-arl',
+        'user.getAlbums',
+        { user_id: 12345, start: 0, nb: 100 },
+        'fake-token'
+      );
+      expect(deezerGatewayRequest).toHaveBeenNthCalledWith(
+        2,
+        'fake-arl',
+        'album.getUserFavorites',
+        { user_id: 12345, start: 0, nb: 100 },
+        'fake-token'
+      );
+      expect(result.albums[0].name).toBe('Fallback Album');
+    });
   });
 
   describe('getAllFavoriteAlbums', () => {
@@ -133,6 +165,30 @@ describe('Deezer favorites', () => {
       const albums = await getAllFavoriteAlbums('fake-arl', 'fake-token', 'user-id');
       expect(deezerGatewayRequest).toHaveBeenCalledTimes(1);
       expect(albums).toHaveLength(0);
+    });
+
+    it('respects safety limit of 10000 albums', async () => {
+      vi.mocked(deezerGatewayRequest).mockResolvedValue({
+        results: {
+          data: Array(100).fill({ ALB_ID: '1', ALB_TITLE: 'A', ART_NAME: 'B' }),
+          total: 20000,
+        },
+      });
+
+      const albums = await getAllFavoriteAlbums('fake-arl', 'fake-token', 'user-id');
+      expect(albums.length).toBe(10000);
+    });
+  });
+
+  describe('assertNoDeezerError', () => {
+    it('handles object errors', async () => {
+      vi.mocked(deezerGatewayRequest).mockResolvedValue({
+        error: { code: 500, message: 'Object error' },
+      });
+
+      await expect(getFavoriteAlbums('arl', 'token', '123')).rejects.toThrow(
+        /Deezer favorite albums lookup failed: {"code":500,"message":"Object error"}/
+      );
     });
   });
 });

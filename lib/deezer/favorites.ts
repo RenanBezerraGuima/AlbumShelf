@@ -25,18 +25,33 @@ export async function getFavoriteAlbums(
   // Use user_id as number if it looks like one, but keep as string if not
   const userIdParam = /^\d+$/.test(deezerUserId) ? parseInt(deezerUserId, 10) : deezerUserId;
 
-  const payload = await deezerGatewayRequest<any>(
-    arl,
-    'album.getUserFavorites',
-    {
-      user_id: userIdParam,
-      start,
-      nb,
-    },
-    apiToken,
-  );
-
-  assertNoDeezerError(payload, 'favorite albums lookup');
+  let payload: any;
+  try {
+    payload = await deezerGatewayRequest<any>(
+      arl,
+      'user.getAlbums',
+      {
+        user_id: userIdParam,
+        start,
+        nb,
+      },
+      apiToken,
+    );
+    assertNoDeezerError(payload, 'user albums lookup');
+  } catch (error) {
+    console.warn('Deezer user.getAlbums failed, falling back to album.getUserFavorites', error);
+    payload = await deezerGatewayRequest<any>(
+      arl,
+      'album.getUserFavorites',
+      {
+        user_id: userIdParam,
+        start,
+        nb,
+      },
+      apiToken,
+    );
+    assertNoDeezerError(payload, 'favorite albums lookup');
+  }
 
   const data = payload?.results?.data;
   const total = Number(payload?.results?.total) || 0;

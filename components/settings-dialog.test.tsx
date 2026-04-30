@@ -423,4 +423,47 @@ describe('SettingsDialog', () => {
       );
     });
   });
+
+  it('imports Deezer favorites when the button is clicked', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        connected: true,
+        status: 'connected',
+        arlHint: '...abcd',
+        deezerUserId: '123',
+        lastVerifiedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.000Z',
+      }), { status: 200 }),
+    ).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        albums: [{ id: 'deezer-favorites-1', name: 'Imported Album', artist: 'Deezer Artist', imageUrl: '', totalTracks: 10 }],
+      }), { status: 200 }),
+    );
+
+    render(<SettingsDialog accessToken="supabase-token" />);
+
+    const importButton = await screen.findByRole('button', {
+      name: /Import Hearted Albums/i,
+    });
+    await waitFor(() => expect(importButton).toBeEnabled());
+    fireEvent.click(importButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenLastCalledWith('/api/deezer/favorites', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer supabase-token',
+        },
+      });
+      expect(actions.importFolders).toHaveBeenCalledWith([
+        expect.objectContaining({
+          name: 'Deezer Favorites',
+          albums: [expect.objectContaining({ id: 'deezer-favorites-1' })],
+        }),
+      ]);
+      expect(toastSuccessMock).toHaveBeenCalledWith('Deezer favorites imported', {
+        description: '1 albums added to "Deezer Favorites" collection.',
+      });
+    });
+  });
 });
