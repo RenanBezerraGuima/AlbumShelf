@@ -1,5 +1,5 @@
-import type { Album, Folder, Theme, AlbumViewMode, StreamingProvider, GeistFont, AlbumDetails, Track } from './types';
-import { THEMES, VIEW_MODES, STREAMING_PROVIDERS, GEIST_FONTS } from './types';
+import type { Album, Folder, Theme, AlbumViewMode, SortOrder, StreamingProvider, GeistFont, AlbumDetails, Track } from './types';
+import { THEMES, VIEW_MODES, SORT_ORDERS, STREAMING_PROVIDERS, GEIST_FONTS } from './types';
 
 const ALLOWED_PROTOCOLS = ['https:'];
 export const MAX_URL_LENGTH = 2048;
@@ -152,6 +152,13 @@ export function isValidTheme(theme: any): theme is Theme {
  */
 export function isValidViewMode(mode: any): mode is AlbumViewMode {
   return typeof mode === 'string' && VIEW_MODES.includes(mode as AlbumViewMode);
+}
+
+/**
+ * Validate if a string is a valid SortOrder.
+ */
+export function isValidSortOrder(order: any): order is SortOrder {
+  return typeof order === 'string' && SORT_ORDERS.includes(order as SortOrder);
 }
 
 /**
@@ -554,6 +561,7 @@ export function sanitizeFolder(
   const name = folder.name ? (folder.name === 'Untitled' ? 'Untitled' : sanitizeText(folder.name, MAX_NAME_LENGTH)) : 'Untitled';
   const isExpanded = Boolean(folder.isExpanded);
   const viewMode = isValidViewMode(folder.viewMode) ? folder.viewMode : 'grid';
+  const sortOrder = isValidSortOrder(folder.sortOrder) ? folder.sortOrder : 'manual';
 
   let changed = false;
   const albums: Album[] = [];
@@ -605,7 +613,8 @@ export function sanitizeFolder(
     folder.name === name &&
     folder.parentId === parentId &&
     folder.isExpanded === isExpanded &&
-    folder.viewMode === viewMode
+    folder.viewMode === viewMode &&
+    folder.sortOrder === sortOrder
   ) {
     return folder as Folder;
   }
@@ -618,6 +627,7 @@ export function sanitizeFolder(
     subfolders,
     isExpanded,
     viewMode,
+    sortOrder,
   };
 }
 
