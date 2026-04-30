@@ -75,6 +75,7 @@ export const SettingsDialog = memo(function SettingsDialog({
   const [isDeezerBusy, setIsDeezerBusy] = useState(false);
   const [deezerPlaylistName, setDeezerPlaylistName] = useState('');
   const [isDeezerExporting, setIsDeezerExporting] = useState(false);
+  const [isDeezerImporting, setIsDeezerImporting] = useState(false);
 
   /**
    * Performance: Granular subscriptions and useShallow prevent the SettingsDialog
@@ -301,6 +302,53 @@ export const SettingsDialog = memo(function SettingsDialog({
     isDeezerExporting,
     selectedFolder,
   ]);
+
+  const handleImportDeezerFavorites = useCallback(async () => {
+    if (!accessToken || !deezerStatus.connected || isDeezerImporting) return;
+
+    setIsDeezerImporting(true);
+    try {
+      const response = await fetch('/api/deezer/favorites', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to import Deezer favorites');
+      }
+
+      const albums = Array.isArray(data.albums) ? data.albums : [];
+      if (albums.length === 0) {
+        toast.info('No favorite albums found on Deezer.');
+        return;
+      }
+
+      const store = useFolderStore.getState();
+
+      store.importFolders([{
+        id: crypto.randomUUID(),
+        name: 'Deezer Favorites',
+        parentId: null,
+        albums: albums,
+        subfolders: [],
+        isExpanded: true,
+        viewMode: 'grid',
+      }]);
+
+      toast.success('Deezer favorites imported', {
+        description: `${albums.length} albums added to "Deezer Favorites" collection.`,
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to import Deezer favorites', {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsDeezerImporting(false);
+    }
+  }, [accessToken, deezerStatus.connected, isDeezerImporting]);
 
   /**
    * Performance: Accessing large state slices (like 'folders') only inside event handlers
@@ -586,6 +634,19 @@ export const SettingsDialog = memo(function SettingsDialog({
                     Disconnect
                   </Button>
                 </div>
+              </div>
+
+              <div className="space-y-2 border-t border-border/60 pt-3">
+                <Button
+                  type="button"
+                  onClick={handleImportDeezerFavorites}
+                  className="w-full justify-start gap-2 rounded-none"
+                  variant="outline"
+                  disabled={!accessToken || !deezerStatus.connected || isDeezerImporting}
+                >
+                  <Download className={cn("h-4 w-4", isDeezerImporting && "animate-pulse")} />
+                  {isDeezerImporting ? 'Importing favorites...' : 'Import Hearted Albums'}
+                </Button>
               </div>
             </div>
 
