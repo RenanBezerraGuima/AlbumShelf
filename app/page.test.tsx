@@ -32,6 +32,27 @@ vi.mock('@/hooks/use-mobile', () => ({
 
 vi.mock('@/lib/store', () => ({
   useFolderStore: useFolderStoreMock,
+  selectSyncState: vi.fn((state) => state),
+  applySyncState: vi.fn(),
+  resetSyncState: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase', () => ({
+  isSupabaseConfigured: vi.fn(() => true),
+  getSupabaseBrowserClient: vi.fn(() => ({
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: {
+            user: { id: 'user-id', email: 'test@example.com' },
+            access_token: 'token',
+          },
+        },
+        error: null,
+      }),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
+  })),
 }));
 
 vi.mock('@/lib/share-service', () => ({
@@ -40,6 +61,12 @@ vi.mock('@/lib/share-service', () => ({
 
 vi.mock('@/lib/hydration-service', () => ({
   hydrateAlbums: (...args: any[]) => hydrateAlbumsMock(...args),
+}));
+
+vi.mock('@/lib/user-library', () => ({
+  loadUserLibrary: vi.fn().mockResolvedValue({ folders: [] }),
+  saveUserLibrary: vi.fn(),
+  createSeedState: vi.fn((state) => state),
 }));
 
 vi.mock('@/components/folder-tree', () => ({ FolderTree: () => <div>FolderTree</div> }));
@@ -83,12 +110,12 @@ describe('Home page', () => {
     window.history.replaceState({}, '', 'http://localhost:3000/AlbumShelf/');
   });
 
-  it('renders desktop layout and does not hydrate without share payload', () => {
+  it('renders desktop layout and does not hydrate without share payload', async () => {
     useIsMobileMock.mockReturnValue(false);
 
     render(<Home />);
 
-    expect(screen.getByText('Search Desktop')).toBeInTheDocument();
+    expect(await screen.findByText('Search Desktop')).toBeInTheDocument();
     expect(decompressDataMock).not.toHaveBeenCalled();
   });
 
@@ -112,7 +139,7 @@ describe('Home page', () => {
 
     render(<Home />);
 
-    fireEvent.click(screen.getByText('Mobile Header'));
+    fireEvent.click(await screen.findByText('Mobile Header'));
     expect(screen.getByTestId('sheet')).toHaveAttribute('data-open', 'true');
 
     await waitFor(() => {
