@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus, Share2, Check } from 'lucide-react';
+import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus, Share2, Check, ArrowUpDown, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
 import { generateShareUrl } from '@/lib/share-service';
 import { preloadAlbumImages, registerAlbumImageServiceWorker } from '@/lib/album-image-cache';
@@ -128,6 +135,9 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
 });
 
 export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'manual' | 'artist' | 'title'>('manual');
+
   // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const hasFolders = useFolderStore(state => (state.sharedFolders ?? state.folders).length > 0);
@@ -142,6 +152,28 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
   const setFolderViewMode = useFolderStore(state => state.setFolderViewMode);
+
+  const filteredAndSortedAlbums = useMemo(() => {
+    if (!selectedFolder) return [];
+    let albums = [...selectedFolder.albums];
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      albums = albums.filter(
+        (album) =>
+          album.name.toLowerCase().includes(query) ||
+          album.artist.toLowerCase().includes(query)
+      );
+    }
+
+    if (sortBy === 'artist') {
+      albums.sort((a, b) => a.artist.localeCompare(b.artist));
+    } else if (sortBy === 'title') {
+      albums.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return albums;
+  }, [selectedFolder, searchQuery, sortBy]);
 
   const albumViewMode = selectedFolder?.viewMode || 'grid';
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -183,8 +215,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   }, []);
 
   useEffect(() => {
-    const albums = selectedFolder?.albums ?? [];
-    if (!selectedFolderId || albums.length === 0) {
+    if (!selectedFolderId || filteredAndSortedAlbums.length === 0) {
       setCoverWarmupProgress(null);
       return;
     }
@@ -192,12 +223,12 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     const requestId = ++warmupSequenceRef.current;
     setCoverWarmupProgress({
       current: 0,
-      total: albums.length,
+      total: filteredAndSortedAlbums.length,
       folderId: selectedFolderId,
     });
 
     void preloadAlbumImages(
-      albums.map((album) => album.imageUrl),
+      filteredAndSortedAlbums.map((album) => album.imageUrl),
       isMobile ? PRELOAD_IMAGE_COUNT_MOBILE : PRELOAD_IMAGE_COUNT_DESKTOP,
       (current, total) => {
         if (warmupSequenceRef.current !== requestId) return;
@@ -272,7 +303,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   }, [albumViewMode, isMobile, selectedFolderId]);
 
   const virtualGrid = useMemo(() => {
-    const albums = selectedFolder?.albums ?? [];
+    const albums = filteredAndSortedAlbums;
     if (albums.length === 0) {
       return {
         totalHeight: 0,
@@ -355,35 +386,47 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Performance: Handlers are stabilized with useCallback and use getState()
   // for store data to prevent re-rendering memoized DraggableAlbumItems.
   const handleDragStart = useCallback((e: React.DragEvent, album: Album, index: number) => {
+    // Disable drag and drop when filtered or sorted
+    if (searchQuery.trim() || sortBy !== 'manual') {
+      e.preventDefault();
+      return;
+    }
+
     const { selectedFolderId, setDraggedAlbum } = useFolderStore.getState();
     if (!selectedFolderId) return;
     setDraggedAlbum(album, selectedFolderId, index);
     e.dataTransfer.setData('text/plain', album.id);
     e.dataTransfer.effectAllowed = 'move';
-  }, []);
+  }, [searchQuery, sortBy]);
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
+    // Disable drag and drop when filtered or sorted
+    if (searchQuery.trim() || sortBy !== 'manual') return;
+
     const { draggedAlbumIndex } = useFolderStore.getState();
     // Optimization: Only update state if the drop target has actually changed.
     // This prevents redundant re-renders during high-frequency dragOver events.
     if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
       setDropIndex(prev => prev !== index ? index : prev);
     }
-  }, []);
+  }, [searchQuery, sortBy]);
 
   const handleDragLeave = useCallback(() => {
     setDropIndex(null);
   }, []);
 
   const handleDrop = useCallback((index: number) => {
+    // Disable drag and drop when filtered or sorted
+    if (searchQuery.trim() || sortBy !== 'manual') return;
+
     const { selectedFolderId, draggedAlbumIndex, reorderAlbum, setDraggedAlbum } = useFolderStore.getState();
     if (selectedFolderId && draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
       reorderAlbum(selectedFolderId, draggedAlbumIndex, index);
     }
     setDraggedAlbum(null, null, null);
     setDropIndex(null);
-  }, []);
+  }, [searchQuery, sortBy]);
 
   const handleDragEnd = useCallback(() => {
     useFolderStore.getState().setDraggedAlbum(null, null, null);
@@ -487,6 +530,69 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           </div>
 
           <div className="flex items-center gap-1">
+            <div className="relative group mr-2">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input
+                placeholder="Search collection..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-6 w-[150px] md:w-[200px] pl-7 pr-7 text-[10px] bg-background border-border focus:ring-0 focus:border-primary transition-all rounded-none"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:text-primary transition-colors"
+                  aria-label="Clear search query"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      className={cn(
+                        'h-auto py-0.5 px-2 rounded-none border border-border transition-all',
+                        sortBy !== 'manual' && 'bg-primary text-primary-foreground border-primary'
+                      )}
+                      aria-label="Sort albums"
+                    >
+                      <ArrowUpDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px] font-mono uppercase tracking-widest border-2 border-border brutalist-shadow-sm rounded-none">
+                  Sort albums
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" className="rounded-none border-2 border-border brutalist-shadow font-mono text-[10px] uppercase tracking-widest p-0">
+                <DropdownMenuItem
+                  onClick={() => setSortBy('manual')}
+                  className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'manual' && "bg-accent")}
+                >
+                  Manual
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSortBy('artist')}
+                  className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'artist' && "bg-accent")}
+                >
+                  By Artist
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSortBy('title')}
+                  className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'title' && "bg-accent")}
+                >
+                  By Title
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -543,7 +649,8 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           </div>
         </div>
         <p className="text-[10px] tracking-widest text-primary font-medium" style={{ fontFamily: 'var(--font-body)' }}>
-          {selectedFolder.albums.length} album{selectedFolder.albums.length !== 1 ? 's' : ''} // Catalog data
+          {filteredAndSortedAlbums.length} album{filteredAndSortedAlbums.length !== 1 ? 's' : ''} // Catalog data
+          {searchQuery && ` (filtered from ${selectedFolder.albums.length})`}
         </p>
       </div>
 
@@ -612,8 +719,21 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
             </div>
           </div>
         </div>
+      ) : filteredAndSortedAlbums.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground tracking-tighter" style={{ fontFamily: 'var(--font-body)' }}>
+          <Filter className="h-12 w-12 mb-3 opacity-20" />
+          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-display)' }}>No albums match your search</p>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => setSearchQuery('')}
+            className="text-xs text-primary mt-1"
+          >
+            Clear search
+          </Button>
+        </div>
       ) : albumViewMode === 'canvas' ? (
-        <AlbumCanvas albums={selectedFolder.albums} folderId={selectedFolderId} />
+        <AlbumCanvas albums={filteredAndSortedAlbums} folderId={selectedFolderId} />
       ) : (
         <div
           ref={gridViewportRef}
