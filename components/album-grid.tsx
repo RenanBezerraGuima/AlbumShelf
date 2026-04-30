@@ -144,9 +144,9 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const hasFolders = useFolderStore(state => (state.sharedFolders ?? state.folders).length > 0);
   const streamingProvider = useFolderStore(state => state.streamingProvider);
-  const selectedFolder = useFolderStore(useCallback(state =>
+  const selectedFolder = useFolderStore(state =>
     state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
-  , []));
+  );
 
   const breadcrumb = useFolderStore(
     useShallow(state => state.selectedFolderId ? getBreadcrumb(state.sharedFolders ?? state.folders, state.selectedFolderId) : [])
@@ -187,9 +187,10 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
       );
     }
 
-    if (sortBy === 'artist') {
+    const currentSortBy = selectedFolder.sortOrder || 'manual';
+    if (currentSortBy === 'artist') {
       albums.sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
-    } else if (sortBy === 'title') {
+    } else if (currentSortBy === 'title') {
       albums.sort((a, b) => a.name.localeCompare(b.name) || a.artist.localeCompare(b.artist));
     }
 
@@ -406,12 +407,6 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
   // Performance: Handlers are stabilized with useCallback and use Refs/getState()
   // to prevent re-rendering memoized DraggableAlbumItems.
   const handleDragStart = useCallback((e: React.DragEvent, album: Album, index: number) => {
-    // Disable drag and drop when filtered or sorted
-    if (debouncedQueryRef.current.trim() || sortByRef.current !== 'manual') {
-      e.preventDefault();
-      return;
-    }
-
     const { selectedFolderId, setDraggedAlbum } = useFolderStore.getState();
     if (!selectedFolderId) return;
     setDraggedAlbum(album, selectedFolderId, index);
