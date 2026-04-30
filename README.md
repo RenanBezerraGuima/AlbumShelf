@@ -1,4 +1,4 @@
-# ALBUMSHELF [VER. 1.0.0]
+# ALBUMSHELF
 > HIGH-SPEED LOCAL-FIRST ALBUM ORGANIZATION SYSTEM.
 
 AlbumShelf is a brutalist, industrial-grade web application designed for collectors who value speed, privacy, and data ownership. Search the global catalog, organize your library into hierarchical collections, and keep your data exactly where it belongs: with you.
