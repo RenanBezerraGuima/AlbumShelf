@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus, Share2, Check, ArrowUpDown, Filter, X } from 'lucide-react';
+import { Music, Grid2X2, Orbit, Search, Menu, FolderPlus, Share2, Check, ArrowUpDown, Filter, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,9 @@ import { useFolderStore, findFolder, getBreadcrumb } from '@/lib/store';
 import { generateShareUrl } from '@/lib/share-service';
 import { preloadAlbumImages, registerAlbumImageServiceWorker } from '@/lib/album-image-cache';
 import { AlbumCard } from './album-card';
-import type { Album } from '@/lib/types';
+import type { Album, SortOrder } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 const AlbumCanvas = dynamic(
   () => import('./album-canvas').then((mod) => mod.AlbumCanvas),
@@ -135,16 +136,17 @@ const DraggableAlbumItem = React.memo(function DraggableAlbumItem({
 });
 
 export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'manual' | 'artist' | 'title'>('manual');
+  // Use local state for the UI input to keep typing fast
+  const [searchInput, setSearchInput] = useState('');
+  // Use debounced value for the actual filtering logic
+  const debouncedQuery = useDebouncedValue(searchInput, 200);
 
-  // Use granular selectors to avoid re-renders when unrelated parts of the store change
   const selectedFolderId = useFolderStore(state => state.selectedFolderId);
   const hasFolders = useFolderStore(state => (state.sharedFolders ?? state.folders).length > 0);
   const streamingProvider = useFolderStore(state => state.streamingProvider);
-  const selectedFolder = useFolderStore(useCallback(state =>
+  const selectedFolder = useFolderStore(state =>
     state.selectedFolderId ? findFolder(state.sharedFolders ?? state.folders, state.selectedFolderId) : null
-  , []));
+  );
 
   const breadcrumb = useFolderStore(
     useShallow(state => state.selectedFolderId ? getBreadcrumb(state.sharedFolders ?? state.folders, state.selectedFolderId) : [])
@@ -152,13 +154,32 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const draggedAlbumIndex = useFolderStore(state => state.draggedAlbumIndex);
   const setFolderViewMode = useFolderStore(state => state.setFolderViewMode);
+  const setFolderSortOrder = useFolderStore(state => state.setFolderSortOrder);
+
+  const albumViewMode = selectedFolder?.viewMode || 'grid';
+  const sortBy = selectedFolder?.sortOrder || 'manual';
+
+  // Refs to keep drag handlers stable and avoid re-rendering 100s of items on every keystroke
+  const debouncedQueryRef = useRef(debouncedQuery);
+  const sortByRef = useRef(sortBy);
+
+  useEffect(() => {
+    debouncedQueryRef.current = debouncedQuery;
+    sortByRef.current = sortBy;
+  }, [debouncedQuery, sortBy]);
+
+  // Reset search input when folder changes to avoid cross-pollination
+  useEffect(() => {
+    setSearchInput('');
+  }, [selectedFolderId]);
 
   const filteredAndSortedAlbums = useMemo(() => {
     if (!selectedFolder) return [];
     let albums = [...selectedFolder.albums];
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    const trimmedQuery = debouncedQuery.trim();
+    if (trimmedQuery) {
+      const query = trimmedQuery.toLowerCase();
       albums = albums.filter(
         (album) =>
           album.name.toLowerCase().includes(query) ||
@@ -166,16 +187,16 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
       );
     }
 
-    if (sortBy === 'artist') {
-      albums.sort((a, b) => a.artist.localeCompare(b.artist));
-    } else if (sortBy === 'title') {
-      albums.sort((a, b) => a.name.localeCompare(b.name));
+    const currentSortBy = selectedFolder.sortOrder || 'manual';
+    if (currentSortBy === 'artist') {
+      albums.sort((a, b) => a.artist.localeCompare(b.artist) || a.name.localeCompare(b.name));
+    } else if (currentSortBy === 'title') {
+      albums.sort((a, b) => a.name.localeCompare(b.name) || a.artist.localeCompare(b.artist));
     }
 
     return albums;
-  }, [selectedFolder, searchQuery, sortBy]);
+  }, [selectedFolder?.albums, selectedFolder?.sortOrder, debouncedQuery]);
 
-  const albumViewMode = selectedFolder?.viewMode || 'grid';
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [isShared, setIsShared] = useState(false);
 
@@ -248,7 +269,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
       if (warmupSequenceRef.current !== requestId) return;
       setCoverWarmupProgress(null);
     });
-  }, [isMobile, selectedFolder?.albums, selectedFolderId]);
+  }, [isMobile, selectedFolderId, filteredAndSortedAlbums]);
 
   useEffect(() => {
     if (albumViewMode !== 'grid') return;
@@ -354,7 +375,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     }
 
     return { totalHeight, visibleAlbums };
-  }, [gridMetrics, isMobile, selectedFolder?.albums]);
+  }, [gridMetrics, isMobile, filteredAndSortedAlbums]);
 
   const eagerImageCount = isMobile ? EAGER_IMAGE_COUNT_MOBILE : EAGER_IMAGE_COUNT_DESKTOP;
   const isWarmingAlbumArt = coverWarmupProgress?.folderId === selectedFolderId;
@@ -383,26 +404,20 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedFolderId, handleShare]);
 
-  // Performance: Handlers are stabilized with useCallback and use getState()
-  // for store data to prevent re-rendering memoized DraggableAlbumItems.
+  // Performance: Handlers are stabilized with useCallback and use Refs/getState()
+  // to prevent re-rendering memoized DraggableAlbumItems.
   const handleDragStart = useCallback((e: React.DragEvent, album: Album, index: number) => {
-    // Disable drag and drop when filtered or sorted
-    if (searchQuery.trim() || sortBy !== 'manual') {
-      e.preventDefault();
-      return;
-    }
-
     const { selectedFolderId, setDraggedAlbum } = useFolderStore.getState();
     if (!selectedFolderId) return;
     setDraggedAlbum(album, selectedFolderId, index);
     e.dataTransfer.setData('text/plain', album.id);
     e.dataTransfer.effectAllowed = 'move';
-  }, [searchQuery, sortBy]);
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     // Disable drag and drop when filtered or sorted
-    if (searchQuery.trim() || sortBy !== 'manual') return;
+    if (debouncedQueryRef.current.trim() || sortByRef.current !== 'manual') return;
 
     const { draggedAlbumIndex } = useFolderStore.getState();
     // Optimization: Only update state if the drop target has actually changed.
@@ -410,7 +425,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     if (draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
       setDropIndex(prev => prev !== index ? index : prev);
     }
-  }, [searchQuery, sortBy]);
+  }, []);
 
   const handleDragLeave = useCallback(() => {
     setDropIndex(null);
@@ -418,7 +433,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
   const handleDrop = useCallback((index: number) => {
     // Disable drag and drop when filtered or sorted
-    if (searchQuery.trim() || sortBy !== 'manual') return;
+    if (debouncedQueryRef.current.trim() || sortByRef.current !== 'manual') return;
 
     const { selectedFolderId, draggedAlbumIndex, reorderAlbum, setDraggedAlbum } = useFolderStore.getState();
     if (selectedFolderId && draggedAlbumIndex !== null && draggedAlbumIndex !== index) {
@@ -426,7 +441,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
     }
     setDraggedAlbum(null, null, null);
     setDropIndex(null);
-  }, [searchQuery, sortBy]);
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     useFolderStore.getState().setDraggedAlbum(null, null, null);
@@ -531,17 +546,29 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
 
           <div className="flex items-center gap-1">
             <div className="relative group mr-2">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center">
+                {searchInput !== debouncedQuery ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                ) : (
+                  <Search className="h-3 w-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                )}
+              </div>
               <Input
                 placeholder="Search collection..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setSearchInput('');
+                    e.currentTarget.blur();
+                  }
+                }}
                 className="h-6 w-[150px] md:w-[200px] pl-7 pr-7 text-[10px] bg-background border-border focus:ring-0 focus:border-primary transition-all rounded-none"
                 style={{ fontFamily: 'var(--font-mono)' }}
               />
-              {searchQuery && (
+              {searchInput && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setSearchInput('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:text-primary transition-colors"
                   aria-label="Clear search query"
                 >
@@ -573,19 +600,19 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
               </Tooltip>
               <DropdownMenuContent align="end" className="rounded-none border-2 border-border brutalist-shadow font-mono text-[10px] uppercase tracking-widest p-0">
                 <DropdownMenuItem
-                  onClick={() => setSortBy('manual')}
+                  onClick={() => setFolderSortOrder(selectedFolderId, 'manual')}
                   className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'manual' && "bg-accent")}
                 >
                   Manual
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setSortBy('artist')}
+                  onClick={() => setFolderSortOrder(selectedFolderId, 'artist')}
                   className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'artist' && "bg-accent")}
                 >
                   By Artist
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setSortBy('title')}
+                  onClick={() => setFolderSortOrder(selectedFolderId, 'title')}
                   className={cn("rounded-none focus:bg-primary focus:text-primary-foreground cursor-pointer px-3 py-2", sortBy === 'title' && "bg-accent")}
                 >
                   By Title
@@ -650,7 +677,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
         </div>
         <p className="text-[10px] tracking-widest text-primary font-medium" style={{ fontFamily: 'var(--font-body)' }}>
           {filteredAndSortedAlbums.length} album{filteredAndSortedAlbums.length !== 1 ? 's' : ''} // Catalog data
-          {searchQuery && ` (filtered from ${selectedFolder.albums.length})`}
+          {debouncedQuery && ` (filtered from ${selectedFolder.albums.length})`}
         </p>
       </div>
 
@@ -726,7 +753,7 @@ export function AlbumGrid({ isMobile }: { isMobile?: boolean }) {
           <Button
             variant="link"
             size="sm"
-            onClick={() => setSearchQuery('')}
+            onClick={() => setSearchInput('')}
             className="text-xs text-primary mt-1"
           >
             Clear search

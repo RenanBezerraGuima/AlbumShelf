@@ -7,6 +7,9 @@ export const GEIST_FONTS: GeistFont[] = ['mono'];
 export type AlbumViewMode = 'grid' | 'canvas';
 export const VIEW_MODES: AlbumViewMode[] = ['grid', 'canvas'];
 
+export type SortOrder = 'manual' | 'artist' | 'title';
+export const SORT_ORDERS: SortOrder[] = ['manual', 'artist', 'title'];
+
 export type StreamingProvider = 'deezer' | 'apple' | 'spotify';
 export const STREAMING_PROVIDERS: StreamingProvider[] = ['deezer', 'apple', 'spotify'];
 
@@ -36,6 +39,7 @@ export interface Folder {
   subfolders: Folder[];
   isExpanded: boolean;
   viewMode?: AlbumViewMode;
+  sortOrder?: SortOrder;
 }
 
 export interface SpotifyAlbum {

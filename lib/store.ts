@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Folder, Album, Theme, AlbumViewMode, StreamingProvider, GeistFont } from "./types";
+import type { Folder, Album, Theme, AlbumViewMode, SortOrder, StreamingProvider, GeistFont } from "./types";
 import {
   sanitizeUrl,
   sanitizeImageUrl,
@@ -8,6 +8,7 @@ import {
   sanitizeFolderTree,
   isValidTheme,
   isValidViewMode,
+  isValidSortOrder,
   isValidStreamingProvider,
   isValidGeistFont,
   sanitizeSyncState,
@@ -103,6 +104,7 @@ interface FolderStore {
   setSettingsOpen: (open: boolean) => void;
   setHydrationProgress: (progress: { current: number; total: number } | null) => void;
   setFolderViewMode: (id: string, mode: AlbumViewMode) => void;
+  setFolderSortOrder: (id: string, order: SortOrder) => void;
 }
 
 export type SyncState = Pick<
@@ -453,6 +455,25 @@ export const useFolderStore = create<FolderStore>()(
           };
 
           const newFolders = addFolderToTree(currentFolders, finalParentId, newFolder);
+          if (newFolders === currentFolders) return state;
+          if (state.sharedFolders) {
+            return { sharedFolders: newFolders, lastUpdated: Date.now() };
+          }
+          return {
+            folders: newFolders,
+            lastUpdated: Date.now(),
+          };
+        });
+      },
+
+      setFolderSortOrder: (id, order) => {
+        if (!isValidSortOrder(order)) return;
+        set((state) => {
+          const currentFolders = state.sharedFolders ?? state.folders;
+          const newFolders = updateFolderInTree(currentFolders, id, (folder) => {
+            if (folder.sortOrder === order) return folder;
+            return { ...folder, sortOrder: order };
+          });
           if (newFolders === currentFolders) return state;
           if (state.sharedFolders) {
             return { sharedFolders: newFolders, lastUpdated: Date.now() };
