@@ -37,12 +37,12 @@ describe('Deezer favorites', () => {
 
       vi.mocked(deezerGatewayRequest).mockResolvedValue(mockPayload);
 
-      const result = await getFavoriteAlbums('fake-arl', 'fake-token', 'user-id');
+      const result = await getFavoriteAlbums('fake-arl', 'fake-token', '12345');
 
       expect(deezerGatewayRequest).toHaveBeenCalledWith(
         'fake-arl',
         'album.getUserFavorites',
-        { user_id: 'user-id', start: 0, nb: 500 },
+        { user_id: 12345, start: 0, nb: 100 },
         'fake-token'
       );
 
@@ -92,7 +92,7 @@ describe('Deezer favorites', () => {
 
     it('returns empty list if data is not an array', async () => {
       vi.mocked(deezerGatewayRequest).mockResolvedValue({ results: { data: null, total: 0 } });
-      const result = await getFavoriteAlbums('fake-arl', 'fake-token', 'user-id');
+      const result = await getFavoriteAlbums('fake-arl', 'fake-token', '12345');
       expect(result.albums).toEqual([]);
       expect(result.total).toBe(0);
     });
@@ -103,23 +103,23 @@ describe('Deezer favorites', () => {
       vi.mocked(deezerGatewayRequest)
         .mockResolvedValueOnce({
           results: {
-            data: Array(500).fill({ ALB_ID: '1', ALB_TITLE: 'A' }),
-            total: 600,
+            data: Array(100).fill({ ALB_ID: '1', ALB_TITLE: 'A' }),
+            total: 150,
           },
         })
         .mockResolvedValueOnce({
           results: {
-            data: Array(100).fill({ ALB_ID: '2', ALB_TITLE: 'B' }),
-            total: 600,
+            data: Array(50).fill({ ALB_ID: '2', ALB_TITLE: 'B' }),
+            total: 150,
           },
         });
 
-      const albums = await getAllFavoriteAlbums('fake-arl', 'fake-token', 'user-id');
+      const albums = await getAllFavoriteAlbums('fake-arl', 'fake-token', '12345');
 
       expect(deezerGatewayRequest).toHaveBeenCalledTimes(2);
-      expect(albums).toHaveLength(600);
+      expect(albums).toHaveLength(150);
       expect(albums[0].name).toBe('A');
-      expect(albums[500].name).toBe('B');
+      expect(albums[100].name).toBe('B');
     });
 
     it('stops if results are empty', async () => {
